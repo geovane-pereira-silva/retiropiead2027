@@ -601,6 +601,11 @@
   overflow-y: auto;
 }
 
+.pbtx-slide-reading .pbtx-slide-footer {
+  display: none;
+}
+
+
 .pbtx-slide-list .pbtx-title,
 .pbtx-slide-table .pbtx-title,
 .pbtx-slide-credits .pbtx-title {
