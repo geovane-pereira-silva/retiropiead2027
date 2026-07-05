@@ -77,16 +77,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "PBTX" },
-      { name: "description", content: "PBTX project" },
+      { title: "PBTX — O Chamado para os Gentios" },
+      { name: "description", content: "Apresentação web redesenhada da Lição 1: O Chamado para os Gentios." },
       { name: "author", content: "PBTX" },
-      { property: "og:title", content: "PBTX" },
-      { property: "og:description", content: "PBTX project" },
+      { property: "og:title", content: "PBTX — O Chamado para os Gentios" },
+      { property: "og:description", content: "Apresentação web clara, visual e navegável da Lição 1." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@pbtx" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Alegreya:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700;800&display=swap",
+      },
       {
         rel: "stylesheet",
         href: appCss,
