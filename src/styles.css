@@ -360,9 +360,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(19rem, 39%);
   gap: 2rem;
-  width: min(100%, 76rem);
+  width: min(100%, 92rem);
   aspect-ratio: 16 / 9;
-  min-height: 38rem;
+  min-height: 42rem;
   overflow: hidden;
   border: 1px solid color-mix(in oklab, var(--pbtx-line) 82%, transparent);
   border-radius: 8px;
