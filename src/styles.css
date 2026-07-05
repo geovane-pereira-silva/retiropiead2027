@@ -584,13 +584,15 @@
 
 .pbtx-slide-list,
 .pbtx-slide-table,
-.pbtx-slide-credits {
+.pbtx-slide-credits,
+.pbtx-slide-reading {
   grid-template-columns: minmax(0, 1fr);
 }
 
 .pbtx-slide-list .pbtx-slide-content,
 .pbtx-slide-table .pbtx-slide-content,
-.pbtx-slide-credits .pbtx-slide-content {
+.pbtx-slide-credits .pbtx-slide-content,
+.pbtx-slide-reading .pbtx-slide-content {
   justify-content: flex-start;
   padding: 3rem 4rem 4rem;
 }
