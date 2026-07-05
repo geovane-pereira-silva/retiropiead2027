@@ -275,10 +275,10 @@
 
 .pbtx-shell {
   display: grid;
-  grid-template-columns: 18rem minmax(0, 1fr);
+  grid-template-columns: 14rem minmax(0, 1fr);
   gap: 1rem;
   min-height: calc(100vh - 4.3rem);
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .pbtx-rail {
