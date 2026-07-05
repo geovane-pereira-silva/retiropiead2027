@@ -615,12 +615,22 @@
 
 .pbtx-slide-reading .pbtx-title,
 .pbtx-slide-lesson .pbtx-title {
-  max-width: 18ch;
-  font-size: 2.85rem;
+  max-width: 100%;
+  font-size: 3.15rem;
+}
+
+.pbtx-slide-reading .pbtx-subtitle {
+  font-size: 2.4rem;
+}
+
+.pbtx-slide-reading .pbtx-body-lines {
+  max-width: 100%;
+  gap: 1.15rem;
 }
 
 .pbtx-slide-reading .pbtx-body-lines p {
-  font-size: 1.05rem;
+  font-size: 1.85rem;
+  line-height: 1.35;
 }
 
 .pbtx-overview {
