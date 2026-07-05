@@ -597,6 +597,10 @@
   padding: 3rem 4rem 4rem;
 }
 
+.pbtx-slide-reading .pbtx-slide-content {
+  overflow-y: auto;
+}
+
 .pbtx-slide-list .pbtx-title,
 .pbtx-slide-table .pbtx-title,
 .pbtx-slide-credits .pbtx-title {
