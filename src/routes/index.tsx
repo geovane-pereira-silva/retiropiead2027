@@ -162,7 +162,7 @@ function SlideFrame({ slide }: { slide: PbtxSlide }) {
       <div className="pbtx-slide-content">
         <SlideText slide={slide} />
       </div>
-      {slide.image ? (
+      {slide.image && slide.layout !== "reading" ? (
         <figure className="pbtx-slide-figure">
           <img src={slide.image} alt="Cena visual relacionada ao conteúdo da lição" width={1600} height={912} loading={slide.id === 1 ? "eager" : "lazy"} />
         </figure>
