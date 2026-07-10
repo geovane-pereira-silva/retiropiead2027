@@ -25,25 +25,29 @@ body {
 }
 
 .deck {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  overflow: hidden;
 }
 
 .deck-frame {
-  width: 100%;
-  max-width: 26rem;
+  height: 100%;
+  max-height: 46rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  align-items: center;
 }
 
 .slide {
+  flex: 1;
+  min-height: 0;
   aspect-ratio: 9 / 16;
-  width: 100%;
+  max-width: 100%;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 14px;
