@@ -98,7 +98,7 @@ export const slides: Slide[] = [
       {
         kind: "verse",
         ref: "Juízes 6:8-10",
-        text: "\"Eu vos livrei... mas não destes ouvidos à minha voz.\"",
+        text: "\"O Senhor enviou um profeta aos filhos de Israel; e disse-lhes: Assim diz o Senhor Deus de Israel: Eu vos fiz subir do Egito, e vos tirei da casa da servidão; e vos livrei da mão dos egípcios, e da mão de todos quantos vos oprimiam; e os expulsei de diante de vós, e a vós vos dei a sua terra; e vos disse: Eu sou o Senhor vosso Deus; não temais os deuses dos amorreus, em cuja terra habitais; mas não destes ouvidos à minha voz.\"",
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"O que te tira da crise não é apenas apresentar necessidades; é permitir que Deus trate o coração.\"" },
