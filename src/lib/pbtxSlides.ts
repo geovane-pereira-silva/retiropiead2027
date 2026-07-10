@@ -114,6 +114,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Pare de usar o tempo da oração para se justificar. Use-o para confessar.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Confesse os seus pecados sem se justificar e alcance a misericórdia de Deus." },
     ],
   },
   {
