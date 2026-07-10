@@ -206,6 +206,8 @@ export const slides: Slide[] = [
         kind: "quote",
         text: "\"Quando há arrependimento sincero, Deus transforma o clamor em chamado, o chamado em propósito e o propósito em vitória.\"",
       },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Clame ao Senhor agora; permita que Ele transforme o seu clamor em chamado, propósito e vitória." },
     ],
   },
 ];
