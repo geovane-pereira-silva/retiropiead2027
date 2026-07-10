@@ -59,7 +59,7 @@ export const slides: Slide[] = [
       {
         kind: "verse",
         ref: "Juízes 6:3-5",
-        text: "\"Porque sucedia que, semeando Israel, subiam contra ele os midianitas... destruíam os frutos da terra.\"",
+        text: "\"Porque sucedia que, semeando Israel, os midianitas subiam contra ele, e os amalequitas, e os filhos do oriente, subiam contra ele. E punham-se contra ele em campo, e destruíam os frutos da terra, até chegar a Gaza; e não deixavam mantimento em Israel, nem ovelhas, nem bois, nem jumentos. Porque subiam com os seus gados e as suas tendas; vinham como gafanhotos, em tanta multidão, que não se podiam contar, nem a eles nem aos seus camelos; e entravam na terra, para a destruir.\"",
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Sempre que Israel semeava... os inimigos vinham destruir.\"" },
