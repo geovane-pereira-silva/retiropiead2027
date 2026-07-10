@@ -81,7 +81,7 @@ export const slides: Slide[] = [
       {
         kind: "verse",
         ref: "2 Crônicas 7:14",
-        text: "\"Se o meu povo... se humilhar, orar, buscar a minha face e se converter... eu ouvirei.\"",
+        text: "\"E se o meu povo, que se chama pelo meu nome, se humilhar, e orar, e buscar a minha face, e se converter dos seus maus caminhos, então eu ouvirei dos céus, e perdoarei os seus pecados, e sararei a sua terra.\"",
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Não há resposta enquanto não houver sincero clamor.\"" },
