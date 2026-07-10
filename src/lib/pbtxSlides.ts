@@ -173,6 +173,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"O problema nunca foi o tamanho do inimigo. O problema é perder a presença de Deus.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Busque a presença de Deus acima de qualquer recurso ou força humana." },
     ],
   },
   {
