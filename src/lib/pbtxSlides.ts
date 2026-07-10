@@ -26,6 +26,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase de impacto" },
       { kind: "quote", text: "\"Antes da resposta, Deus procura um coração quebrantado.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Reconheça a sua dependência de Deus e prepare o coração para clamar." },
     ],
   },
   {
