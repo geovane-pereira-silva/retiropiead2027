@@ -81,6 +81,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Não há resposta enquanto não houver sincero clamor.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Humilhe-se hoje, clame com sinceridade e busque a face de Deus." },
     ],
   },
   {
