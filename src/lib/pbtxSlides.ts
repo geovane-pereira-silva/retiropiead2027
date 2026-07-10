@@ -59,7 +59,7 @@ export const slides: Slide[] = [
       {
         kind: "verse",
         ref: "Juízes 6:3-5",
-        text: "\"Porque sucedia que, semeando Israel, subiam contra ele os midianitas... destruíam os frutos da terra.\"",
+        text: "\"Porque sucedia que, semeando Israel, os midianitas subiam contra ele, e os amalequitas, e os filhos do oriente, subiam contra ele. E punham-se contra ele em campo, e destruíam os frutos da terra, até chegar a Gaza; e não deixavam mantimento em Israel, nem ovelhas, nem bois, nem jumentos. Porque subiam com os seus gados e as suas tendas; vinham como gafanhotos, em tanta multidão, que não se podiam contar, nem a eles nem aos seus camelos; e entravam na terra, para a destruir.\"",
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Sempre que Israel semeava... os inimigos vinham destruir.\"" },
@@ -81,7 +81,7 @@ export const slides: Slide[] = [
       {
         kind: "verse",
         ref: "2 Crônicas 7:14",
-        text: "\"Se o meu povo... se humilhar, orar, buscar a minha face e se converter... eu ouvirei.\"",
+        text: "\"E se o meu povo, que se chama pelo meu nome, se humilhar, e orar, e buscar a minha face, e se converter dos seus maus caminhos, então eu ouvirei dos céus, e perdoarei os seus pecados, e sararei a sua terra.\"",
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Não há resposta enquanto não houver sincero clamor.\"" },
@@ -98,7 +98,7 @@ export const slides: Slide[] = [
       {
         kind: "verse",
         ref: "Juízes 6:8-10",
-        text: "\"Eu vos livrei... mas não destes ouvidos à minha voz.\"",
+        text: "\"O Senhor enviou um profeta aos filhos de Israel; e disse-lhes: Assim diz o Senhor Deus de Israel: Eu vos fiz subir do Egito, e vos tirei da casa da servidão; e vos livrei da mão dos egípcios, e da mão de todos quantos vos oprimiam; e os expulsei de diante de vós, e a vós vos dei a sua terra; e vos disse: Eu sou o Senhor vosso Deus; não temais os deuses dos amorreus, em cuja terra habitais; mas não destes ouvidos à minha voz.\"",
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"O que te tira da crise não é apenas apresentar necessidades; é permitir que Deus trate o coração.\"" },
@@ -178,7 +178,7 @@ export const slides: Slide[] = [
       {
         kind: "verse",
         ref: "Juízes 6:16",
-        text: "\"Eu serei contigo.\"",
+        text: "\"E o Senhor lhe disse: Porquanto eu hei de ser contigo, tu ferirás aos midianitas como se fossem um só homem.\"",
       },
       {
         kind: "verse",
