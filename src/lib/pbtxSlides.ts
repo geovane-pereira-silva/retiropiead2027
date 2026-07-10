@@ -135,6 +135,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Gideão foi a resposta de Deus ao clamor de Israel.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Creia que Deus pode levantar você como resposta, mesmo na sua fraqueza." },
     ],
   },
   {
