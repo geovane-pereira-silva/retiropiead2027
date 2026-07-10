@@ -32,6 +32,33 @@ body {
   justify-content: center;
   padding: 1rem;
   overflow: hidden;
+  position: relative;
+}
+
+.tap-zone {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 30vw;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tap-zone-left {
+  left: 0;
+}
+
+.tap-zone-right {
+  right: 0;
+}
+
+.tap-zone:disabled {
+  cursor: default;
+
 }
 
 .deck-frame {

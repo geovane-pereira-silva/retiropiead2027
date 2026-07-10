@@ -60,6 +60,22 @@ function Index() {
           </footer>
         </article>
 
+        <button
+          type="button"
+          className="tap-zone tap-zone-left"
+          onClick={() => go(active - 1)}
+          disabled={active === 0}
+          aria-label="Slide anterior"
+        />
+        <button
+          type="button"
+          className="tap-zone tap-zone-right"
+          onClick={() => go(active + 1)}
+          disabled={active === total - 1}
+          aria-label="Próximo slide"
+        />
+
+
         <nav className="deck-nav" aria-label="Navegação">
           <button type="button" onClick={() => go(active - 1)} disabled={active === 0} aria-label="Anterior">
             <ArrowLeft aria-hidden="true" />
