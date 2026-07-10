@@ -178,7 +178,7 @@ export const slides: Slide[] = [
       {
         kind: "verse",
         ref: "Juízes 6:16",
-        text: "\"Eu serei contigo.\"",
+        text: "\"E o Senhor lhe disse: Porquanto eu hei de ser contigo, tu ferirás aos midianitas como se fossem um só homem.\"",
       },
       {
         kind: "verse",
