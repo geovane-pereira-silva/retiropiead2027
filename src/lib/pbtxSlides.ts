@@ -1,405 +1,211 @@
-import antiochHarbor from "../assets/pbtx-antioch-harbor.jpg";
-import antiochHero from "../assets/pbtx-antioch-hero.jpg";
-import missionMap from "../assets/pbtx-mission-map.jpg";
-import scriptureScroll from "../assets/pbtx-scripture-scroll.jpg";
-import worshipCommunity from "../assets/pbtx-worship-community.jpg";
+export type SlidePart =
+  | { kind: "heading"; text: string }
+  | { kind: "text"; text: string }
+  | { kind: "label"; text: string }
+  | { kind: "verse"; ref: string; text: string }
+  | { kind: "quote"; text: string }
+  | { kind: "list"; items: string[] };
 
-export type PbtxSlide = {
+export type Slide = {
   id: number;
-  eyebrow?: string;
-  title: string;
-  subtitle?: string;
-  body?: string[];
-  bullets?: string[];
-  table?: string[][];
-  quote?: string;
-  answer?: string;
-  section?: string;
-  image?: string;
-  layout: "cover" | "intro" | "list" | "reading" | "table" | "quote" | "section" | "lesson" | "synthesis" | "review" | "credits";
+  kicker: string;
+  parts: SlidePart[];
 };
 
-const images = {
-  antiochHarbor,
-  antiochHero,
-  missionMap,
-  scriptureScroll,
-  worshipCommunity,
-};
-
-export const pbtxSlides: PbtxSlide[] = [
+export const slides: Slide[] = [
   {
     id: 1,
-    eyebrow: "Lição 1",
-    title: "O Chamado para os Gentios",
-    subtitle: "Igreja",
-    image: images.antiochHero,
-    layout: "cover",
+    kicker: "Slide 1 — Título",
+    parts: [
+      { kind: "heading", text: "O CLAMOR QUE MOVE A MÃO DE DEUS" },
+      { kind: "label", text: "Texto Base" },
+      {
+        kind: "verse",
+        ref: "Juízes 6:6",
+        text: "\"Assim Israel ficou muito debilitado com a presença dos midianitas; então os filhos de Israel clamaram ao Senhor.\"",
+      },
+      { kind: "label", text: "Frase de impacto" },
+      { kind: "quote", text: "\"Antes da resposta, Deus procura um coração quebrantado.\"" },
+    ],
   },
   {
     id: 2,
-    eyebrow: "Tema do Trimestre",
-    title: "A Igreja dos Gentios",
-    subtitle: "Da Chamada Missionária à Consolidação do Evangelho Entre os Povos",
-    body: ["3º Trimestre", "Ano 2026", "5 de Julho", "Comentarista da Revista", "Pr. Wagner Gaby"],
-    image: images.antiochHarbor,
-    layout: "intro",
+    kicker: "Slide 2 — O pecado gera consequências",
+    parts: [
+      { kind: "heading", text: "Deus não ignora a desobediência" },
+      {
+        kind: "verse",
+        ref: "Juízes 6:1",
+        text: "\"Porém os filhos de Israel fizeram o que era mau aos olhos do Senhor; e o Senhor os deu nas mãos dos midianitas por sete anos.\"",
+      },
+      {
+        kind: "verse",
+        ref: "Gálatas 6:7",
+        text: "\"Não vos enganeis: de Deus não se zomba; pois tudo o que o homem semear, isso também ceifará.\"",
+      },
+      { kind: "label", text: "Frase" },
+      { kind: "quote", text: "\"O Senhor não tolera desobediência. Pecados contra a autoridade de Deus trazem consequências.\"" },
+    ],
   },
   {
     id: 3,
-    title: "Lições do Trimestre",
-    bullets: [
-      "Lição    1 – O Chamado para os Gentios",
-      "Lição    2 – A Porta da Fé se Abre entre os Gentios",
-      "Lição    3 – A Graça que Alcança todas as Nações",
-      "Lição    4 – O Espírito que nos Guia para além das Fronteiras",
-      "Lição    5 – Cristo entre os Filósofos: O Deus desconhecido se Revela",
-      "Lição    6 – A Suficiência da Graça na Cidade de Corinto",
-      "Lição    7 – Quando o Espírito Sopra em Éfeso",
-      "Lição    8 – Despedida em Éfeso: entre Lágrimas e Alertas",
-      "Lição    9 – Coragem para Testemunhar: Paulo diante da Multidão",
-      "Lição  10 – Uma Esperança Inabalável perante os Poderosos",
-      "Lição  11 – Entre Tempestades e Promessas",
-      "Lição  12 – O Evangelho Chega ao Coração do Império",
-      "Lição  13 – A Missão Continua em Nós",
+    kicker: "Slide 3 — O pecado rouba a colheita",
+    parts: [
+      { kind: "heading", text: "O inimigo ataca justamente quando chega o tempo da colheita." },
+      {
+        kind: "verse",
+        ref: "Juízes 6:3-5",
+        text: "\"Porque sucedia que, semeando Israel, subiam contra ele os midianitas... destruíam os frutos da terra.\"",
+      },
+      { kind: "label", text: "Frase" },
+      { kind: "quote", text: "\"Sempre que Israel semeava... os inimigos vinham destruir.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "O inimigo não quer impedir apenas o plantio." },
+      { kind: "text", text: "Ele quer impedir a colheita." },
     ],
-    layout: "list",
   },
   {
     id: 4,
-    title: "Leitura Bíblica em Classe",
-    subtitle: "Atos 13:1-12",
-    body: [
-      "1 – Na Igreja que estava em Antioquia havia alguns profetas e doutores, a saber: Barnabé, e Simeão, chamado Níger, e Lúcio, cireneu, e Manaém, que fora criado com Herodes, o tetrarca, e Saulo.",
-      "2 – E, servindo eles ao Senhor e jejuando, disse o Espírito Santo: Apartai-me a Barnabé e a Saulo para a obra a que os tenho chamado.",
-      "3 – Então, jejuando, e orando, e pondo sobre eles as mãos, os despediram.",
-      "4 – E assim estes, enviados pelo Espírito Santo, desceram a Selêucia e dali navegaram para Chipre.",
-      "5 – E, chegados a Salamina, anunciaram a palavra de Deus nas sinagogas dos judeus; e tinham também a João como cooperador.",
+    kicker: "Slide 4 — Deus espera o clamor",
+    parts: [
+      { kind: "heading", text: "O céu responde ao arrependimento sincero" },
+      {
+        kind: "verse",
+        ref: "Juízes 6:6",
+        text: "\"Então os filhos de Israel clamaram ao Senhor.\"",
+      },
+      {
+        kind: "verse",
+        ref: "2 Crônicas 7:14",
+        text: "\"Se o meu povo... se humilhar, orar, buscar a minha face e se converter... eu ouvirei.\"",
+      },
+      { kind: "label", text: "Frase" },
+      { kind: "quote", text: "\"Não há resposta enquanto não houver sincero clamor.\"" },
     ],
-    image: images.scriptureScroll,
-    layout: "reading",
   },
   {
     id: 5,
-    title: "Leitura Bíblica em Classe",
-    subtitle: "Atos 13:1-12",
-    body: [
-      "6 – E, havendo atravessado a ilha até Pafos, acharam um certo judeu, mágico, falso profeta, chamado Barjesus,",
-      "7 – o qual estava com o procônsul Sérgio Paulo, varão prudente. Este, chamando a si Barnabé e Saulo, procurava muito ouvir a palavra de Deus.",
-      "8 – Mas resistia-lhes Elimas, o encantador (porque assim se interpreta o seu nome), procurando apartar da fé o procônsul.",
-      "9 – Todavia, Saulo, que também se chama Paulo, cheio do Espírito Santo e fixando os olhos nele, disse:",
-      "10 – Ó filho do diabo, cheio de todo o engano e de toda a malícia, inimigo de toda a Justiça, não cessarás de perturbar os retos caminhos do Senhor ?",
+    kicker: "Slide 5 — Antes da solução, Deus confronta",
+    parts: [
+      { kind: "text", text: "Israel queria livramento." },
+      { kind: "text", text: "Deus começou falando do pecado." },
+      {
+        kind: "verse",
+        ref: "Juízes 6:8-10",
+        text: "\"Eu vos livrei... mas não destes ouvidos à minha voz.\"",
+      },
+      { kind: "label", text: "Frase" },
+      { kind: "quote", text: "\"O que te tira da crise não é apenas apresentar necessidades; é permitir que Deus trate o coração.\"" },
     ],
-    image: images.missionMap,
-    layout: "reading",
   },
   {
     id: 6,
-    title: "Leitura Bíblica em Classe",
-    subtitle: "Atos 13:1-12",
-    body: [
-      "11 – Eis aí, pois, agora, contra ti a mão do Senhor, e ficarás cego, sem ver o sol por algum tempo. No mesmo instante, a escuridão e as trevas caíram sobre ele, e, andando à roda, buscava a quem o guiasse pela mão.",
-      "12 – Então, o procônsul, vendo o que havia acontecido, creu, maravilhado da doutrina do Senhor.",
+    kicker: "Slide 6 — Confissão produz misericórdia",
+    parts: [
+      {
+        kind: "verse",
+        ref: "Provérbios 28:13",
+        text: "\"O que encobre as suas transgressões jamais prosperará; mas o que as confessa e deixa alcançará misericórdia.\"",
+      },
+      {
+        kind: "verse",
+        ref: "1 João 1:9",
+        text: "\"Se confessarmos os nossos pecados, ele é fiel e justo para nos perdoar.\"",
+      },
+      { kind: "label", text: "Frase" },
+      { kind: "quote", text: "\"Pare de usar o tempo da oração para se justificar. Use-o para confessar.\"" },
     ],
-    image: images.scriptureScroll,
-    layout: "reading",
   },
   {
     id: 7,
-    title: "Leitura Diária",
-    table: [
-      ["Segunda", "At 1.8", "Sem o Espírito Santo não há missão verdadeira"],
-      ["Terça", "At 11.26", "A Identidade e a Missão caminham juntas"],
-      ["Quarta", "Mt 6.16-18", "O Jejum fortalece nossa sensibilidade espiritual"],
-      ["Quinta", "Is 61.1", "O ministério de Jesus começou pela unção do Espírito"],
-      ["Sexta", "At 4.31", "A igreja Primitiva avançava porque estava cheia do Espírito"],
-      ["Sábado", "Rm 10.14,15", "Como ouvirão, se não há quem pregue?"],
+    kicker: "Slide 7 — Deus levanta Gideão",
+    parts: [
+      { kind: "text", text: "Depois do clamor..." },
+      { kind: "text", text: "Depois da Palavra..." },
+      { kind: "text", text: "Surge Gideão." },
+      {
+        kind: "verse",
+        ref: "Juízes 6:12",
+        text: "\"O Senhor é contigo, homem valente.\"",
+      },
+      {
+        kind: "verse",
+        ref: "Juízes 6:16",
+        text: "\"Porque eu hei de ser contigo, e tu ferirás os midianitas como se fossem um só homem.\"",
+      },
+      { kind: "label", text: "Frase" },
+      { kind: "quote", text: "\"Gideão foi a resposta de Deus ao clamor de Israel.\"" },
     ],
-    layout: "table",
   },
   {
     id: 8,
-    title: "Texto Áureo",
-    quote: "“E, servindo eles ao Senhor e jejuando, disse o Espírito Santo: Apartai-me a Barnabé e a Saulo para a obra a que os tenho chamado.” (Atos 13.2)",
-    image: images.scriptureScroll,
-    layout: "quote",
+    kicker: "Slide 8 — Deus usa a prova para formar caráter",
+    parts: [
+      {
+        kind: "verse",
+        ref: "Hebreus 12:6",
+        text: "\"Porque o Senhor corrige a quem ama.\"",
+      },
+      {
+        kind: "verse",
+        ref: "Romanos 5:3-4",
+        text: "\"A tribulação produz perseverança; e a perseverança, experiência.\"",
+      },
+      { kind: "label", text: "Frase" },
+      { kind: "quote", text: "\"A escola que forma o caráter chama-se sofrimento.\"" },
+    ],
   },
   {
     id: 9,
-    title: "Verdade Prática",
-    quote: "Quando a Igreja ouve o Espírito, o Evangelho avança e vidas são alcançadas para a glória de Deus.",
-    image: images.worshipCommunity,
-    layout: "quote",
+    kicker: "Slide 9 — A vitória depende da presença de Deus",
+    parts: [
+      { kind: "text", text: "Não era o tamanho do exército." },
+      { kind: "text", text: "Era quem estava com Gideão." },
+      {
+        kind: "verse",
+        ref: "Juízes 6:16",
+        text: "\"Eu serei contigo.\"",
+      },
+      {
+        kind: "verse",
+        ref: "Salmo 34:19",
+        text: "\"Muitas são as aflições do justo, mas o Senhor de todas o livra.\"",
+      },
+      { kind: "label", text: "Frase" },
+      { kind: "quote", text: "\"O problema nunca foi o tamanho do inimigo. O problema é perder a presença de Deus.\"" },
+    ],
   },
   {
     id: 10,
-    title: "Objetivos da Lição",
-    bullets: [
-      "❶ Apresentar o contexto histórico e espiritual da igreja de Antioquia e sua missão aos gentios",
-      "❷ Conduzir o aluno à reflexão sobre a atuação do Espírito Santo na condução da obra missionária e no envio dos obreiros",
-      "❸ Aplicar os princípios da Igreja de Antioquia à vida da Igreja Local, assumindo a missão cristã como identidade e compromisso",
+    kicker: "Slide 10 — Apelo",
+    parts: [
+      { kind: "heading", text: "Hoje Deus continua ouvindo quem clama." },
+      {
+        kind: "verse",
+        ref: "Salmos 34:17",
+        text: "\"Clamam os justos, e o Senhor os escuta e os livra de todas as suas tribulações.\"",
+      },
+      {
+        kind: "verse",
+        ref: "Jeremias 33:3",
+        text: "\"Clama a mim, e responder-te-ei, e anunciar-te-ei coisas grandes e ocultas, que não sabes.\"",
+      },
+      { kind: "label", text: "Conclusão" },
+      {
+        kind: "list",
+        items: [
+          "O pecado trouxe a opressão.",
+          "O clamor trouxe a resposta.",
+          "A Palavra trouxe o confronto.",
+          "A confissão trouxe misericórdia.",
+          "A presença de Deus trouxe a vitória.",
+        ],
+      },
+      { kind: "label", text: "Frase final" },
+      {
+        kind: "quote",
+        text: "\"Quando há arrependimento sincero, Deus transforma o clamor em chamado, o chamado em propósito e o propósito em vitória.\"",
+      },
     ],
-    layout: "list",
-  },
-  {
-    id: 11,
-    title: "Palavra-Chave",
-    subtitle: "Gentios",
-    image: images.missionMap,
-    layout: "quote",
-  },
-  {
-    id: 12,
-    title: "Tópicos da Lição",
-    bullets: [
-      "I   –  O Nascimento da Missão Gentílica",
-      "1 – Antioquia: um centro escolhido por Deus",
-      "2 – Profetas e doutores servindo ao Senhor",
-      "3 – A Separação de Paulo e Barnabé",
-      "II  –  O Espírito Santo e a Obra Missionária",
-      "1 – O Espírito que conduz a Missão",
-      "2 – O Poder do Espírito na Evangelização dos Gentios",
-      "3 – Evidência da ação missionária do Espírito",
-      "III  – A Igreja como Agência Missionária",
-      "1 – A Igreja que ouve a Voz de Deus",
-      "2 – Uma Igreja que Envia e Sustenta seus Missionários",
-      "3 – Uma Igreja que Cumpre a Grande Comissão",
-    ],
-    layout: "list",
-  },
-  { id: 13, title: "Introdução", image: images.antiochHarbor, layout: "section" },
-  {
-    id: 14,
-    title: "Introdução",
-    body: [
-      "Lucas registra o cumprimento progressivo da promessa de Jesus em Atos 1.8:",
-      "O Evangelho alcançaria Jerusalém, Judeia, Samaria e chegaria aos confins da Terra.",
-      "Atos 13 e 18 o foco do Evangelho passa a Antioquia.",
-    ],
-    image: images.missionMap,
-    layout: "lesson",
-  },
-  {
-    id: 15,
-    title: "Introdução",
-    body: ["A Igreja Primitiva de Atos é caracterizada por diversidade, sensibilidade espiritual e prática missionária madura, que o Espírito Santo convoca Paulo e Barnabé para a evangelização dos gentios."],
-    image: images.worshipCommunity,
-    layout: "lesson",
-  },
-  {
-    id: 16,
-    title: "Introdução",
-    body: [
-      "A partir de Antioquia, o ministério de Paulo torna-se central, e o Espírito é mostrado como o verdadeiro condutor da expansão cristã.",
-      "A Missão Gentílica nasce não como estratégia humana, mas como resposta ao chamado direto do Espírito para alcançar as nações.",
-    ],
-    image: images.antiochHero,
-    layout: "lesson",
-  },
-  { id: 17, eyebrow: "Tópico I", title: "O Nascimento da Missão Gentílica", image: images.antiochHarbor, layout: "section" },
-  {
-    id: 18,
-    eyebrow: "Tópico I",
-    title: "1 – Antioquia: um centro escolhido por Deus",
-    body: ["Fundada por Seleuco Nicátor em 300 a.C., Antioquia da Síria tornou-se a terceira maior cidade do Império Romano."],
-    image: images.antiochHarbor,
-    layout: "lesson",
-  },
-  {
-    id: 19,
-    eyebrow: "Tópico I",
-    title: "1 – Antioquia: um centro escolhido por Deus",
-    body: ["Culturalmente greco-helenista, abrigava significativa população judaica e exercia influência intelectual e comercial, contando com o porto de Selêucia (At 13.4)."],
-    image: images.antiochHarbor,
-    layout: "lesson",
-  },
-  {
-    id: 20,
-    eyebrow: "Tópico I",
-    title: "1 – Antioquia: um centro escolhido por Deus",
-    body: ["Foi em Antioquia que os discípulos de Cristo foram chamados “cristãos” pela primeira vez (At 11.26).", "Deus escolheu Antioquia como base da missão gentílica, uma verdadeira base missionária de envio às nações."],
-    image: images.antiochHero,
-    layout: "lesson",
-  },
-  {
-    id: 21,
-    eyebrow: "Tópico I",
-    title: "2 – Profeta e Doutores servindo ao Senhor",
-    body: ["A liderança local reunia profetas e doutores (mestres), ministérios que, após o período apostólico, tornaram-se pilares da edificação da igreja (1Co 12.28)."],
-    image: images.worshipCommunity,
-    layout: "lesson",
-  },
-  {
-    id: 22,
-    eyebrow: "Tópico I",
-    title: "2 – Profeta e Doutores servindo ao Senhor",
-    body: ["Os profetas exortavam mediante inspiração direta.", "Os mestres instruíam com base nas Escrituras e na tradição dos ensinos de Jesus.", "Durante o serviço ao Senhor, marcado por oração e jejum, o Espírito falou."],
-    image: images.scriptureScroll,
-    layout: "lesson",
-  },
-  {
-    id: 23,
-    eyebrow: "Tópico I",
-    title: "3 – A Separação de Paulo e Barnabé",
-    quote: "O Espírito Santo ordenou: “Apartai-me a Barnabé e a Saulo para a obra a que os tenho chamado” (At 13.2,3)",
-    body: ["A Igreja respondeu com jejum, oração e imposição de mãos, reconhecendo o chamado divino e enviando seus melhores obreiros."],
-    image: images.missionMap,
-    layout: "lesson",
-  },
-  { id: 24, title: "Síntese do Tópico I", quote: "Em Antioquia, o Espírito inaugura a missão cristã entre os gentios.", image: images.antiochHero, layout: "synthesis" },
-  { id: 25, eyebrow: "Tópico II", title: "O Espírito Santo e a Obra Missionária", image: images.worshipCommunity, layout: "section" },
-  {
-    id: 26,
-    eyebrow: "Tópico II",
-    title: "1 – O Espírito que conduz a missão",
-    body: ["O Livro de Atos pode ser chamado, com justiça, de “Atos do Espírito Santo”", "É Ele quem inspira, dirige, separa e envia os missionários."],
-    image: images.worshipCommunity,
-    layout: "lesson",
-  },
-  {
-    id: 27,
-    eyebrow: "Tópico II",
-    title: "1 – O Espírito que conduz a missão",
-    body: ["A Missão não nasce da criatividade humana, mas da vontade soberana do Espírito.", "Pelo poder do Espírito Santo os apóstolos tornaram-se proclamadores ousados da Fé.", "Toda iniciativa evangelizadora autêntica é fruto da ação do Espírito no coração da igreja."],
-    image: images.antiochHero,
-    layout: "lesson",
-  },
-  {
-    id: 28,
-    eyebrow: "Tópico II",
-    title: "2 – O Poder do Espírito na Evangelização dos Gentios",
-    body: ["Os discípulos viviam cheios do Espírito, e por isso evangelizavam com coragem, discernimento e alegria (At 4.31; 5.41; 7.55).", "O Batismo no Espírito Santo lhes deu poder para testemunhar de Cristo, e eficácia em sua mensagem (At 1.8)."],
-    image: images.worshipCommunity,
-    layout: "lesson",
-  },
-  {
-    id: 29,
-    eyebrow: "Tópico II",
-    title: "2 – O Poder do Espírito na Evangelização dos Gentios",
-    body: ["Esta unção não apenas fortaleceu a pregação, mas também conferiu autoridade espiritual para enfrentar resistências, realizar sinais e consolidar igrejas em diversos povos e regiões.", "A Expansão registrada em Atos, de 120 discípulos a multidões, é resultado direto dessa obra sobrenatural."],
-    image: images.antiochHarbor,
-    layout: "lesson",
-  },
-  {
-    id: 30,
-    eyebrow: "Tópico II",
-    title: "3 – Evidências da ação missionária do Espírito",
-    body: ["As primeiras viagens missionárias mostram a clara intervenção do Espírito:", "portas se abrem, vidas são transformadas, e igrejas são plantadas apesar de perseguições."],
-    image: images.missionMap,
-    layout: "lesson",
-  },
-  {
-    id: 31,
-    eyebrow: "Tópico II",
-    title: "3 – Evidências da ação missionária do Espírito",
-    body: ["Em Pafos, o confronto entre Paulo e Elimas não é apenas um episódio de oposição, mas uma demonstração de que a luz do Evangelho prevalece sobre as trevas."],
-    image: images.scriptureScroll,
-    layout: "lesson",
-  },
-  {
-    id: 32,
-    eyebrow: "Tópico II",
-    title: "3 – Evidências da ação missionária do Espírito",
-    body: ["A conversão do procônsul Sérgio Paulo revela que nenhum nível social está além do alcance de Deus.", "A missão avança porque o Espírito autentica a mensagem e confirma a autoridade dos enviados."],
-    image: images.antiochHero,
-    layout: "lesson",
-  },
-  { id: 33, title: "Síntese do Tópico II", quote: "O Espírito Santo conduz e sustenta a expansão missionária da Igreja.", image: images.worshipCommunity, layout: "synthesis" },
-  { id: 34, eyebrow: "Tópico III", title: "A Igreja como Agência Missionária", image: images.antiochHero, layout: "section" },
-  {
-    id: 35,
-    eyebrow: "Tópico III",
-    title: "1 – A Igreja que ouve a voz de Deus",
-    body: ["Antioquia serve de modelo para toda comunidade cristã: uma igreja que ora, jejua e discerne a direção divina.", "Uma igreja missionária cresce na comunhão e age por obediência."],
-    image: images.worshipCommunity,
-    layout: "lesson",
-  },
-  {
-    id: 36,
-    eyebrow: "Tópico III",
-    title: "1 – A Igreja que ouve a voz de Deus",
-    body: ["A obra missionária não é programação, mas identidade.", "Em Atos 13, vemos que o Espírito fala à igreja que se coloca diante de Deus com reverência e compromisso."],
-    image: images.scriptureScroll,
-    layout: "lesson",
-  },
-  {
-    id: 37,
-    eyebrow: "Tópico III",
-    title: "2 – 	Uma Igreja que envia e sustenta seus Missionários",
-    body: ["A imposição de mãos sobre Paulo e Barnabé mostra que a igreja participa ativamente do envio.", "Não retém seus melhores servos, mas os consagra ao propósito eterno."],
-    image: images.missionMap,
-    layout: "lesson",
-  },
-  {
-    id: 38,
-    eyebrow: "Tópico III",
-    title: "2 – 	Uma Igreja que envia e sustenta seus Missionários",
-    body: ["Sustentar, interceder e acompanhar missionários é parte inseparável da vocação eclesial.", "Assim como Antioquia se tornou um centro de envio, cada igreja local é chamada a tornar-se base de operação para que o Evangelho alcance novos povos e culturas."],
-    image: images.antiochHarbor,
-    layout: "lesson",
-  },
-  {
-    id: 39,
-    eyebrow: "Tópico III",
-    title: "3 – Uma Igreja que cumpre a Grande Comissão",
-    body: ["A ordem de Jesus permanece: ir, pregar, fazer discípulos e alcançar as nações (Mt 28.19,20).", "No mundo, ainda há povos que nunca ouviram o Evangelho."],
-    image: images.antiochHero,
-    layout: "lesson",
-  },
-  {
-    id: 40,
-    eyebrow: "Tópico III",
-    title: "3 – Uma Igreja que cumpre a Grande Comissão",
-    quote: "Como ouvirão, se não há quem pregue ?\n(Rm 10.14)\nE como pregarão, se não forem enviados ?\n(Rm 10.15)",
-    image: images.missionMap,
-    layout: "quote",
-  },
-  {
-    id: 41,
-    eyebrow: "Tópico III",
-    title: "3 – Uma Igreja que cumpre a Grande Comissão",
-    body: ["O Espírito continua chamando homens e mulheres para essa obra.", "Cabe à igreja atender ao chamado com prontidão, oração, recursos e disposição para ir."],
-    image: images.worshipCommunity,
-    layout: "lesson",
-  },
-  { id: 42, title: "Síntese do Tópico III", quote: "A Igreja responde ao chamado do Espírito enviando e sustentando os missionários.", image: images.antiochHarbor, layout: "synthesis" },
-  { id: 43, title: "Conclusão", image: images.antiochHero, layout: "section" },
-  {
-    id: 44,
-    title: "Conclusão",
-    body: [
-      "A missão entre os gentios começa com oração, jejum e sensibilidade à voz do Espírito.",
-      "A Igreja de Antioquia mostra que Deus fala, chama, separa e envia; e que a igreja responde, intercede e sustenta.",
-      "A Palavra de Deus é poderosa para transformar todo pecador em uma pessoa regenerada, alcançada pela graça.",
-      "Hoje, o Espírito continua chamando sua igreja para alcançar as nações.",
-      "Estamos dispostos a ouvir, obedecer e participar da missão que ainda está em andamento ?",
-    ],
-    image: images.worshipCommunity,
-    layout: "lesson",
-  },
-  { id: 45, title: "Revisando Conteúdo", image: images.scriptureScroll, layout: "section" },
-  { id: 46, eyebrow: "❶", title: "Em qual cidade os discípulos foram chamados “cristãos” pela primeira vez ?", answer: "Antioquia.", image: images.antiochHarbor, layout: "review" },
-  { id: 47, eyebrow: "❷", title: "Quem ordenou para que separassem Saulo e Barnabé para as nações ?", answer: "O Espírito Santo.", image: images.worshipCommunity, layout: "review" },
-  { id: 48, eyebrow: "❸", title: "Por que os discípulos evangelizavam com coragem, discernimento e alegria ?", answer: "Porque os discípulos viviam cheios do Espírito.", body: ["Não Matarás"], image: images.missionMap, layout: "review" },
-  { id: 49, eyebrow: "❹", title: "Quais evidências mostram a clara intervenção do Espírito nas primeiras viagens missionárias ?", answer: "Portas se abrem, vidas são transformadas e igrejas são plantadas apesar de perseguições.", image: images.antiochHero, layout: "review" },
-  { id: 50, eyebrow: "❺", title: "Por que Antioquia serve de modelo para toda a comunidade cristã ?", answer: "Antioquia é uma igreja que ora, Jejua e discerne a direção divina.", image: images.scriptureScroll, layout: "review" },
-  { id: 51, title: "Próxima Lição", image: images.antiochHarbor, layout: "section" },
-  {
-    id: 52,
-    title: "SLIDE de suporte EBD ao campo",
-    body: [
-      "FONTE",
-      "Revista Lições Bíblicas",
-      "Adultos CPAD",
-      "3° Trimestre de 2026",
-      "Assembleia de Deus",
-      "Desenvolvido",
-      "Sem fins Comerciais",
-      "www.ebdpanorama.com",
-      "Nossa Missão é ajudar os professores de EBD !",
-      "Whatsapp (11)98180-6767",
-    ],
-    image: images.scriptureScroll,
-    layout: "credits",
   },
 ];
