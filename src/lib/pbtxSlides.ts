@@ -96,6 +96,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"O que te tira da crise não é apenas apresentar necessidades; é permitir que Deus trate o coração.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Permita que Deus trate o seu coração antes de pedir o livramento." },
     ],
   },
   {
