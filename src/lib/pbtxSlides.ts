@@ -153,6 +153,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"A escola que forma o caráter chama-se sofrimento.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Encare as provações como escola de Deus para formar o seu caráter." },
     ],
   },
   {
