@@ -26,6 +26,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase de impacto" },
       { kind: "quote", text: "\"Antes da resposta, Deus procura um coração quebrantado.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Reconheça a sua dependência de Deus e prepare o coração para clamar." },
     ],
   },
   {
@@ -45,6 +47,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"O Senhor não tolera desobediência. Pecados contra a autoridade de Deus trazem consequências.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Examine sua vida: onde a desobediência tem aberto brechas para o inimigo?" },
     ],
   },
   {
@@ -81,6 +85,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Não há resposta enquanto não houver sincero clamor.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Humilhe-se hoje, clame com sinceridade e busque a face de Deus." },
     ],
   },
   {
@@ -96,6 +102,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"O que te tira da crise não é apenas apresentar necessidades; é permitir que Deus trate o coração.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Permita que Deus trate o seu coração antes de pedir o livramento." },
     ],
   },
   {
@@ -114,6 +122,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Pare de usar o tempo da oração para se justificar. Use-o para confessar.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Confesse os seus pecados sem se justificar e alcance a misericórdia de Deus." },
     ],
   },
   {
@@ -135,6 +145,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"Gideão foi a resposta de Deus ao clamor de Israel.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Creia que Deus pode levantar você como resposta, mesmo na sua fraqueza." },
     ],
   },
   {
@@ -153,6 +165,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"A escola que forma o caráter chama-se sofrimento.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Encare as provações como escola de Deus para formar o seu caráter." },
     ],
   },
   {
@@ -173,6 +187,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"O problema nunca foi o tamanho do inimigo. O problema é perder a presença de Deus.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Busque a presença de Deus acima de qualquer recurso ou força humana." },
     ],
   },
   {
@@ -206,6 +222,8 @@ export const slides: Slide[] = [
         kind: "quote",
         text: "\"Quando há arrependimento sincero, Deus transforma o clamor em chamado, o chamado em propósito e o propósito em vitória.\"",
       },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Clame ao Senhor agora; permita que Ele transforme o seu clamor em chamado, propósito e vitória." },
     ],
   },
 ];
