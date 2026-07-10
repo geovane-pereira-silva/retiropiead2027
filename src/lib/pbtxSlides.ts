@@ -45,6 +45,8 @@ export const slides: Slide[] = [
       },
       { kind: "label", text: "Frase" },
       { kind: "quote", text: "\"O Senhor não tolera desobediência. Pecados contra a autoridade de Deus trazem consequências.\"" },
+      { kind: "label", text: "Aplicação" },
+      { kind: "text", text: "Examine sua vida: onde a desobediência tem aberto brechas para o inimigo?" },
     ],
   },
   {
