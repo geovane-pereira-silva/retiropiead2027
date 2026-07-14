@@ -22,6 +22,7 @@ import { motion } from "framer-motion";
 
 import heroImg from "../assets/hero-santa-clara.jpg";
 import { retiro } from "../content/retiro";
+import { InstagramGallery } from "../components/InstagramGallery";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -59,6 +60,7 @@ function Landing() {
         <Incluso />
         <Valores />
         <Depoimentos />
+        <InstagramSection />
         <Faq />
         <Localizacao />
         <CtaFinal />
@@ -317,6 +319,16 @@ function Valores() {
           </p>
         </details>
       </div>
+    </Section>
+  );
+}
+
+/* ————————————————————————— Instagram ————————————————————————— */
+function InstagramSection() {
+  if (!retiro.instagram.length) return null;
+  return (
+    <Section kicker="No Instagram" title="Momentos que ficaram." lead="Vídeos e reels compartilhados por quem já viveu.">
+      <InstagramGallery items={retiro.instagram} />
     </Section>
   );
 }
