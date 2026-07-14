@@ -323,6 +323,16 @@ function Valores() {
   );
 }
 
+/* ————————————————————————— Instagram ————————————————————————— */
+function InstagramSection() {
+  if (!retiro.instagram.length) return null;
+  return (
+    <Section kicker="No Instagram" title="Momentos que ficaram." lead="Vídeos e reels compartilhados por quem já viveu.">
+      <InstagramGallery items={retiro.instagram} />
+    </Section>
+  );
+}
+
 /* ————————————————————————— Depoimentos ————————————————————————— */
 function Depoimentos() {
   return (
