@@ -22,15 +22,19 @@ export function ComparisonTable() {
               <tr key={c.criterio}>
                 <th scope="row">{c.criterio}</th>
                 <td className={anteriorWin ? "win" : novoWin ? "lose" : ""}>
-                  <span className="cmp-value">{c.anterior}</span>
-                  <span className="cmp-icon">
-                    {anteriorWin ? <Check size={16} /> : novoWin ? <X size={16} /> : <Minus size={16} />}
+                  <span className="cmp-inline">
+                    <span className="cmp-value">{c.anterior}</span>
+                    <span className="cmp-icon">
+                      {anteriorWin ? <Check size={16} /> : novoWin ? <X size={16} /> : <Minus size={16} />}
+                    </span>
                   </span>
                 </td>
                 <td className={novoWin ? "win" : anteriorWin ? "lose" : ""}>
-                  <span className="cmp-value">{c.novo}</span>
-                  <span className="cmp-icon">
-                    {novoWin ? <Check size={16} /> : anteriorWin ? <X size={16} /> : <Minus size={16} />}
+                  <span className="cmp-inline">
+                    <span className="cmp-value">{c.novo}</span>
+                    <span className="cmp-icon">
+                      {novoWin ? <Check size={16} /> : anteriorWin ? <X size={16} /> : <Minus size={16} />}
+                    </span>
                   </span>
                 </td>
               </tr>

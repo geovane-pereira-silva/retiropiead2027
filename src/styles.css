@@ -228,13 +228,14 @@ body {
 .cmp tbody td {
   padding: 0.75rem 1rem; color: var(--color-muted);
   border-bottom: 1px solid var(--color-line);
-  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  vertical-align: middle;
 }
 .cmp tbody tr:last-child th, .cmp tbody tr:last-child td { border-bottom: 0; }
 .cmp td.win { color: var(--color-green); }
 .cmp td.win .cmp-icon { color: var(--color-green); }
 .cmp td.lose { color: var(--color-red); }
 .cmp td.lose .cmp-icon { color: var(--color-red); }
+.cmp td .cmp-inline { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .cmp-icon { opacity: 0.75; }
 .cmp-compact tbody td, .cmp-compact tbody th { padding: 0.5rem 0.75rem; display: table-cell; font-size: 0.9rem; }
 
