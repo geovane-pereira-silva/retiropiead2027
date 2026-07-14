@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
 
 import { retiro, calcCenario, pontoEquilibrio, totalCustosFixos, totalCustosVariaveisPorPessoa } from "../content/retiro";
@@ -14,7 +15,7 @@ export type Section = {
   kicker: string;
   title: string;
   lead?: string;
-  Component: () => JSX.Element;
+  Component: () => ReactElement;
 };
 
 /* ═══════════════════════ 1. RESUMO EXECUTIVO ═══════════════════════ */
