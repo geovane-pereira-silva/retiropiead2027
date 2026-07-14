@@ -52,12 +52,12 @@ export default defineConfig({
           ],
         },
         manifest: {
-          name: "O Clamor que Move a Mão de Deus",
-          short_name: "O Clamor",
-          description: "Ministração em slides — Juízes 6:1-16.",
+          name: "Retiro Conexão Jovem 2026",
+          short_name: "Conexão Jovem",
+          description: "Retiro Conexão Jovem 2026 — Sítio Santa Clara, Campos do Jordão.",
           display: "standalone",
-          background_color: "#f2f2f2",
-          theme_color: "#1a1a1a",
+          background_color: "#08090c",
+          theme_color: "#08090c",
           start_url: "/",
           icons: [
             { src: "/favicon.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
