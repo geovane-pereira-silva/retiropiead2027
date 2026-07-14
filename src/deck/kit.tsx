@@ -90,7 +90,7 @@ export function DonutChart({
         </Pie>
         <Tooltip
           {...tooltipStyle}
-          formatter={(v: number, n) => [`${brl(v)} (${((v / total) * 100).toFixed(0)}%)`, String(n)]}
+          formatter={((v: number, n: string) => [`${brl(v)} (${((v / total) * 100).toFixed(0)}%)`, n]) as never}
         />
       </PieChart>
     </ResponsiveContainer>
@@ -111,9 +111,9 @@ export function HBar({
         <CartesianGrid stroke={LINE} horizontal={false} />
         <XAxis type="number" stroke={MUTED} tick={{ fill: MUTED, fontSize: 12 }} tickFormatter={valueFormatter} />
         <YAxis type="category" dataKey="rotulo" stroke={MUTED} tick={{ fill: INK, fontSize: 13 }} width={170} />
-        <Tooltip {...tooltipStyle} formatter={(v: number) => valueFormatter(v)} />
+        <Tooltip {...tooltipStyle} formatter={((v: number) => valueFormatter(v)) as never} />
         <Bar dataKey="valor" fill={GOLD} radius={[0, 8, 8, 0]}>
-          <LabelList dataKey="valor" position="right" formatter={(v: number) => valueFormatter(v)} fill={INK} fontSize={12} />
+          <LabelList dataKey="valor" position="right" formatter={((v: number) => valueFormatter(v)) as never} fill={INK} fontSize={12} />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -130,7 +130,7 @@ export function ProjectionLine({
         <CartesianGrid stroke={LINE} />
         <XAxis dataKey="participantes" stroke={MUTED} tick={{ fill: MUTED, fontSize: 12 }} label={{ value: "Participantes", position: "insideBottom", offset: -4, fill: MUTED, fontSize: 12 }} />
         <YAxis stroke={MUTED} tick={{ fill: MUTED, fontSize: 12 }} tickFormatter={brlCompact} />
-        <Tooltip {...tooltipStyle} formatter={(v: number) => brl(v)} labelFormatter={(l) => `${l} participantes`} />
+        <Tooltip {...tooltipStyle} formatter={((v: number) => brl(v)) as never} labelFormatter={((l: number) => `${l} participantes`) as never} />
         <Line type="monotone" dataKey="receita" stroke={GOLD_SOFT} strokeWidth={2} dot={false} name="Receita" />
         <Line type="monotone" dataKey="custo"   stroke={RED}       strokeWidth={2} dot={false} name="Custo total" strokeDasharray="4 4" />
         <Line type="monotone" dataKey="saldo"   stroke={GREEN}     strokeWidth={3} dot={{ r: 3, fill: GREEN }} name="Saldo" />
