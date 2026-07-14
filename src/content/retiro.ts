@@ -79,6 +79,12 @@ export const retiro = {
     "Devocionais",
     "Cultos e ministrações",
   ],
+  instagram: [
+    // Cole aqui links de posts/reels públicos do Instagram.
+    // thumb é opcional — se ausente, o card usa gradiente com o título.
+    // Exemplo:
+    // { url: "https://www.instagram.com/reel/XXXXXXXXXXX/", titulo: "Retiro 2024 — Melhores momentos", descricao: "Um resumo do que Deus fez.", thumb: "" },
+  ] as { url: string; titulo: string; descricao?: string; thumb?: string }[],
   valores: {
     inscricao: 400,
     parcelamento: "Em até 4x sem juros no cartão",
