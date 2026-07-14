@@ -79,10 +79,13 @@ export function DonutChart({
           data={data}
           dataKey="valor"
           nameKey="rotulo"
-          innerRadius="55%"
-          outerRadius="88%"
+          cx="50%"
+          cy="50%"
+          innerRadius={65}
+          outerRadius={110}
           paddingAngle={2}
           stroke="transparent"
+          isAnimationActive={false}
         >
           {data.map((_, i) => (
             <Cell key={i} fill={palette[i % palette.length]} />
