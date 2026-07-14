@@ -199,7 +199,7 @@ function Cenarios() {
 /* ═══════════════════════ 6. RISCOS ═══════════════════════ */
 function Riscos() {
   return (
-    <div className="grid grid-2-1 gap-4">
+    <div style={{ display: "grid", gap: "1.5rem" }}>
       <RiskMatrix />
       <RiskTable />
     </div>
