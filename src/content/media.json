@@ -1,0 +1,23 @@
+{
+  "fotos": {
+    "fachada": [],
+    "vista_aerea": [],
+    "salao_principal": [],
+    "auditorio": [],
+    "dormitorios": [],
+    "quartos": [],
+    "cozinha": [],
+    "refeitorio": [],
+    "area_externa": [],
+    "piscina": [],
+    "salas": [],
+    "convivencia": []
+  },
+  "videos": {
+    "tour_geral": "",
+    "drone": "",
+    "salao": "",
+    "dormitorios": "",
+    "piscina": ""
+  }
+}
