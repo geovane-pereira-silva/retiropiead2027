@@ -1,185 +1,124 @@
-# Landing Page — Retiro Conexão Jovem
+# Reestruturação — Apresentação Executiva do Retiro de Carnaval 2027
 
-Substituir totalmente o app atual de slides (PBTX) por uma Landing Page moderna, estilo Apple, para o Retiro Conexão Jovem no sítio Santa Clara (Campos do Jordão – SP). Antes de escrever código, este plano define arquitetura, navegação, wireframe, componentes, dados e estratégia de mídia — conforme você pediu.
+Transformar o projeto atual (landing page) em uma **apresentação executiva** para reunião de liderança, mantendo toda a base técnica reaproveitável para virar landing pública depois. Antes de mexer, este é o plano.
 
----
+## Correção de data
 
-## 1. Arquitetura das páginas
+O evento acontece **sexta a terça de Carnaval de 2027** → **12/02/2027 (sex) a 16/02/2027 (ter)**. Todo `dataInicio`, `dataFim`, `dataTexto` e a edição em `retiro.ts` serão atualizados. `edicao: "2027"`.
 
-Site single-page com seções âncora + páginas secundárias para conteúdo denso.
+## Nova arquitetura em uma frase
 
-```text
-/                     Landing principal (hero + todas as seções)
-/local                Santa Clara em detalhe (tour + estrutura)
-/galeria              Galeria completa (fotos por categoria + vídeos)
-/programacao          Programação expandida com timeline
-/inscricao            Checkout / formulário de inscrição
-/faq                  FAQ completa
-/estudo               Área restrita: viabilidade, riscos, SWOT, regional, família
-                      (protegida por senha simples — só líderes/pastor)
-```
+Um **deck web navegável** de 10 seções (slides) sobre a mesma base React/TanStack já existente, com navegação por teclado/swipe/menu lateral, modo apresentação em tela cheia, e um "flag" de modo (`?mode=landing`) que reaproveita os mesmos dados para virar landing pública no futuro — **sem reconstrução**.
 
-A landing `/` traz resumos e CTAs; as páginas internas aprofundam.
-
-## 2. Mapa de navegação
+## Rotas
 
 ```text
-Header fixo (glass)
- ├── Logo Conexão Jovem
- ├── Links: Retiro · Local · Galeria · Programação · Valores · FAQ
- └── CTA "Inscreva-se"
-
-Landing /
- ├── Hero (imagem cheia + contador regressivo)
- ├── Sobre o Retiro
- ├── Conheça o Santa Clara         → /local
- ├── Galeria (preview)             → /galeria
- ├── Estrutura (cards)
- ├── Programação (resumo)          → /programacao
- ├── O que está incluso
- ├── Valores + composição do R$400
- ├── Depoimentos
- ├── FAQ (top 5)                   → /faq
- ├── Localização (mapa)
- ├── CTA final
- └── Footer (redes, contato, link discreto /estudo)
+/                    Home do deck — capa + índice + botão "Apresentar"
+/deck/$slug          Cada seção (slide). slug = resumo, local, comparativo, ...
+/deck/print          Todas as seções empilhadas para impressão / PDF
+/inscricao (futuro)  Placeholder — vira landing quando ativar mode=landing
 ```
 
-## 3. Wireframe textual (landing)
+Navegação: setas ←/→, `Home`/`End`, `P` para presenter, `Esc` sai. Sidebar/índice recolhível.
 
-```text
-┌──────────────────────────────────────────┐
-│ HERO — imagem full-bleed + overlay       │
-│  "Conexão Jovem 2026"                    │
-│  subtítulo curto + versículo             │
-│  [Quero participar] [Conheça o local]    │
-│  ⏳ 00d 00h 00m 00s                       │
-├──────────────────────────────────────────┤
-│ SOBRE — 3 cards (Propósito / Visão / Você)│
-├──────────────────────────────────────────┤
-│ SANTA CLARA — split: foto + bullets      │
-│ [Ver tour completo →]                    │
-├──────────────────────────────────────────┤
-│ GALERIA — abas (Fotos | Vídeos)          │
-│  Fotos: chips de categoria + carrossel   │
-│  Vídeos: grid de cards separados         │
-├──────────────────────────────────────────┤
-│ ESTRUTURA — grid de 9 cards com ícones   │
-├──────────────────────────────────────────┤
-│ PROGRAMAÇÃO — timeline (Manhã/Tarde/Noite)│
-├──────────────────────────────────────────┤
-│ INCLUSO — 9 chips ✔                       │
-├──────────────────────────────────────────┤
-│ VALORES — card com R$400, parcelamento,  │
-│  PIX/QR + expandível "onde vai seu R$"   │
-├──────────────────────────────────────────┤
-│ DEPOIMENTOS — carrossel                  │
-├──────────────────────────────────────────┤
-│ FAQ — accordion (5 principais)           │
-├──────────────────────────────────────────┤
-│ LOCALIZAÇÃO — mapa + tempo de viagem     │
-├──────────────────────────────────────────┤
-│ CTA FINAL — full-bleed "Sua vaga espera" │
-├──────────────────────────────────────────┤
-│ FOOTER                                   │
-└──────────────────────────────────────────┘
-```
+## Estrutura de dados (única fonte de verdade)
 
-## 4. Componentes necessários
-
-- Layout: `SiteHeader`, `SiteFooter`, `Section`, `Container`
-- Hero: `Hero`, `Countdown`, `CtaPair`
-- Conteúdo: `FeatureCard`, `IconCard`, `SplitBlock`, `Stat`
-- Galeria: `GalleryTabs`, `CategoryChips`, `PhotoCarousel`, `VideoCard`, `Lightbox`
-- Programação: `Timeline`, `TimelineItem`, `PeriodTabs`
-- Valores: `PriceCard`, `PixQr`, `CostBreakdown` (expansível)
-- Sociais: `TestimonialCarousel`, `TestimonialCard`
-- Utilidade: `Faq`, `MapEmbed`, `AnchorNav`, `ScrollProgress`
-- Estudo (rota protegida): `SwotGrid`, `RiskMatrix`, `BudgetTable`, `ScenarioCard`
-
-Base: shadcn/ui + Tailwind v4 + framer-motion. Ícones lucide-react.
-
-## 5. Estrutura de dados (`src/content/retiro.ts` + JSON)
+Toda a apresentação é **data-driven** — nada hardcoded em componente. Isso é o que permite reuso na landing depois.
 
 ```ts
-type Retiro = {
-  edicao: string;               // "2026"
-  data: { inicio: string; fim: string };
-  local: { nome: string; cidade: string; uf: string; mapsUrl: string };
-  hero: { titulo: string; subtitulo: string; versiculo: string; imagem: string };
-  sobre: { proposito: string; visao: string; publico: string };
-  estrutura: { icone: string; titulo: string; descricao: string }[];
-  programacao: { dia: string; blocos: { periodo: "manha"|"tarde"|"noite"; itens: string[] }[] }[];
-  incluso: string[];
-  valores: { inscricao: number; parcelamento: string; pix: string; qrImage: string;
-             composicao: { rotulo: string; valor: number }[] };
-  faq: { pergunta: string; resposta: string }[];
-  depoimentos: { nome: string; texto: string; foto?: string; videoUrl?: string }[];
-};
-```
+// src/content/retiro.ts (expandido)
+export const retiro = {
+  edicao: "2027",
+  dataInicio, dataFim, dataTexto,  // 12–16/02/2027
+  local, hero, sobre, estrutura, programacao, incluso, valores, faq, depoimentos,
+  instagram,
 
-Mídia separada em `src/content/media.json`:
-
-```json
-{
-  "fotos": {
-    "fachada": [], "vista_aerea": [], "salao_principal": [], "auditorio": [],
-    "dormitorios": [], "quartos": [], "cozinha": [], "refeitorio": [],
-    "area_externa": [], "piscina": [], "salas": [], "convivencia": []
-  },
-  "videos": {
-    "tour_geral": "", "drone": "", "salao": "", "dormitorios": "",
-    "piscina": "", "outros": []
-  }
+  // NOVOS blocos:
+  comparativo:  { criterios: [...], anterior: {...}, santaClara: {...} },
+  financas:     { inscricao, composicao, custosFixos, custosVariaveis, transporte, ... },
+  cenarios:     { conservador, provavel, otimista },  // { participantes, receita, custo, saldo }
+  riscos:       [{ risco, prob: 1-5, impacto: 1-5, mitigacao }],
+  custosExtras: [{ item, valor, categoria, obs }],
+  swot:         { forcas: [], fraquezas: [], oportunidades: [], ameacas: [] },
+  crescimento:  { outrasIgrejas, familias, expansao, comunhao },  // cada um com {vantagens, desafios, impacto}
+  conclusao:    { beneficios, riscos, condicoes, recomendacoes, proximosPassos },
 }
 ```
 
-Estudo (rota protegida) em `src/content/estudo.ts`: custos, riscos, SWOT, regional, família, reserva técnica.
+## As 10 seções (slides)
 
-## 6. Estratégia de mídia (Google Drive → site)
+1. **Resumo Executivo** — 4 KPIs (participantes-alvo, investimento total, ticket médio, ponto de equilíbrio) + 4 cards (Objetivo / Justificativa / Benefícios / Desafios).
+2. **Local — Santa Clara** — hero visual + info da estrutura, capacidade, diferenciais + mapa. Galeria de fotos e galeria de vídeos em **módulos independentes** (abas).
+3. **Comparativo de Locais** — tabela lado a lado (anterior × Santa Clara) por critério, com destaque visual do vencedor por linha.
+4. **Estudo Financeiro** — dashboard com: gráfico de pizza (composição do R$400), barras (custos por categoria), indicadores (ponto de equilíbrio, valor líquido/participante), linha (projeção por nº de participantes), comparativo com retiro anterior.
+5. **Cenários** — 3 cards grandes (Conservador / Provável / Otimista) com participantes, receita, custo, saldo, margem — visualmente comparáveis.
+6. **Gestão de Riscos** — matriz 5×5 (probabilidade × impacto) como **heatmap** colorido com bolhas por risco + tabela lateral com plano de mitigação.
+7. **Custos Adicionais** — tabela agrupada por categoria (Ministração, Logística, Estrutura, Reserva) com subtotais e total.
+8. **SWOT** — grid 2×2 clássico.
+9. **Oportunidades de Crescimento** — 4 estudos (outras igrejas, famílias, expansão, comunhão) — cada um em card com vantagens/desafios/impacto financeiro.
+10. **Conclusão** — recomendação executiva, condições para aprovação, próximos passos com timeline.
 
-Recomendação, do mais simples ao mais robusto:
+## Módulos de mídia (fotos, vídeos, Instagram)
 
-1. **JSON manual (fase 1 — recomendado para começar)**: você cola em `media.json` os IDs/URLs. Para Drive, converter link de compartilhamento em URL direta:
-   - Foto: `https://drive.google.com/thumbnail?id=<ID>&sz=w2000`
-   - Vídeo: embed `https://drive.google.com/file/d/<ID>/preview`
-   Helper `driveImage(id)` / `driveVideo(id)` no código evita boilerplate.
-2. **Script de sync (fase 2)**: um script Node lista uma pasta via Google Drive API (API key de leitura pública) e gera `media.json` automaticamente. Basta rodar `bun run sync:media` sempre que subir mídia nova.
-3. **Google Photos**: API é limitada (não lista álbuns públicos sem OAuth do dono) — evitar.
-4. **Cloudinary / R2**: melhor performance e compressão automática; fica como upgrade futuro.
+Já existe `src/content/media.json` + `src/lib/drive.ts` (Google Drive) + `src/components/InstagramGallery.tsx`. Vou **reusar tudo** dentro da seção "Local":
 
-Começamos com (1), deixamos (2) preparado para quando você tiver a pasta pública.
+- **Fotos do Drive**: por categoria (fachada, dormitórios, etc.), carrossel horizontal com lazy-load. Basta colar IDs do Drive em `media.json`.
+- **Vídeos do Drive**: cards com `iframe` `drive.google.com/file/d/{id}/preview` sob demanda (só monta ao clicar). Ninguém precisa de conta.
+- **Instagram**: já funciona (opção 3 que aplicamos) — card + modal com embed oficial.
 
-## 7. Sugestões adicionais (o que ainda não foi considerado)
+## Componentes novos (reutilizáveis)
 
-- **Área do inscrito** (fase futura, com Lovable Cloud): login por e-mail, ver comprovante, baixar termo, ver quarto/ônibus.
-- **Termo de responsabilidade** digital (menores de idade) assinável no cadastro.
-- **Seguro-viagem/assistência** — item de custo real quase sempre esquecido.
-- **Kit de divulgação** (`/kit`) com artes prontas para stories, versículos, contagem regressiva — vira motor de compartilhamento orgânico.
-- **Rastreamento**: GA4 + eventos por CTA para medir conversão.
-- **PWA já existente**: reaproveitar o service worker para funcionar offline no local (sinal fraco em Campos do Jordão).
-- **Modo alto contraste / acessibilidade**: bom para líderes mais velhos apresentarem.
-- **Comparativo "retiro anterior × Santa Clara"** — reforça o salto de qualidade.
-- **Meta de inscrições** com barra de progresso (gamificação suave).
-- **Página de agradecimento pós-inscrição** com próximos passos + grupo de WhatsApp.
+- `Slide` (wrapper com kicker + título + navegação)
+- `Kpi` (número grande + label + tendência opcional)
+- `PieChart`, `BarChart`, `LineChart`, `HeatMap` — recharts (leve, já compatível)
+- `ComparisonTable` (linhas com destaque de vencedor)
+- `ScenarioCard` (com participantes/receita/custo/saldo animados)
+- `RiskMatrix` (heatmap 5×5 com bolhas posicionadas)
+- `SwotGrid`
+- `MoneyBreakdown` (visual da composição do ticket)
+- `SlideNav` (setas, dots, atalhos de teclado)
+- `PresenterMode` (fullscreen + timer opcional)
 
-## Passos de implementação (após sua aprovação)
+## Reaproveitamento futuro para landing
 
-1. Remover conteúdo PBTX: `src/lib/pbtxSlides.ts`, `src/routes/index.tsx` atual, CSS de deck, asset do pptx, manifest antigo.
-2. Instalar `framer-motion` e componentes shadcn base (button, card, tabs, accordion, dialog, carousel).
-3. Criar design tokens no `src/styles.css` (paleta escura sofisticada + serifa display + sans neutra).
-4. Montar `SiteHeader`/`SiteFooter` e layout raiz.
-5. Landing `/` com todas as seções usando dados de `content/retiro.ts` + `media.json`.
-6. Rotas `/local`, `/galeria`, `/programacao`, `/faq`, `/inscricao`, `/estudo` (protegida por senha simples client-side + prompt).
-7. Ajustar PWA (nome, ícones, manifest, cache das seções principais).
-8. SEO por rota (title, description, og) e sitemap.
+Todas as seções expõem uma prop `mode: "deck" | "landing"`:
+- **deck**: uma seção por viewport, com chrome de slide (kicker, footer, contador).
+- **landing**: seções empilhadas em scroll, sem chrome, com CTAs de inscrição.
 
-## Perguntas rápidas antes de codar
+Uma rota `/inscricao` (futura) monta o modo `landing` com as mesmas seções relevantes (Local, Estrutura, Programação, Valores, FAQ, CTA). Zero reescrita — só flip do modo e ordem das seções.
 
-- **Data do retiro** e horário — para o contador regressivo real.
-- **Cores de marca** do Conexão Jovem (tem logo/paleta?) ou proponho paleta nova.
-- **Fotos/vídeos já disponíveis** (mesmo poucas) para não ficar com placeholders.
-- **Inscrição**: só formulário + PIX manual, ou integração com pagamento (Stripe/Mercado Pago)?
-- **Página /estudo**: senha simples ou totalmente pública?
+## Design
 
-Se estiver ok com este plano, respondo suas perguntas curtinhas acima e já começo pela fundação visual + hero.
+- Paleta atual (fundo #08090c, dourado #d8b26a, serifa Fraunces) já é executiva e sóbria — **mantém**. Ajustes: mais espaço branco, hierarquia tipográfica clara, cards com bordas hairline (1px) em vez de sombras.
+- Gráficos com paleta neutra (dourado como destaque, verde/vermelho apenas para saldo positivo/negativo).
+- **Sem parágrafos longos** — bullets curtos, chips, números grandes. Cada slide entrega **uma ideia**.
+
+## Dependências
+
+- `recharts` — biblioteca de gráficos (React nativo, sem D3 pesado, ~90KB gzip). Alternativa: `visx` (mais leve mas verboso). Recomendo recharts.
+- Já temos: `framer-motion`, `lucide-react`, TanStack Router. Suficiente.
+
+## Escopo desta primeira entrega
+
+1. Corrigir datas para Carnaval 2027 (12–16/02/2027).
+2. Instalar recharts.
+3. Ampliar `retiro.ts` com os blocos novos (números **placeholder realistas** que você refina depois).
+4. Criar 10 rotas de seção + rota `/` como índice/capa.
+5. Componentes: `Slide`, `Kpi`, gráficos, `ComparisonTable`, `RiskMatrix`, `ScenarioCard`, `SwotGrid`.
+6. Navegação por teclado + presenter mode (fullscreen).
+7. Rota `/deck/print` empilhada, pronta para "Cmd+P → PDF".
+8. Manter galerias existentes (Drive + Instagram) na seção Local.
+
+O que fica **fora** desta primeira entrega (para não inflar demais):
+- Landing `/inscricao` — só o placeholder da rota.
+- Área protegida por senha — não é mais necessária (o deck é a área executiva).
+- Sync automático do Drive — segue por JSON manual como hoje.
+
+## Perguntas antes de implementar
+
+1. **Números-base**: uso valores realistas placeholder (ex.: local R$ 10.000, transporte R$ 8.000, inscrição R$ 400, meta de 140 participantes) e você refina, ou você já tem uma planilha para eu importar?
+2. **Preletor / cantor convidado**: já há valor estimado (oferta + hospedagem + transporte)?
+3. **Retiro anterior** (para o comparativo): tem custo total e nº de participantes reais do último ano?
+4. **Cenário conservador / provável / otimista**: sugiro 80 / 120 / 160 participantes — ok?
+
+Se der ok no plano (e me responder o que puder das 4 perguntas), começo pela correção de datas + fundação do deck + seções 1–3. As demais entram na sequência.
