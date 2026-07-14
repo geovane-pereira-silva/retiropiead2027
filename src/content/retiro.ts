@@ -3,7 +3,7 @@ export type MediaItem = { id?: string; url?: string; caption?: string };
 export const retiro = {
   edicao: "2026",
   nome: "Conexão Jovem",
-  tema: "Enraizados",
+  tema: "Retiro de Jovens",
   dataInicio: "2026-07-10T18:00:00-03:00",
   dataFim: "2026-07-12T14:00:00-03:00",
   dataTexto: "10 a 12 de Julho de 2026",
@@ -15,7 +15,7 @@ export const retiro = {
     tempoViagem: "≈ 3h de São Paulo",
   },
   hero: {
-    titulo: "Enraizados",
+    titulo: "Retiro de Jovens",
     subtitulo: "Retiro Conexão Jovem 2026",
     versiculo: "“Como o cervo brama pelas correntes das águas, assim brama a minha alma por ti, ó Deus.” — Salmos 42:1",
   },

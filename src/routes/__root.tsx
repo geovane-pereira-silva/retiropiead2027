@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "theme-color", content: "#08090c" },
-      { title: "Retiro Conexão Jovem 2026 — Enraizados" },
+      { title: "Retiro Conexão Jovem 2026" },
       { name: "description", content: "Retiro Conexão Jovem 2026 no Sítio Santa Clara, Campos do Jordão. Três dias de comunhão, cultos e crescimento. Inscrições abertas." },
       { property: "og:site_name", content: "Retiro Conexão Jovem" },
       { property: "og:type", content: "website" },
