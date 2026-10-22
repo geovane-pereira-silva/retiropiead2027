@@ -52,12 +52,12 @@ export default defineConfig({
           ],
         },
         manifest: {
-          name: "Retiro Conexão Jovem 2026",
+          name: "Retiro Conexão Jovem 2027",
           short_name: "Conexão Jovem",
-          description: "Retiro Conexão Jovem 2026 — Sítio Santa Clara, Campos do Jordão.",
+          description: "Retiro Conexão Jovem 2027 — informações e inscrições.",
           display: "standalone",
-          background_color: "#08090c",
-          theme_color: "#08090c",
+          background_color: "#090a12",
+          theme_color: "#090a12",
           start_url: "/",
           icons: [
             { src: "/favicon.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },

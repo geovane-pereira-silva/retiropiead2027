@@ -1,0 +1,4315 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..836ea50
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,9 @@
++# Variáveis de ambiente do SERVIDOR (nunca use o prefixo VITE_ e nunca faça commit dos valores reais).
++# Configure-as no painel de segredos/variáveis da hospedagem (ex.: Lovable Cloud / Cloudflare).
++
++# URL do web app do Google Apps Script que grava na planilha (termina em /exec). OBRIGATÓRIA.
++APPS_SCRIPT_URL=
++
++# Segredo opcional: se preenchido, é enviado no corpo como "token" e o script pode recusar quem não o tiver.
++# Se usar, defina a mesma chave em Propriedades do script → TOKEN (veja docs/apps-script/Code.gs).
++APPS_SCRIPT_TOKEN=
+diff --git a/docs/apps-script/Code.gs b/docs/apps-script/Code.gs
+new file mode 100644
+index 0000000..ae25801
+--- /dev/null
++++ b/docs/apps-script/Code.gs
+@@ -0,0 +1,62 @@
++/**
++ * REFERÊNCIA do doPost que casa com o que o site envia (src/server/sheets.server.ts).
++ * NÃO substitua o seu script sem comparar: se o seu já grava na planilha, basta garantir
++ * que ele (1) leia JSON de e.postData.contents, (2) bloqueie CPF repetido e
++ * (3) responda JSON { ok: true } ou { ok: false, code: "DUPLICATE" }.
++ *
++ * Implantação: Implantar → Nova implantação → App da Web
++ *   Executar como: Eu  |  Quem pode acessar: Qualquer pessoa
++ * (o app é público, mas a PLANILHA continua privada: compartilhe-a só com quem for autorizado).
++ * Depois de editar o código, crie uma NOVA VERSÃO da implantação.
++ */
++const NOME_ABA = "Inscrições";
++const COLUNAS = [
++  "enviadoEm", "nomeCompleto", "dataNascimento", "idadeNaDataDoRetiro", "faixa", "valorTexto", "valor",
++  "cpf", "telefone", "whatsapp", "email", "igreja", "cidade",
++  "menorDeIdade", "responsavelNome", "responsavelTelefone",
++  "emergenciaNome", "emergenciaTelefone", "necessidades",
++  "aceiteRegras", "aceitePrivacidade", "versaoTermos", "statusPagamento", "idempotencyKey", "origem",
++];
++const COLUNAS_TEXTO = ["cpf", "telefone", "whatsapp", "responsavelTelefone", "emergenciaTelefone", "dataNascimento"];
++
++function saida(obj) {
++  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
++}
++
++function doGet() {
++  return saida({ ok: true, servico: "inscricoes-retiro" }); // teste de vida, sem dados
++}
++
++function doPost(e) {
++  const trava = LockService.getScriptLock();
++  try {
++    trava.waitLock(20000);
++    const d = JSON.parse(e.postData.contents);
++
++    const token = PropertiesService.getScriptProperties().getProperty("TOKEN");
++    if (token && d.token !== token) return saida({ ok: false, code: "UNAUTHORIZED" });
++
++    const planilha = SpreadsheetApp.getActiveSpreadsheet(); // script vinculado à planilha
++    let aba = planilha.getSheetByName(NOME_ABA) || planilha.insertSheet(NOME_ABA);
++    if (aba.getLastRow() === 0) {
++      aba.appendRow(COLUNAS);
++      aba.setFrozenRows(1);
++      aba.getRange(1, 1, 1, COLUNAS.length).setFontWeight("bold");
++      COLUNAS_TEXTO.forEach((c) => aba.getRange(1, COLUNAS.indexOf(c) + 1, aba.getMaxRows(), 1).setNumberFormat("@"));
++    }
++
++    const ultima = aba.getLastRow();
++    if (ultima > 1) {
++      const cpfs = aba.getRange(2, COLUNAS.indexOf("cpf") + 1, ultima - 1, 1).getValues()
++        .map((l) => String(l[0]).replace(/\D/g, "").padStart(11, "0"));
++      if (cpfs.indexOf(String(d.cpf)) !== -1) return saida({ ok: false, code: "DUPLICATE" });
++    }
++
++    aba.appendRow(COLUNAS.map((c) => (d[c] === undefined || d[c] === null ? "" : d[c])));
++    return saida({ ok: true });
++  } catch (erro) {
++    return saida({ ok: false, code: "ERROR", message: String(erro) });
++  } finally {
++    trava.releaseLock();
++  }
++}
+diff --git a/docs/inscricoes.md b/docs/inscricoes.md
+new file mode 100644
+index 0000000..ac6673b
+--- /dev/null
++++ b/docs/inscricoes.md
+@@ -0,0 +1,24 @@
++# Inscrições do retiro — como funciona e o que configurar
++
++## Onde editar o conteúdo
++- `src/content/evento.ts`: datas, valores por faixa etária, textos, FAQ, programação, regras, contatos.
++- `src/content/media.json`: fotos e vídeos do local (veja o cabeçalho de `src/landing/Gallery.tsx`).
++- Nenhum componente precisa mudar para atualizar datas, valores ou programação.
++
++## Fluxo
++Navegador → `enviarInscricao` (função de servidor) → valida de novo, recalcula idade/valor → Google Apps Script → planilha.
++O CPF e os demais dados nunca passam por URL, localStorage ou logs. A URL do script fica só no servidor.
++
++## Configuração obrigatória (1 passo)
++Defina `APPS_SCRIPT_URL` (e, opcionalmente, `APPS_SCRIPT_TOKEN`) no painel de variáveis/segredos da hospedagem.
++Sem isso o formulário informa "inscrições temporariamente indisponíveis" e **não** finge sucesso.
++
++## Formato enviado à planilha
++JSON no corpo do POST (`text/plain`), com os campos de `CorpoPlanilha` em `src/lib/inscricao.ts`.
++Resposta esperada: `{ "ok": true }`, ou `{ "ok": false, "code": "DUPLICATE" }` para CPF repetido.
++Qualquer outra resposta (HTML de erro, timeout) é tratada como "não confirmado" — nunca como sucesso.
++Se o seu script usa outros nomes de campos, ajuste só `montarRequisicao` em `src/server/sheets.server.ts`.
++Referência pronta: `docs/apps-script/Code.gs`. Teste real: `node scripts/testar-planilha.mjs`.
++
++## Testes automáticos
++`npx tsx --test tests/*.test.ts` (regras de idade/valor/CPF e fluxo do servidor contra um mock local do Apps Script).
+diff --git a/scripts/testar-planilha.mjs b/scripts/testar-planilha.mjs
+new file mode 100644
+index 0000000..d6ea99a
+--- /dev/null
++++ b/scripts/testar-planilha.mjs
+@@ -0,0 +1,44 @@
++// Envia UMA linha de teste para o Apps Script e mostra a resposta bruta.
++// Uso:  APPS_SCRIPT_URL="https://script.google.com/macros/s/.../exec" node scripts/testar-planilha.mjs
++// Atenção: grava de verdade uma linha "TESTE" na planilha — apague-a depois.
++const url = process.env.APPS_SCRIPT_URL;
++if (!url) {
++  console.error("Defina APPS_SCRIPT_URL.");
++  process.exit(1);
++}
++const corpo = {
++  idempotencyKey: `teste-${Date.now()}`,
++  enviadoEm: new Date().toISOString(),
++  nomeCompleto: "TESTE Pode Apagar",
++  dataNascimento: "1990-01-01",
++  idadeNaDataDoRetiro: 37,
++  faixa: "A partir de 10 anos",
++  valor: 400,
++  valorTexto: "R$ 400,00",
++  cpf: "52998224725",
++  telefone: "35999990000",
++  whatsapp: "35999990000",
++  email: "",
++  igreja: "TESTE",
++  cidade: "TESTE",
++  menorDeIdade: "NÃO",
++  responsavelNome: "",
++  responsavelTelefone: "",
++  emergenciaNome: "TESTE Contato",
++  emergenciaTelefone: "35988880000",
++  necessidades: "",
++  aceiteRegras: "SIM",
++  aceitePrivacidade: "SIM",
++  versaoTermos: "teste",
++  statusPagamento: "NÃO CONFIRMADO",
++  origem: "teste-manual",
++};
++if (process.env.APPS_SCRIPT_TOKEN) corpo.token = process.env.APPS_SCRIPT_TOKEN;
++const r = await fetch(url, {
++  method: "POST",
++  headers: { "content-type": "text/plain;charset=utf-8" },
++  body: JSON.stringify(corpo),
++  redirect: "follow",
++});
++console.log("HTTP", r.status);
++console.log((await r.text()).slice(0, 500));
+diff --git a/src/content/evento.ts b/src/content/evento.ts
+new file mode 100644
+index 0000000..6d75c73
+--- /dev/null
++++ b/src/content/evento.ts
+@@ -0,0 +1,214 @@
++// ============================================================================
++// Conteúdo PÚBLICO da landing page do retiro — fonte única editável.
++//
++// Para mudar datas, valores, programação, FAQ ou textos, edite apenas este
++// arquivo (e src/content/media.json para fotos/vídeos). Nenhum componente
++// precisa ser alterado.
++//
++// Regra do projeto: nada aqui pode ser inventado. Tudo o que ainda não foi
++// confirmado pela organização fica como `null`, lista vazia ou marcado
++// `status: "a-confirmar"`, e a página mostra "em breve" automaticamente.
++// ============================================================================
++
++import type { Faixa } from "../lib/inscricao";
++
++export type { Faixa };
++
++export type ItemProgramacao = { hora?: string; titulo: string; descricao?: string };
++export type DiaProgramacao = { titulo: string; data?: string; itens: ItemProgramacao[] };
++
++export type InfoCard = {
++  id: "hospedagem" | "alimentacao" | "transporte" | "orientacoes";
++  titulo: string;
++  status: "confirmado" | "a-confirmar";
++  texto: string;
++  itens?: string[];
++};
++
++export const evento = {
++  /** false → a página de inscrição exibe aviso de "inscrições encerradas/em breve" */
++  inscricoesAbertas: true,
++
++  nome: "Retiro Conexão Jovem",
++  edicao: "2027",
++  ministerio: "Conexão Jovem",
++  igreja: "Primeira Assembleia de Deus",
++  igrejaCidade: "Santa Rita do Sapucaí, MG",
++
++  /** Tema oficial ainda não informado. Preencha com texto para aparecer no topo. */
++  tema: null as string | null,
++
++  fraseImpacto: "Uma geração conectada ao céu: louvor, oração e comunhão em um só lugar.",
++
++  // Datas (somente dia). A idade é calculada na data de início.
++  inicioData: "2027-02-12",
++  fimData: "2027-02-16",
++  dataTexto: "12 a 16 de fevereiro de 2027",
++  periodoNota: "Sexta a terça-feira de Carnaval",
++
++  // Local conforme o conteúdo já existente no projeto e o nome da pasta de fotos.
++  // CONFIRMAR com a organização antes de divulgar.
++  local: {
++    nome: "Sítio Santa Clara",
++    cidade: "Campos do Jordão",
++    uf: "SP",
++    mapsUrl: null as string | null,
++  },
++
++  // Valores definidos pela organização.
++  faixas: [
++    {
++      id: "menor-5",
++      rotulo: "Menores de 5 anos",
++      idadeMin: 0,
++      idadeMax: 4,
++      valor: null,
++      nota: "Valor a definir pela organização",
++    },
++    { id: "5-9", rotulo: "De 5 a 9 anos", idadeMin: 5, idadeMax: 9, valor: 200 },
++    { id: "10-mais", rotulo: "A partir de 10 anos", idadeMin: 10, idadeMax: null, valor: 400 },
++  ] as Faixa[],
++
++  sobre: [
++    {
++      titulo: "Propósito espiritual",
++      texto:
++        "Dias separados para buscar a Deus, ser edificado pela Palavra e renovar a fé junto com a igreja.",
++    },
++    {
++      titulo: "Comunhão",
++      texto:
++        "Fortalecer os laços entre jovens e famílias da Primeira Assembleia de Deus em um ambiente de acolhimento.",
++    },
++    {
++      titulo: "Louvor e oração",
++      texto: "Momentos de adoração, intercessão e busca pela presença de Deus.",
++    },
++    {
++      titulo: "Convivência cristã",
++      texto:
++        "Tempo para conversar, servir uns aos outros, conhecer pessoas e criar memórias com propósito.",
++    },
++  ],
++
++  // Informações práticas. Só "valores" e as orientações do formulário estão confirmados.
++  informacoes: [
++    {
++      id: "hospedagem",
++      titulo: "Hospedagem",
++      status: "a-confirmar",
++      texto: "Os detalhes de acomodação serão divulgados pela organização.",
++    },
++    {
++      id: "alimentacao",
++      titulo: "Alimentação",
++      status: "a-confirmar",
++      texto:
++        "Os detalhes das refeições serão divulgados pela organização. Restrições alimentares podem ser informadas no formulário de inscrição.",
++    },
++    {
++      id: "transporte",
++      titulo: "Transporte",
++      status: "a-confirmar",
++      texto: "As informações de transporte serão divulgadas pela organização.",
++    },
++    {
++      id: "orientacoes",
++      titulo: "Orientações",
++      status: "confirmado",
++      texto: "O que você precisa saber para se inscrever:",
++      itens: [
++        "O CPF é obrigatório e identifica a inscrição.",
++        "Menores de 18 anos devem ter nome e telefone do responsável legal informados.",
++        "Informe um contato de emergência.",
++        "Necessidades de hospedagem ou alimentação podem ser descritas no formulário.",
++        "O envio do formulário é um cadastro e não confirma pagamento.",
++      ],
++    },
++  ] as InfoCard[],
++
++  /** Vazio = a seção mostra "programação em breve". Exemplo de preenchimento ao final do arquivo. */
++  programacao: [] as DiaProgramacao[],
++
++  faq: [
++    {
++      p: "Como faço minha inscrição?",
++      r: "Acesse a página de inscrição e preencha o formulário. O valor calculado aparece antes do envio e, ao final, você recebe uma tela de confirmação do cadastro.",
++      status: "confirmado" as const,
++    },
++    {
++      p: "Quais são os valores?",
++      r: "Menores de 5 anos: valor a definir pela organização. De 5 a 9 anos: R$ 200,00. A partir de 10 anos: R$ 400,00. A idade é calculada na data de início do retiro (12/02/2027).",
++      status: "confirmado" as const,
++    },
++    {
++      p: "Enviar o formulário confirma meu pagamento?",
++      r: "Não. O formulário registra o cadastro e seus dados. O envio não significa pagamento confirmado.",
++      status: "confirmado" as const,
++    },
++    {
++      p: "Crianças menores de 5 anos pagam?",
++      r: "O valor para menores de 5 anos ainda será definido pela organização e, por isso, nenhuma cobrança é calculada automaticamente.",
++      status: "confirmado" as const,
++    },
++    {
++      p: "E se o participante for menor de 18 anos?",
++      r: "No formulário, é obrigatório informar nome e telefone do responsável legal quando o participante tem menos de 18 anos na data de início do retiro.",
++      status: "confirmado" as const,
++    },
++    {
++      p: "Por que preciso informar o CPF?",
++      r: "O CPF é obrigatório e serve para identificar a inscrição e evitar cadastros duplicados.",
++      status: "confirmado" as const,
++    },
++    {
++      p: "Como meus dados são usados?",
++      r: "Apenas para organizar o retiro. Veja o aviso de privacidade na página de inscrição.",
++      status: "confirmado" as const,
++    },
++    {
++      p: "Como será a hospedagem, a alimentação e o transporte?",
++      r: "Esses detalhes ainda serão divulgados pela organização.",
++      status: "a-confirmar" as const,
++    },
++    {
++      p: "Como e quando faço o pagamento?",
++      r: "As orientações de pagamento ainda serão divulgadas pela organização.",
++      status: "a-confirmar" as const,
++    },
++  ],
++
++  /** Mostrado na confirmação de inscrição. Ajuste quando houver forma de pagamento definida. */
++  proximosPassos: [
++    "Este cadastro não confirma pagamento.",
++    "A organização divulgará as orientações de pagamento e os próximos passos.",
++    "Guarde esta tela (um print ajuda) e, em caso de dúvida, procure a liderança da Conexão Jovem.",
++  ],
++
++  /** Regras do retiro. Vazio = página mostra "em elaboração". PUBLICAR antes de abrir as inscrições. */
++  regras: [] as string[],
++
++  contato: {
++    whatsapp: null as string | null, // somente dígitos com DDI, ex.: "5535999999999"
++    instagram: null as string | null, // URL completa
++    email: null as string | null,
++  },
++
++  /** Versão do texto de regras/privacidade aceita no formulário (vai para a planilha). */
++  versaoTermos: "2026-10-rascunho",
++};
++
++/*
++Exemplo de programação (cole em `programacao` quando for confirmada):
++
++programacao: [
++  {
++    titulo: "Sexta-feira",
++    data: "12/02/2027",
++    itens: [
++      { hora: "18h", titulo: "Chegada e acolhimento" },
++      { hora: "20h", titulo: "Culto de abertura" },
++    ],
++  },
++],
++*/
+diff --git a/src/deck/Slide.tsx b/src/deck/Slide.tsx
+index 679cea8..42e4641 100644
+--- a/src/deck/Slide.tsx
++++ b/src/deck/Slide.tsx
+@@ -30,7 +30,7 @@ export function Slide({
+       } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+         if (prev) navigate({ to: "/deck/$slug", params: { slug: prev.slug } });
+       } else if (e.key === "Home") {
+-        navigate({ to: "/" });
++        navigate({ to: "/deck" });
+       } else if (e.key === "End") {
+         const last = sections[sections.length - 1];
+         navigate({ to: "/deck/$slug", params: { slug: last.slug } });
+@@ -47,7 +47,7 @@ export function Slide({
+   return (
+     <div className="slide-shell">
+       <header className="slide-topbar">
+-        <Link to="/" className="slide-topbtn" aria-label="Índice">
++        <Link to="/deck" className="slide-topbtn" aria-label="Índice">
+           <Home size={16} />
+         </Link>
+         <div className="slide-topmeta">
+@@ -86,7 +86,7 @@ export function Slide({
+           <span>{prev?.short ?? "Início"}</span>
+         </button>
+ 
+-        <Link to="/" className="slide-navbtn slide-navbtn-ghost" aria-label="Ver índice">
++        <Link to="/deck" className="slide-navbtn slide-navbtn-ghost" aria-label="Ver índice">
+           <LayoutGrid size={16} />
+           <span>Índice</span>
+         </Link>
+diff --git a/src/landing/Gallery.tsx b/src/landing/Gallery.tsx
+new file mode 100644
+index 0000000..4ca0c66
+--- /dev/null
++++ b/src/landing/Gallery.tsx
+@@ -0,0 +1,210 @@
++import { useEffect, useState } from "react";
++import { Camera, Video as VideoIcon, X } from "lucide-react";
++
++import media from "../content/media.json";
++
++/**
++ * Fotos e vídeos do local vêm de src/content/media.json (nada é inventado aqui).
++ *
++ * Cada foto pode ser:
++ *   - um caminho/URL:            "/media/quartos-01.jpg"  ou  "https://…/foto.jpg"
++ *   - um objeto com texto alt:   { "src": "/media/salao.jpg", "alt": "Salão principal" }
++ *   - um arquivo do Google Drive: "drive:ID_DO_ARQUIVO"  (o arquivo precisa estar
++ *     compartilhado como "qualquer pessoa com o link")
++ *
++ * Vídeos: link do YouTube (watch/shorts/youtu.be) ou do Google Drive
++ * (drive.google.com/file/d/ID/view). Outros links viram um botão "Assistir".
++ */
++type Foto = string | { src: string; alt?: string };
++
++const fotos = media.fotos as unknown as Record<string, Foto[]>;
++const videos = media.videos as unknown as Record<string, string>;
++
++const GRUPOS = [
++  { id: "quartos", rotulo: "Quartos", chaves: ["dormitorios", "quartos"] },
++  {
++    id: "saloes",
++    rotulo: "Salões e auditórios",
++    chaves: ["salao_principal", "auditorio", "salas"],
++  },
++  {
++    id: "convivencia",
++    rotulo: "Áreas de convivência",
++    chaves: ["convivencia", "area_externa", "piscina", "refeitorio", "cozinha"],
++  },
++  { id: "geral", rotulo: "Visão geral", chaves: ["fachada", "vista_aerea"] },
++] as const;
++
++const ROTULO_VIDEO: Record<string, string> = {
++  tour_geral: "Tour pelo local",
++  drone: "Vista aérea",
++  salao: "Salão",
++  dormitorios: "Dormitórios",
++  piscina: "Área externa",
++};
++
++function resolverFoto(f: Foto): { src: string; alt: string } {
++  const bruto = typeof f === "string" ? f : f.src;
++  const alt =
++    typeof f === "string" ? "Foto do local do retiro" : (f.alt ?? "Foto do local do retiro");
++  if (bruto.startsWith("drive:")) {
++    const id = encodeURIComponent(bruto.slice(6));
++    return { src: `https://drive.google.com/thumbnail?id=${id}&sz=w1600`, alt };
++  }
++  return { src: bruto, alt };
++}
++
++function urlDeEmbed(u: string): string | null {
++  try {
++    const url = new URL(u);
++    const host = url.hostname.replace(/^www\./, "");
++    if (host === "youtu.be")
++      return `https://www.youtube-nocookie.com/embed/${url.pathname.slice(1)}`;
++    if (host === "youtube.com" || host === "m.youtube.com") {
++      const v = url.searchParams.get("v");
++      if (v) return `https://www.youtube-nocookie.com/embed/${v}`;
++      const m = /^\/(shorts|embed)\/([\w-]+)/.exec(url.pathname);
++      if (m) return `https://www.youtube-nocookie.com/embed/${m[2]}`;
++    }
++    if (host === "drive.google.com") {
++      const m = /\/file\/d\/([\w-]+)/.exec(url.pathname);
++      if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
++    }
++  } catch {
++    /* URL inválida: cai no botão */
++  }
++  return null;
++}
++
++const fotosDoGrupo = (chaves: readonly string[]): Foto[] => chaves.flatMap((c) => fotos[c] ?? []);
++const listaVideos = Object.entries(videos).filter(
++  ([, url]) => typeof url === "string" && url.trim() !== "",
++);
++
++export function Gallery() {
++  const grupos = GRUPOS.map((g) => ({ ...g, itens: fotosDoGrupo(g.chaves) }));
++  const primeiro = grupos.find((g) => g.itens.length > 0)?.id ?? grupos[0].id;
++  const [aba, setAba] = useState<string>(primeiro);
++  const [aberta, setAberta] = useState<{ src: string; alt: string } | null>(null);
++
++  useEffect(() => {
++    if (!aberta) return;
++    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAberta(null);
++    window.addEventListener("keydown", onKey);
++    return () => window.removeEventListener("keydown", onKey);
++  }, [aberta]);
++
++  const atual = grupos.find((g) => g.id === aba);
++
++  return (
++    <div>
++      <div className="lp-tabs" role="tablist" aria-label="Fotos e vídeos do local">
++        {grupos.map((g) => (
++          <button
++            key={g.id}
++            type="button"
++            role="tab"
++            id={`aba-${g.id}`}
++            aria-selected={aba === g.id}
++            aria-controls="painel-local"
++            className="lp-tab"
++            onClick={() => setAba(g.id)}
++          >
++            {g.rotulo}
++          </button>
++        ))}
++        <button
++          type="button"
++          role="tab"
++          id="aba-videos"
++          aria-selected={aba === "videos"}
++          aria-controls="painel-local"
++          className="lp-tab"
++          onClick={() => setAba("videos")}
++        >
++          Vídeos
++        </button>
++      </div>
++
++      <div id="painel-local" role="tabpanel" aria-labelledby={`aba-${aba}`}>
++        {aba === "videos" ? (
++          listaVideos.length === 0 ? (
++            <div className="lp-empty">
++              <VideoIcon size={28} aria-hidden="true" />
++              <strong>Vídeos do local em breve</strong>
++              <span>Assim que a organização enviar, o tour em vídeo aparece aqui.</span>
++            </div>
++          ) : (
++            <div className="lp-videos">
++              {listaVideos.map(([chave, url]) => {
++                const embed = urlDeEmbed(url);
++                const titulo = ROTULO_VIDEO[chave] ?? "Vídeo do local";
++                return embed ? (
++                  <div className="lp-video" key={chave}>
++                    <iframe
++                      src={embed}
++                      title={titulo}
++                      loading="lazy"
++                      allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
++                      allowFullScreen
++                    />
++                  </div>
++                ) : (
++                  <a
++                    className="lp-btn lp-btn-ghost"
++                    key={chave}
++                    href={url}
++                    target="_blank"
++                    rel="noopener noreferrer"
++                  >
++                    <VideoIcon size={18} aria-hidden="true" /> Assistir: {titulo}
++                  </a>
++                );
++              })}
++            </div>
++          )
++        ) : atual && atual.itens.length > 0 ? (
++          <div className="lp-gallery">
++            {atual.itens.map((f, i) => {
++              const { src, alt } = resolverFoto(f);
++              return (
++                <button
++                  type="button"
++                  className="lp-photo"
++                  key={`${src}-${i}`}
++                  onClick={() => setAberta({ src, alt })}
++                  aria-label={`Ampliar: ${alt}`}
++                >
++                  <img src={src} alt={alt} loading="lazy" decoding="async" />
++                </button>
++              );
++            })}
++          </div>
++        ) : (
++          <div className="lp-empty">
++            <Camera size={28} aria-hidden="true" />
++            <strong>Fotos de “{atual?.rotulo}” em breve</strong>
++            <span>
++              As imagens oficiais do local serão publicadas aqui assim que forem enviadas.
++            </span>
++          </div>
++        )}
++      </div>
++
++      {aberta && (
++        <div
++          className="lp-lightbox"
++          role="dialog"
++          aria-modal="true"
++          aria-label={aberta.alt}
++          onClick={() => setAberta(null)}
++        >
++          <button type="button" aria-label="Fechar imagem" onClick={() => setAberta(null)}>
++            <X size={22} />
++          </button>
++          <img src={aberta.src} alt={aberta.alt} onClick={(e) => e.stopPropagation()} />
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/src/landing/Landing.tsx b/src/landing/Landing.tsx
+new file mode 100644
+index 0000000..b335021
+--- /dev/null
++++ b/src/landing/Landing.tsx
+@@ -0,0 +1,500 @@
++import { Link } from "@tanstack/react-router";
++import {
++  ArrowRight,
++  BedDouble,
++  Bus,
++  CalendarDays,
++  ClipboardList,
++  Clock,
++  Flame,
++  HeartHandshake,
++  MapPin,
++  Menu,
++  Music,
++  Plus,
++  Users,
++  Utensils,
++  Wallet,
++  X,
++} from "lucide-react";
++import { useState, type ReactNode } from "react";
++
++import { evento } from "../content/evento";
++import { formatarReais } from "../lib/inscricao";
++import { Gallery } from "./Gallery";
++
++const NAV = [
++  { href: "#sobre", rotulo: "Sobre" },
++  { href: "#local", rotulo: "Local" },
++  { href: "#informacoes", rotulo: "Informações" },
++  { href: "#programacao", rotulo: "Programação" },
++  { href: "#duvidas", rotulo: "Dúvidas" },
++];
++
++const ICONE_SOBRE = [Flame, Users, Music, HeartHandshake];
++const ICONE_INFO = {
++  hospedagem: BedDouble,
++  alimentacao: Utensils,
++  transporte: Bus,
++  orientacoes: ClipboardList,
++};
++
++function Cabecalho() {
++  const [aberto, setAberto] = useState(false);
++  return (
++    <header className="lp-nav">
++      <div className="lp-wrap">
++        <div className="lp-nav-in">
++          <a className="lp-brand" href="#topo" aria-label={`${evento.ministerio} — início`}>
++            <b>{evento.ministerio}</b>
++            <span>
++              {evento.igreja} · {evento.igrejaCidade}
++            </span>
++          </a>
++          <nav className="lp-links" aria-label="Seções da página">
++            {NAV.map((n) => (
++              <a key={n.href} href={n.href}>
++                {n.rotulo}
++              </a>
++            ))}
++          </nav>
++          <Link to="/inscricao" className="lp-btn lp-btn-fire lp-nav-cta">
++            Inscreva-se
++          </Link>
++          <button
++            type="button"
++            className="lp-burger"
++            aria-label={aberto ? "Fechar menu" : "Abrir menu"}
++            aria-expanded={aberto}
++            aria-controls="menu-mobile"
++            onClick={() => setAberto((v) => !v)}
++          >
++            {aberto ? <X size={22} /> : <Menu size={22} />}
++          </button>
++        </div>
++        {aberto && (
++          <nav id="menu-mobile" className="lp-drawer" aria-label="Menu">
++            {NAV.map((n) => (
++              <a key={n.href} href={n.href} onClick={() => setAberto(false)}>
++                {n.rotulo}
++              </a>
++            ))}
++            <Link to="/inscricao" className="lp-btn lp-btn-fire" onClick={() => setAberto(false)}>
++              Quero me inscrever <ArrowRight size={18} />
++            </Link>
++          </nav>
++        )}
++      </div>
++    </header>
++  );
++}
++
++/** Arte abstrata original: rede de pontos conectados (tema "conexão"). */
++function Rede() {
++  const nos: Array<[number, number]> = [
++    [90, 140],
++    [300, 260],
++    [520, 120],
++    [760, 300],
++    [980, 160],
++    [1110, 430],
++    [880, 540],
++    [640, 430],
++    [400, 540],
++    [170, 450],
++  ];
++  const liga: Array<[number, number]> = [
++    [0, 1],
++    [1, 2],
++    [2, 3],
++    [3, 4],
++    [4, 5],
++    [5, 6],
++    [6, 7],
++    [7, 8],
++    [8, 9],
++    [9, 0],
++    [1, 7],
++    [2, 7],
++    [3, 7],
++    [3, 6],
++    [1, 8],
++    [1, 9],
++    [4, 3],
++  ];
++  return (
++    <svg
++      className="lp-net"
++      viewBox="0 0 1200 640"
++      preserveAspectRatio="xMidYMid slice"
++      aria-hidden="true"
++      focusable="false"
++    >
++      {liga.map(([a, b], i) => (
++        <line
++          key={i}
++          x1={nos[a][0]}
++          y1={nos[a][1]}
++          x2={nos[b][0]}
++          y2={nos[b][1]}
++          stroke="#62aaff"
++          strokeOpacity="0.28"
++          strokeWidth="1.2"
++        />
++      ))}
++      {nos.map(([x, y], i) => (
++        <g key={i}>
++          <circle
++            cx={x}
++            cy={y}
++            r={i % 3 === 0 ? 16 : 10}
++            fill={i % 3 === 0 ? "#ff5a1f" : "#ffb02e"}
++            fillOpacity="0.14"
++          />
++          <circle
++            cx={x}
++            cy={y}
++            r={i % 3 === 0 ? 5 : 3.5}
++            fill={i % 3 === 0 ? "#ff7a2a" : "#ffc766"}
++          />
++        </g>
++      ))}
++    </svg>
++  );
++}
++
++function Inicio() {
++  return (
++    <section className="lp-hero" id="topo" aria-labelledby="titulo">
++      <Rede />
++      <div className="lp-wrap">
++        <span className="lp-hero-badge lp-rise">
++          <Flame size={15} aria-hidden="true" /> {evento.ministerio} · {evento.igreja}
++        </span>
++        <h1 className="lp-title lp-rise d1" id="titulo">
++          {evento.nome} <em>{evento.edicao}</em>
++        </h1>
++        {evento.tema ? (
++          <p className="lp-tema lp-rise d1">{evento.tema}</p>
++        ) : (
++          <p className="lp-tema pendente lp-rise d1">Tema: a ser divulgado</p>
++        )}
++        <p className="lp-impact lp-rise d2">{evento.fraseImpacto}</p>
++
++        <ul className="lp-facts lp-rise d2">
++          <li className="lp-fact">
++            <CalendarDays size={22} aria-hidden="true" />
++            <span>
++              <small>Data</small>
++              <strong>{evento.dataTexto}</strong>
++              <small style={{ textTransform: "none", letterSpacing: 0 }}>
++                {evento.periodoNota}
++              </small>
++            </span>
++          </li>
++          <li className="lp-fact">
++            <MapPin size={22} aria-hidden="true" />
++            <span>
++              <small>Local</small>
++              <strong>
++                {evento.local.nome} · {evento.local.cidade}/{evento.local.uf}
++              </strong>
++            </span>
++          </li>
++        </ul>
++
++        <div className="lp-cta-row lp-rise d3">
++          <Link to="/inscricao" className="lp-btn lp-btn-fire lp-btn-big">
++            Quero me inscrever <ArrowRight size={20} />
++          </Link>
++          <a href="#local" className="lp-btn lp-btn-ghost lp-btn-big">
++            Conhecer o local
++          </a>
++        </div>
++      </div>
++    </section>
++  );
++}
++
++function Titulo({
++  eyebrow,
++  titulo,
++  lead,
++  id,
++}: {
++  eyebrow: string;
++  titulo: string;
++  lead?: ReactNode;
++  id: string;
++}) {
++  return (
++    <>
++      <span className="lp-eyebrow">{eyebrow}</span>
++      <h2 className="lp-h2" id={id}>
++        {titulo}
++      </h2>
++      {lead && <p className="lp-lead">{lead}</p>}
++    </>
++  );
++}
++
++function Sobre() {
++  return (
++    <section className="lp-section" id="sobre" aria-labelledby="t-sobre">
++      <div className="lp-wrap">
++        <Titulo
++          id="t-sobre"
++          eyebrow="Sobre o retiro"
++          titulo="Dias para buscar a Deus, juntos"
++          lead="O retiro é um tempo separado pela Conexão Jovem para viver a fé em comunidade: louvor, oração, Palavra e convivência cristã."
++        />
++        <div className="lp-grid c4">
++          {evento.sobre.map((s, i) => {
++            const Icone = ICONE_SOBRE[i % ICONE_SOBRE.length];
++            return (
++              <article className="lp-card" key={s.titulo}>
++                <span className={`lp-ico${i % 2 ? " sky" : ""}`}>
++                  <Icone size={24} aria-hidden="true" />
++                </span>
++                <h3>{s.titulo}</h3>
++                <p>{s.texto}</p>
++              </article>
++            );
++          })}
++        </div>
++      </div>
++    </section>
++  );
++}
++
++function Local() {
++  return (
++    <section className="lp-section alt" id="local" aria-labelledby="t-local">
++      <div className="lp-wrap">
++        <Titulo
++          id="t-local"
++          eyebrow="Conheça o local"
++          titulo={`${evento.local.nome}, ${evento.local.cidade}/${evento.local.uf}`}
++          lead="Veja os quartos, salões, auditórios e áreas de convivência. As imagens exibidas são as enviadas pela organização."
++        />
++        <Gallery />
++        {evento.local.mapsUrl && (
++          <p style={{ marginTop: "1.5rem" }}>
++            <a
++              className="lp-btn lp-btn-ghost"
++              href={evento.local.mapsUrl}
++              target="_blank"
++              rel="noopener noreferrer"
++            >
++              <MapPin size={18} aria-hidden="true" /> Ver no mapa
++            </a>
++          </p>
++        )}
++      </div>
++    </section>
++  );
++}
++
++function Informacoes() {
++  return (
++    <section className="lp-section" id="informacoes" aria-labelledby="t-info">
++      <div className="lp-wrap">
++        <Titulo
++          id="t-info"
++          eyebrow="Informações importantes"
++          titulo="Tudo o que você precisa saber"
++          lead="O que já está definido aparece aqui. Os itens marcados como “A confirmar” serão divulgados pela organização."
++        />
++        <div className="lp-grid c3">
++          <article className="lp-card">
++            <span className="lp-ico">
++              <Wallet size={24} aria-hidden="true" />
++            </span>
++            <h3>
++              Valores <span className="lp-badge ok">Confirmado</span>
++            </h3>
++            <ul className="lp-prices">
++              {evento.faixas.map((f) => (
++                <li key={f.id}>
++                  <span>{f.rotulo}</span>
++                  {f.valor === null ? (
++                    <span className="tbd">{f.nota ?? "A definir"}</span>
++                  ) : (
++                    <b>{formatarReais(f.valor)}</b>
++                  )}
++                </li>
++              ))}
++            </ul>
++            <p style={{ marginTop: "0.75rem", fontSize: "0.85rem" }}>
++              Idade calculada na data de início do retiro.
++            </p>
++          </article>
++
++          {evento.informacoes.map((c) => {
++            const Icone = ICONE_INFO[c.id];
++            return (
++              <article className="lp-card" key={c.id}>
++                <span className="lp-ico sky">
++                  <Icone size={24} aria-hidden="true" />
++                </span>
++                <h3>
++                  {c.titulo}
++                  <span className={`lp-badge ${c.status === "confirmado" ? "ok" : "pend"}`}>
++                    {c.status === "confirmado" ? "Confirmado" : "A confirmar"}
++                  </span>
++                </h3>
++                <p>{c.texto}</p>
++                {c.itens && (
++                  <ul className="lp-list">
++                    {c.itens.map((t) => (
++                      <li key={t}>{t}</li>
++                    ))}
++                  </ul>
++                )}
++              </article>
++            );
++          })}
++        </div>
++      </div>
++    </section>
++  );
++}
++
++function Programacao() {
++  return (
++    <section className="lp-section alt" id="programacao" aria-labelledby="t-prog">
++      <div className="lp-wrap">
++        <Titulo id="t-prog" eyebrow="Programação" titulo="Atividades do retiro" />
++        {evento.programacao.length === 0 ? (
++          <div className="lp-empty">
++            <Clock size={28} aria-hidden="true" />
++            <strong>A programação será divulgada em breve</strong>
++            <span>Somente atividades confirmadas pela organização serão publicadas aqui.</span>
++          </div>
++        ) : (
++          <div className="lp-grid c3">
++            {evento.programacao.map((d) => (
++              <article className="lp-day" key={d.titulo}>
++                <h3>{d.titulo}</h3>
++                {d.data && <small>{d.data}</small>}
++                <ul className="lp-slots">
++                  {d.itens.map((it, i) => (
++                    <li key={`${it.titulo}-${i}`}>
++                      <time>{it.hora ?? ""}</time>
++                      <span>
++                        <strong>{it.titulo}</strong>
++                        {it.descricao && (
++                          <span style={{ display: "block", color: "var(--lp-mute)" }}>
++                            {it.descricao}
++                          </span>
++                        )}
++                      </span>
++                    </li>
++                  ))}
++                </ul>
++              </article>
++            ))}
++          </div>
++        )}
++      </div>
++    </section>
++  );
++}
++
++function Duvidas() {
++  return (
++    <section className="lp-section" id="duvidas" aria-labelledby="t-faq">
++      <div className="lp-wrap">
++        <Titulo id="t-faq" eyebrow="Dúvidas frequentes" titulo="Respostas objetivas" />
++        <div className="lp-faq">
++          {evento.faq.map((q) => (
++            <details key={q.p}>
++              <summary>
++                <span>
++                  {q.p}
++                  {q.status === "a-confirmar" && <span className="lp-badge pend">A confirmar</span>}
++                </span>
++                <Plus size={20} aria-hidden="true" />
++              </summary>
++              <p>{q.r}</p>
++            </details>
++          ))}
++        </div>
++      </div>
++    </section>
++  );
++}
++
++function ChamadaFinal() {
++  return (
++    <section className="lp-final" aria-labelledby="t-final">
++      <div className="lp-wrap">
++        <h2 className="lp-h2" id="t-final">
++          Faça parte do {evento.nome} {evento.edicao}
++        </h2>
++        <p className="lp-lead">
++          Preencha o formulário em poucos minutos. Você vê o valor da sua inscrição antes de enviar.
++        </p>
++        <Link to="/inscricao" className="lp-btn lp-btn-fire lp-btn-big">
++          Fazer minha inscrição <ArrowRight size={20} />
++        </Link>
++      </div>
++    </section>
++  );
++}
++
++export function Rodape() {
++  const { whatsapp, instagram, email } = evento.contato;
++  return (
++    <footer className="lp-foot">
++      <div className="lp-wrap lp-foot-in">
++        <span>
++          {evento.ministerio} · {evento.igreja} · {evento.igrejaCidade}
++        </span>
++        <span>
++          <a href="/inscricao#regras">Regras</a> · <a href="/inscricao#privacidade">Privacidade</a>
++          {whatsapp && (
++            <>
++              {" · "}
++              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">
++                WhatsApp
++              </a>
++            </>
++          )}
++          {instagram && (
++            <>
++              {" · "}
++              <a href={instagram} target="_blank" rel="noopener noreferrer">
++                Instagram
++              </a>
++            </>
++          )}
++          {email && (
++            <>
++              {" · "}
++              <a href={`mailto:${email}`}>{email}</a>
++            </>
++          )}
++        </span>
++      </div>
++    </footer>
++  );
++}
++
++export function Landing() {
++  return (
++    <div className="lp">
++      <Cabecalho />
++      <main>
++        <Inicio />
++        <Sobre />
++        <Local />
++        <Informacoes />
++        <Programacao />
++        <Duvidas />
++        <ChamadaFinal />
++      </main>
++      <Rodape />
++    </div>
++  );
++}
+diff --git a/src/landing/RegistrationForm.tsx b/src/landing/RegistrationForm.tsx
+new file mode 100644
+index 0000000..a919acc
+--- /dev/null
++++ b/src/landing/RegistrationForm.tsx
+@@ -0,0 +1,560 @@
++import { Link } from "@tanstack/react-router";
++import { AlertTriangle, ArrowLeft, Check, Loader2 } from "lucide-react";
++import {
++  useMemo,
++  useRef,
++  useState,
++  type ChangeEvent,
++  type FormEvent,
++  type MouseEvent,
++  type ReactNode,
++} from "react";
++
++import { evento } from "../content/evento";
++import {
++  ORDEM_CAMPOS,
++  VALORES_VAZIOS,
++  formatarCpf,
++  formatarReais,
++  formatarTelefone,
++  hojeSaoPaulo,
++  validar,
++  type Campo,
++  type Erros,
++  type FormValues,
++} from "../lib/inscricao";
++import { enviarInscricao } from "../server/inscricao.functions";
++
++type Confirmacao = {
++  nome: string;
++  idade: number;
++  faixa: string;
++  valor: number | null;
++  jaRegistrada: boolean;
++};
++type Estado =
++  | { tipo: "livre" }
++  | { tipo: "enviando" }
++  | { tipo: "erro"; mensagem: string }
++  | { tipo: "sucesso"; dados: Confirmacao };
++
++const novaChave = (): string =>
++  typeof crypto !== "undefined" && "randomUUID" in crypto
++    ? crypto.randomUUID()
++    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
++
++const dataBr = (iso: string): string => iso.split("-").reverse().join("/");
++
++// ─── Campo de texto acessível ────────────────────────────────────────────────
++type EntradaProps = {
++  campo: Campo;
++  rotulo: string;
++  valor: string;
++  onChange: (v: string) => void;
++  onBlur: () => void;
++  erro?: string;
++  opcional?: boolean;
++  dica?: string;
++  tipo?: string;
++  modo?: "text" | "numeric" | "tel" | "email";
++  autoComplete?: string;
++  placeholder?: string;
++  maxLength?: number;
++  multilinha?: boolean;
++  min?: string;
++  max?: string;
++};
++
++function Entrada(p: EntradaProps) {
++  const id = `f-${p.campo}`;
++  const idErro = `${id}-erro`;
++  const idDica = `${id}-dica`;
++  const descrito =
++    [p.erro ? idErro : "", p.dica ? idDica : ""].filter(Boolean).join(" ") || undefined;
++  return (
++    <div className="lp-field">
++      <label htmlFor={id}>
++        {p.rotulo}
++        {p.opcional && <small> (opcional)</small>}
++      </label>
++      {p.multilinha ? (
++        <textarea
++          id={id}
++          name={p.campo}
++          rows={4}
++          value={p.valor}
++          maxLength={p.maxLength}
++          placeholder={p.placeholder}
++          aria-invalid={p.erro ? true : undefined}
++          aria-describedby={descrito}
++          onBlur={p.onBlur}
++          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => p.onChange(e.target.value)}
++        />
++      ) : (
++        <input
++          id={id}
++          name={p.campo}
++          type={p.tipo ?? "text"}
++          inputMode={p.modo}
++          autoComplete={p.autoComplete}
++          value={p.valor}
++          maxLength={p.maxLength}
++          placeholder={p.placeholder}
++          min={p.min}
++          max={p.max}
++          aria-invalid={p.erro ? true : undefined}
++          aria-describedby={descrito}
++          onBlur={p.onBlur}
++          onChange={(e: ChangeEvent<HTMLInputElement>) => p.onChange(e.target.value)}
++        />
++      )}
++      {p.dica && (
++        <p id={idDica} className="lp-err" style={{ color: "var(--lp-mute)" }}>
++          {p.dica}
++        </p>
++      )}
++      {p.erro && (
++        <p id={idErro} className="lp-err" role="alert">
++          {p.erro}
++        </p>
++      )}
++    </div>
++  );
++}
++
++function abrirTermo(e: MouseEvent<HTMLAnchorElement>, id: "regras" | "privacidade") {
++  e.preventDefault();
++  const el = document.getElementById(id) as HTMLDetailsElement | null;
++  if (!el) return;
++  el.open = true;
++  el.scrollIntoView({ behavior: "smooth", block: "start" });
++  history.replaceState(null, "", `#${id}`);
++}
++
++// ─── Confirmação ─────────────────────────────────────────────────────────────
++function TelaConfirmacao({ dados, onNova }: { dados: Confirmacao; onNova: () => void }) {
++  return (
++    <section className="lp-done" role="status" aria-live="polite" aria-labelledby="t-ok">
++      <span className="lp-done-ico">
++        <Check size={28} aria-hidden="true" />
++      </span>
++      <h2 id="t-ok">{dados.jaRegistrada ? "Inscrição já registrada" : "Cadastro recebido!"}</h2>
++      <p style={{ margin: 0, color: "var(--lp-mute)" }}>
++        {dados.nome}, o seu cadastro no {evento.nome} {evento.edicao} foi registrado.
++      </p>
++
++      <dl>
++        <div>
++          <dt>Participante</dt>
++          <dd>{dados.nome}</dd>
++        </div>
++        <div>
++          <dt>Idade em {dataBr(evento.inicioData)}</dt>
++          <dd>
++            {dados.idade} anos · {dados.faixa}
++          </dd>
++        </div>
++        <div>
++          <dt>Valor calculado</dt>
++          <dd>
++            {dados.valor === null
++              ? "A definir pela organização (sem cobrança automática)"
++              : formatarReais(dados.valor)}
++          </dd>
++        </div>
++        <div>
++          <dt>Situação</dt>
++          <dd>Cadastro recebido · pagamento NÃO confirmado</dd>
++        </div>
++      </dl>
++
++      <p style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>Próximos passos</p>
++      <ol>
++        {evento.proximosPassos.map((p) => (
++          <li key={p}>{p}</li>
++        ))}
++      </ol>
++
++      <div className="lp-cta-row" style={{ marginTop: 0 }}>
++        <Link to="/" className="lp-btn lp-btn-fire">
++          Voltar ao início
++        </Link>
++        <button type="button" className="lp-btn lp-btn-ghost" onClick={onNova}>
++          Inscrever outra pessoa
++        </button>
++      </div>
++    </section>
++  );
++}
++
++// ─── Formulário ──────────────────────────────────────────────────────────────
++export function RegistrationForm() {
++  const [values, setValues] = useState<FormValues>(VALORES_VAZIOS);
++  const [tocados, setTocados] = useState<Partial<Record<Campo, boolean>>>({});
++  const [tentou, setTentou] = useState(false);
++  const [mesmoWhats, setMesmoWhats] = useState(true);
++  const [errosServidor, setErrosServidor] = useState<Erros>({});
++  const [estado, setEstado] = useState<Estado>({ tipo: "livre" });
++  const [hoje] = useState<string>(() => hojeSaoPaulo());
++  const chaveRef = useRef<string | null>(null);
++  const enviandoRef = useRef(false);
++
++  const efetivos: FormValues = mesmoWhats ? { ...values, whatsapp: values.telefone } : values;
++  const calc = useMemo(
++    () =>
++      validar(mesmoWhats ? { ...values, whatsapp: values.telefone } : values, {
++        dataReferencia: evento.inicioData,
++        hoje,
++        faixas: evento.faixas,
++      }),
++    [values, mesmoWhats, hoje],
++  );
++
++  const set = <K extends Campo>(campo: K, valor: FormValues[K]) => {
++    setValues((v) => ({ ...v, [campo]: valor }));
++    setErrosServidor((e) => (e[campo] ? { ...e, [campo]: undefined } : e));
++  };
++  const tocar = (campo: Campo) => setTocados((t) => (t[campo] ? t : { ...t, [campo]: true }));
++  const erro = (campo: Campo): string | undefined =>
++    tentou || tocados[campo] ? (calc.erros[campo] ?? errosServidor[campo]) : undefined;
++
++  const campoTexto = (campo: Campo, extra: Partial<EntradaProps> & { rotulo: string }) => (
++    <Entrada
++      campo={campo}
++      valor={String(values[campo])}
++      onChange={(v) => set(campo, v as never)}
++      onBlur={() => tocar(campo)}
++      erro={erro(campo)}
++      {...extra}
++    />
++  );
++
++  const focarPrimeiroErro = (erros: Erros) => {
++    const primeiro = ORDEM_CAMPOS.find((c) => erros[c]);
++    if (!primeiro) return;
++    const el = document.getElementById(`f-${primeiro}`);
++    el?.scrollIntoView({ behavior: "smooth", block: "center" });
++    (el as HTMLElement | null)?.focus({ preventScroll: true });
++  };
++
++  async function aoEnviar(e: FormEvent<HTMLFormElement>) {
++    e.preventDefault();
++    if (enviandoRef.current) return; // trava contra clique duplo
++    setTentou(true);
++    const r = validar(efetivos, { dataReferencia: evento.inicioData, hoje, faixas: evento.faixas });
++    if (Object.keys(r.erros).length > 0) {
++      setEstado({ tipo: "livre" });
++      focarPrimeiroErro(r.erros);
++      return;
++    }
++
++    enviandoRef.current = true;
++    setEstado({ tipo: "enviando" });
++    try {
++      if (!chaveRef.current) chaveRef.current = novaChave();
++      const resp = await enviarInscricao({
++        data: { values: efetivos, idempotencyKey: chaveRef.current },
++      });
++      if (resp.ok) {
++        chaveRef.current = null;
++        setEstado({
++          tipo: "sucesso",
++          dados: {
++            nome: resp.nome,
++            idade: resp.idade,
++            faixa: resp.faixa,
++            valor: resp.valor,
++            jaRegistrada: !!resp.jaRegistrada,
++          },
++        });
++        setValues(VALORES_VAZIOS);
++        setTocados({});
++        setTentou(false);
++        setMesmoWhats(true);
++        window.scrollTo({ top: 0, behavior: "smooth" });
++      } else {
++        if (resp.erros) {
++          setErrosServidor(resp.erros);
++          focarPrimeiroErro(resp.erros);
++        }
++        setEstado({ tipo: "erro", mensagem: resp.mensagem });
++      }
++    } catch {
++      setEstado({
++        tipo: "erro",
++        mensagem:
++          "Não conseguimos confirmar o envio (verifique sua conexão). Você pode tentar de novo: se a inscrição já tiver sido gravada, avisaremos.",
++      });
++    } finally {
++      enviandoRef.current = false;
++    }
++  }
++
++  if (!evento.inscricoesAbertas) {
++    return (
++      <div className="lp-empty">
++        <strong>As inscrições não estão abertas no momento.</strong>
++        <span>Acompanhe as novidades da Conexão Jovem.</span>
++      </div>
++    );
++  }
++
++  if (estado.tipo === "sucesso") {
++    return <TelaConfirmacao dados={estado.dados} onNova={() => setEstado({ tipo: "livre" })} />;
++  }
++
++  const enviando = estado.tipo === "enviando";
++  const temData = calc.idade !== null;
++
++  let precoPrincipal: ReactNode = "—";
++  let precoNota = "Informe a data de nascimento para ver o valor da inscrição.";
++  if (temData && calc.faixa) {
++    precoPrincipal = calc.valor === null ? "A definir" : formatarReais(calc.valor);
++    precoNota =
++      calc.valor === null
++        ? `${calc.faixa.rotulo}: valor definido pela organização. Nenhuma cobrança automática.`
++        : `${calc.idade} anos em ${dataBr(evento.inicioData)} · ${calc.faixa.rotulo}.`;
++  }
++
++  return (
++    <form className="lp-form" onSubmit={aoEnviar} noValidate aria-busy={enviando}>
++      {/* Campo-isca: invisível para pessoas */}
++      <div className="lp-honey" aria-hidden="true">
++        <label>
++          Não preencha este campo
++          <input
++            tabIndex={-1}
++            autoComplete="off"
++            name="website"
++            value={values.website}
++            onChange={(e) => set("website", e.target.value)}
++          />
++        </label>
++      </div>
++
++      <fieldset className="lp-fs">
++        <legend>Participante</legend>
++        {campoTexto("nomeCompleto", {
++          rotulo: "Nome completo",
++          autoComplete: "name",
++          maxLength: 100,
++        })}
++        <div className="lp-row two" style={{ marginTop: "1rem" }}>
++          {campoTexto("dataNascimento", {
++            rotulo: "Data de nascimento",
++            tipo: "date",
++            autoComplete: "bday",
++            min: "1900-01-01",
++            max: hoje,
++          })}
++          <Entrada
++            campo="cpf"
++            rotulo="CPF"
++            valor={values.cpf}
++            onChange={(v) => set("cpf", formatarCpf(v))}
++            onBlur={() => tocar("cpf")}
++            erro={erro("cpf")}
++            modo="numeric"
++            placeholder="000.000.000-00"
++            maxLength={14}
++            autoComplete="off"
++          />
++        </div>
++      </fieldset>
++
++      <div className="lp-price" aria-live="polite">
++        <div>
++          <small>Valor da inscrição</small>
++          <strong>{precoPrincipal}</strong>
++        </div>
++        <p>{precoNota} O cadastro não é pagamento confirmado.</p>
++      </div>
++
++      <fieldset className="lp-fs">
++        <legend>Contato</legend>
++        <div className="lp-row two">
++          <Entrada
++            campo="telefone"
++            rotulo="Telefone"
++            valor={values.telefone}
++            onChange={(v) => set("telefone", formatarTelefone(v))}
++            onBlur={() => tocar("telefone")}
++            erro={erro("telefone")}
++            tipo="tel"
++            modo="tel"
++            autoComplete="tel-national"
++            placeholder="(00) 00000-0000"
++            maxLength={15}
++          />
++          {!mesmoWhats && (
++            <Entrada
++              campo="whatsapp"
++              rotulo="WhatsApp"
++              valor={values.whatsapp}
++              onChange={(v) => set("whatsapp", formatarTelefone(v))}
++              onBlur={() => tocar("whatsapp")}
++              erro={erro("whatsapp")}
++              tipo="tel"
++              modo="tel"
++              placeholder="(00) 00000-0000"
++              maxLength={15}
++            />
++          )}
++        </div>
++        <label className="lp-check">
++          <input
++            type="checkbox"
++            checked={mesmoWhats}
++            onChange={(e) => setMesmoWhats(e.target.checked)}
++          />
++          <span>Este telefone também é o meu WhatsApp</span>
++        </label>
++        <div style={{ marginTop: "1rem" }}>
++          {campoTexto("email", {
++            rotulo: "E-mail",
++            opcional: true,
++            tipo: "email",
++            modo: "email",
++            autoComplete: "email",
++            maxLength: 120,
++          })}
++        </div>
++      </fieldset>
++
++      <fieldset className="lp-fs">
++        <legend>Igreja e cidade</legend>
++        <div className="lp-row two">
++          {campoTexto("igreja", { rotulo: "Igreja ou congregação", maxLength: 100 })}
++          {campoTexto("cidade", {
++            rotulo: "Cidade",
++            autoComplete: "address-level2",
++            maxLength: 80,
++          })}
++        </div>
++      </fieldset>
++
++      {calc.menorDeIdade && (
++        <fieldset className="lp-fs">
++          <legend>Responsável legal</legend>
++          <p className="hint">Obrigatório para participantes menores de 18 anos.</p>
++          <div className="lp-row two">
++            {campoTexto("responsavelNome", { rotulo: "Nome do responsável", maxLength: 100 })}
++            <Entrada
++              campo="responsavelTelefone"
++              rotulo="Telefone do responsável"
++              valor={values.responsavelTelefone}
++              onChange={(v) => set("responsavelTelefone", formatarTelefone(v))}
++              onBlur={() => tocar("responsavelTelefone")}
++              erro={erro("responsavelTelefone")}
++              tipo="tel"
++              modo="tel"
++              placeholder="(00) 00000-0000"
++              maxLength={15}
++            />
++          </div>
++        </fieldset>
++      )}
++
++      <fieldset className="lp-fs">
++        <legend>Emergência e necessidades</legend>
++        <div className="lp-row two">
++          {campoTexto("emergenciaNome", { rotulo: "Contato de emergência (nome)", maxLength: 100 })}
++          <Entrada
++            campo="emergenciaTelefone"
++            rotulo="Contato de emergência (telefone)"
++            valor={values.emergenciaTelefone}
++            onChange={(v) => set("emergenciaTelefone", formatarTelefone(v))}
++            onBlur={() => tocar("emergenciaTelefone")}
++            erro={erro("emergenciaTelefone")}
++            tipo="tel"
++            modo="tel"
++            placeholder="(00) 00000-0000"
++            maxLength={15}
++          />
++        </div>
++        <div style={{ marginTop: "1rem" }}>
++          {campoTexto("necessidades", {
++            rotulo: "Necessidades relevantes para hospedagem ou alimentação",
++            opcional: true,
++            multilinha: true,
++            maxLength: 500,
++            placeholder: "Ex.: restrição alimentar, mobilidade reduzida…",
++            dica: `${values.necessidades.length}/500 caracteres`,
++          })}
++        </div>
++      </fieldset>
++
++      <fieldset className="lp-fs">
++        <legend>Aceites</legend>
++        <label className="lp-check" style={{ marginTop: 0 }}>
++          <input
++            id="f-aceiteRegras"
++            type="checkbox"
++            checked={values.aceiteRegras}
++            aria-invalid={erro("aceiteRegras") ? true : undefined}
++            onChange={(e) => set("aceiteRegras", e.target.checked)}
++            onBlur={() => tocar("aceiteRegras")}
++          />
++          <span>
++            Li e aceito as{" "}
++            <a href="#regras" onClick={(e) => abrirTermo(e, "regras")}>
++              regras do retiro
++            </a>
++            .
++          </span>
++        </label>
++        {erro("aceiteRegras") && (
++          <p className="lp-err" role="alert">
++            {erro("aceiteRegras")}
++          </p>
++        )}
++        <label className="lp-check">
++          <input
++            id="f-aceitePrivacidade"
++            type="checkbox"
++            checked={values.aceitePrivacidade}
++            aria-invalid={erro("aceitePrivacidade") ? true : undefined}
++            onChange={(e) => set("aceitePrivacidade", e.target.checked)}
++            onBlur={() => tocar("aceitePrivacidade")}
++          />
++          <span>
++            Estou ciente do{" "}
++            <a href="#privacidade" onClick={(e) => abrirTermo(e, "privacidade")}>
++              aviso de privacidade
++            </a>{" "}
++            e do tratamento dos meus dados para a organização do retiro.
++          </span>
++        </label>
++        {erro("aceitePrivacidade") && (
++          <p className="lp-err" role="alert">
++            {erro("aceitePrivacidade")}
++          </p>
++        )}
++      </fieldset>
++
++      {estado.tipo === "erro" && (
++        <div className="lp-alert" role="alert">
++          <AlertTriangle size={20} aria-hidden="true" />
++          <p>{estado.mensagem}</p>
++        </div>
++      )}
++
++      <p style={{ margin: 0, color: "var(--lp-mute)", fontSize: "0.9rem" }}>
++        Valor calculado: <strong style={{ color: "var(--lp-ink)" }}>{precoPrincipal}</strong> · O
++        envio é apenas cadastro e não confirma pagamento.
++      </p>
++      <button type="submit" className="lp-btn lp-btn-fire lp-btn-big lp-submit" disabled={enviando}>
++        {enviando ? (
++          <>
++            <Loader2 size={20} className="lp-spin" aria-hidden="true" /> Enviando…
++          </>
++        ) : (
++          "Enviar inscrição"
++        )}
++      </button>
++      <Link to="/" className="lp-back" style={{ justifySelf: "center" }}>
++        <ArrowLeft size={16} aria-hidden="true" /> Voltar à página do retiro
++      </Link>
++    </form>
++  );
++}
+diff --git a/src/landing/Termos.tsx b/src/landing/Termos.tsx
+new file mode 100644
+index 0000000..2534dd6
+--- /dev/null
++++ b/src/landing/Termos.tsx
+@@ -0,0 +1,83 @@
++import { useEffect } from "react";
++
++import { evento } from "../content/evento";
++
++/** Abre o <details> cujo id está no hash da URL (ex.: /inscricao#privacidade). */
++function abrirPeloHash() {
++  const id = window.location.hash.replace("#", "");
++  if (id !== "regras" && id !== "privacidade") return;
++  const el = document.getElementById(id) as HTMLDetailsElement | null;
++  if (el) {
++    el.open = true;
++    el.scrollIntoView({ block: "start" });
++  }
++}
++
++export function Termos() {
++  useEffect(() => {
++    abrirPeloHash();
++    window.addEventListener("hashchange", abrirPeloHash);
++    return () => window.removeEventListener("hashchange", abrirPeloHash);
++  }, []);
++
++  return (
++    <div className="lp-terms">
++      <details id="regras">
++        <summary>Regras do retiro</summary>
++        <div className="body">
++          {evento.regras.length === 0 ? (
++            <p>
++              As regras oficiais do retiro estão em elaboração pela organização e serão publicadas
++              nesta página.
++            </p>
++          ) : (
++            <ul>
++              {evento.regras.map((r) => (
++                <li key={r}>{r}</li>
++              ))}
++            </ul>
++          )}
++        </div>
++      </details>
++
++      <details id="privacidade">
++        <summary>Aviso de privacidade (LGPD)</summary>
++        <div className="body">
++          <p>
++            <em>Texto-base, sujeito à revisão da liderança da igreja antes da divulgação.</em>
++          </p>
++          <h4>Quem organiza</h4>
++          <p>
++            {evento.ministerio} — {evento.igreja} de {evento.igrejaCidade}.
++          </p>
++          <h4>Quais dados coletamos</h4>
++          <p>
++            Nome completo, data de nascimento, CPF, telefone, WhatsApp, e-mail (opcional), igreja ou
++            congregação, cidade, contato de emergência, necessidades de hospedagem ou alimentação e,
++            para menores de 18 anos, nome e telefone do responsável legal.
++          </p>
++          <h4>Para que usamos</h4>
++          <p>
++            Organizar a inscrição e o retiro: identificação do participante, contato, hospedagem,
++            alimentação, segurança e comunicação em caso de emergência. O CPF serve para identificar
++            a inscrição e evitar duplicidade.
++          </p>
++          <h4>Dados de crianças e adolescentes</h4>
++          <p>
++            Devem ser informados pelo responsável legal e são usados somente para os fins acima.
++          </p>
++          <h4>Compartilhamento e acesso</h4>
++          <p>
++            Os dados não são divulgados publicamente nem vendidos. O acesso é restrito às pessoas
++            autorizadas da organização do retiro.
++          </p>
++          <h4>Seus direitos</h4>
++          <p>
++            Você pode pedir acesso, correção ou exclusão dos seus dados à liderança da Conexão
++            Jovem, conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
++          </p>
++        </div>
++      </details>
++    </div>
++  );
++}
+diff --git a/src/landing/landing.css b/src/landing/landing.css
+new file mode 100644
+index 0000000..38f7fab
+--- /dev/null
++++ b/src/landing/landing.css
+@@ -0,0 +1,987 @@
++/* ==========================================================================
++   Landing pública do retiro — todas as classes usam o prefixo `lp-`
++   para não colidir com os estilos da apresentação executiva (/deck).
++   ========================================================================== */
++
++.lp {
++  --lp-bg: #090a12;
++  --lp-bg2: #0e1020;
++  --lp-card: #141729;
++  --lp-card2: #1a1e35;
++  --lp-ink: #f5f1ea;
++  --lp-mute: #aab0c6;
++  --lp-line: rgba(255, 255, 255, 0.11);
++  --lp-fire: #ff5a1f;
++  --lp-amber: #ffb02e;
++  --lp-sky: #62aaff;
++  --lp-ok: #4fd1a0;
++  --lp-err: #ff7b7b;
++  --lp-grad: linear-gradient(135deg, #ff4d1a 0%, #ff8a1f 55%, #ffc23d 100%);
++  --lp-radius: 18px;
++  --lp-head: "Bricolage Grotesque", "Inter", ui-sans-serif, system-ui, sans-serif;
++
++  background: var(--lp-bg);
++  color: var(--lp-ink);
++  font-family: var(--font-sans, "Inter", ui-sans-serif, system-ui, sans-serif);
++  line-height: 1.6;
++  min-height: 100vh;
++  overflow-x: clip;
++  -webkit-font-smoothing: antialiased;
++}
++.lp *,
++.lp *::before,
++.lp *::after {
++  box-sizing: border-box;
++}
++.lp a {
++  color: inherit;
++}
++.lp :focus-visible {
++  outline: 3px solid var(--lp-amber);
++  outline-offset: 3px;
++  border-radius: 6px;
++}
++
++.lp-wrap {
++  width: 100%;
++  max-width: 72rem;
++  margin: 0 auto;
++  padding: 0 1.25rem;
++}
++.lp-section {
++  padding: clamp(3.5rem, 8vw, 6.5rem) 0;
++  scroll-margin-top: 4.5rem;
++}
++.lp-section.alt {
++  background: var(--lp-bg2);
++  border-block: 1px solid var(--lp-line);
++}
++.lp-eyebrow {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.5rem;
++  font-size: 0.78rem;
++  font-weight: 700;
++  letter-spacing: 0.16em;
++  text-transform: uppercase;
++  color: var(--lp-amber);
++}
++.lp-eyebrow::before {
++  content: "";
++  width: 1.6rem;
++  height: 2px;
++  background: var(--lp-grad);
++  border-radius: 2px;
++}
++.lp-h2 {
++  font-family: var(--lp-head);
++  font-weight: 800;
++  letter-spacing: -0.02em;
++  line-height: 1.05;
++  font-size: clamp(1.9rem, 5.5vw, 3.1rem);
++  margin: 0.75rem 0 1rem;
++}
++.lp-lead {
++  color: var(--lp-mute);
++  font-size: clamp(1rem, 2.4vw, 1.15rem);
++  max-width: 44rem;
++  margin: 0 0 2.25rem;
++}
++
++/* ─── Botões ──────────────────────────────────────────────────────────── */
++.lp-btn {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  gap: 0.6rem;
++  min-height: 3.25rem;
++  padding: 0.85rem 1.6rem;
++  border-radius: 999px;
++  border: 1px solid transparent;
++  font: 700 1rem/1 var(--font-sans, "Inter", sans-serif);
++  text-decoration: none;
++  cursor: pointer;
++  transition:
++    transform 0.18s ease,
++    box-shadow 0.18s ease,
++    background 0.18s ease;
++}
++.lp-btn:active {
++  transform: translateY(1px);
++}
++.lp-btn-fire {
++  background: var(--lp-grad);
++  color: #1c0b03;
++  box-shadow: 0 10px 34px -10px rgba(255, 90, 31, 0.75);
++}
++.lp-btn-fire:hover {
++  box-shadow: 0 14px 40px -8px rgba(255, 110, 31, 0.9);
++  transform: translateY(-2px);
++}
++.lp-btn-ghost {
++  background: rgba(255, 255, 255, 0.04);
++  border-color: var(--lp-line);
++  color: var(--lp-ink);
++}
++.lp-btn-ghost:hover {
++  background: rgba(255, 255, 255, 0.09);
++}
++.lp-btn[disabled] {
++  opacity: 0.6;
++  cursor: not-allowed;
++  transform: none;
++}
++.lp-btn-big {
++  min-height: 3.75rem;
++  padding: 1rem 2.2rem;
++  font-size: 1.1rem;
++}
++
++/* ─── Navegação ───────────────────────────────────────────────────────── */
++.lp-nav {
++  position: sticky;
++  top: 0;
++  z-index: 50;
++  background: color-mix(in oklab, var(--lp-bg) 82%, transparent);
++  backdrop-filter: blur(14px);
++  -webkit-backdrop-filter: blur(14px);
++  border-bottom: 1px solid var(--lp-line);
++}
++.lp-nav-in {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 1rem;
++  min-height: 4rem;
++}
++.lp-brand {
++  display: flex;
++  flex-direction: column;
++  line-height: 1.1;
++  text-decoration: none;
++}
++.lp-brand b {
++  font-family: var(--lp-head);
++  font-weight: 800;
++  font-size: 1.15rem;
++  letter-spacing: -0.01em;
++}
++.lp-brand span {
++  font-size: 0.68rem;
++  color: var(--lp-mute);
++  letter-spacing: 0.04em;
++}
++.lp-links {
++  display: none;
++  align-items: center;
++  gap: 1.5rem;
++}
++.lp-links a {
++  text-decoration: none;
++  font-size: 0.92rem;
++  font-weight: 500;
++  color: var(--lp-mute);
++}
++.lp-links a:hover {
++  color: var(--lp-ink);
++}
++.lp-nav-cta {
++  display: none;
++  min-height: 2.6rem;
++  padding: 0.55rem 1.2rem;
++  font-size: 0.9rem;
++}
++.lp-burger {
++  display: inline-grid;
++  place-items: center;
++  width: 2.9rem;
++  height: 2.9rem;
++  border-radius: 12px;
++  border: 1px solid var(--lp-line);
++  background: transparent;
++  color: var(--lp-ink);
++  cursor: pointer;
++}
++.lp-drawer {
++  border-top: 1px solid var(--lp-line);
++  padding: 0.75rem 0 1.25rem;
++  display: grid;
++  gap: 0.25rem;
++}
++.lp-drawer a:not(.lp-btn) {
++  padding: 0.85rem 0.25rem;
++  text-decoration: none;
++  font-weight: 600;
++  border-bottom: 1px solid var(--lp-line);
++}
++.lp-drawer .lp-btn {
++  margin-top: 0.75rem;
++}
++@media (min-width: 62rem) {
++  .lp-links,
++  .lp-nav-cta {
++    display: inline-flex;
++  }
++  .lp-burger,
++  .lp-drawer {
++    display: none;
++  }
++}
++
++/* ─── Hero ────────────────────────────────────────────────────────────── */
++.lp-hero {
++  position: relative;
++  isolation: isolate;
++  padding: clamp(3rem, 9vw, 7rem) 0 clamp(3.5rem, 8vw, 6rem);
++  background:
++    radial-gradient(60rem 34rem at 85% -10%, rgba(255, 90, 31, 0.32), transparent 60%),
++    radial-gradient(48rem 30rem at -10% 20%, rgba(98, 170, 255, 0.2), transparent 60%),
++    linear-gradient(180deg, #0b0c18 0%, var(--lp-bg) 100%);
++}
++.lp-net {
++  position: absolute;
++  inset: 0;
++  z-index: -1;
++  width: 100%;
++  height: 100%;
++  opacity: 0.55;
++  pointer-events: none;
++  mask-image: linear-gradient(180deg, #000 30%, transparent 95%);
++  -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 95%);
++}
++.lp-hero-badge {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.55rem;
++  padding: 0.45rem 0.95rem;
++  border-radius: 999px;
++  border: 1px solid rgba(255, 176, 46, 0.4);
++  background: rgba(255, 176, 46, 0.08);
++  color: var(--lp-amber);
++  font-size: 0.78rem;
++  font-weight: 700;
++  letter-spacing: 0.08em;
++  text-transform: uppercase;
++}
++.lp-title {
++  font-family: var(--lp-head);
++  font-weight: 800;
++  letter-spacing: -0.035em;
++  line-height: 0.98;
++  font-size: clamp(2.7rem, 11vw, 6.2rem);
++  margin: 1.25rem 0 0;
++  text-wrap: balance;
++}
++.lp-title em {
++  font-style: normal;
++  background: var(--lp-grad);
++  -webkit-background-clip: text;
++  background-clip: text;
++  color: transparent;
++}
++.lp-tema {
++  margin: 1rem 0 0;
++  font-family: var(--lp-head);
++  font-weight: 600;
++  font-size: clamp(1.1rem, 3.4vw, 1.6rem);
++  color: var(--lp-amber);
++}
++.lp-tema.pendente {
++  color: var(--lp-mute);
++  font-weight: 500;
++  font-size: 1rem;
++}
++.lp-impact {
++  max-width: 38rem;
++  margin: 1.25rem 0 0;
++  font-size: clamp(1.05rem, 2.8vw, 1.3rem);
++  color: #d9dcea;
++}
++.lp-facts {
++  display: grid;
++  gap: 0.75rem;
++  margin: 2rem 0 0;
++  padding: 0;
++  list-style: none;
++}
++.lp-fact {
++  display: flex;
++  align-items: center;
++  gap: 0.85rem;
++  padding: 0.85rem 1rem;
++  border-radius: 14px;
++  border: 1px solid var(--lp-line);
++  background: rgba(255, 255, 255, 0.04);
++}
++.lp-fact svg {
++  flex: none;
++  color: var(--lp-amber);
++}
++.lp-fact small {
++  display: block;
++  font-size: 0.7rem;
++  letter-spacing: 0.12em;
++  text-transform: uppercase;
++  color: var(--lp-mute);
++}
++.lp-fact strong {
++  font-weight: 600;
++}
++.lp-cta-row {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 0.85rem;
++  margin-top: 2rem;
++}
++@media (min-width: 48rem) {
++  .lp-facts {
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++    max-width: 44rem;
++  }
++}
++
++/* ─── Cartões ─────────────────────────────────────────────────────────── */
++.lp-grid {
++  display: grid;
++  gap: 1rem;
++}
++@media (min-width: 40rem) {
++  .lp-grid.c2,
++  .lp-grid.c4 {
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++  }
++}
++@media (min-width: 64rem) {
++  .lp-grid.c4 {
++    grid-template-columns: repeat(4, minmax(0, 1fr));
++  }
++  .lp-grid.c3 {
++    grid-template-columns: repeat(3, minmax(0, 1fr));
++  }
++}
++.lp-card {
++  background: var(--lp-card);
++  border: 1px solid var(--lp-line);
++  border-radius: var(--lp-radius);
++  padding: 1.5rem;
++}
++.lp-card h3 {
++  font-family: var(--lp-head);
++  font-weight: 700;
++  font-size: 1.25rem;
++  margin: 0.9rem 0 0.4rem;
++}
++.lp-card p {
++  margin: 0;
++  color: var(--lp-mute);
++}
++.lp-ico {
++  display: inline-grid;
++  place-items: center;
++  width: 3rem;
++  height: 3rem;
++  border-radius: 14px;
++  background: rgba(255, 90, 31, 0.14);
++  color: var(--lp-fire);
++}
++.lp-ico.sky {
++  background: rgba(98, 170, 255, 0.14);
++  color: var(--lp-sky);
++}
++.lp-badge {
++  display: inline-block;
++  margin-left: 0.5rem;
++  padding: 0.15rem 0.6rem;
++  border-radius: 999px;
++  font-size: 0.68rem;
++  font-weight: 700;
++  letter-spacing: 0.08em;
++  text-transform: uppercase;
++  vertical-align: middle;
++  font-family: var(--font-sans, "Inter", sans-serif);
++}
++.lp-badge.ok {
++  background: rgba(79, 209, 160, 0.14);
++  color: var(--lp-ok);
++}
++.lp-badge.pend {
++  background: rgba(255, 176, 46, 0.14);
++  color: var(--lp-amber);
++}
++.lp-list {
++  margin: 0.75rem 0 0;
++  padding-left: 1.15rem;
++  color: var(--lp-mute);
++}
++.lp-list li {
++  margin: 0.4rem 0;
++}
++
++/* Valores */
++.lp-prices {
++  list-style: none;
++  margin: 0.9rem 0 0;
++  padding: 0;
++  display: grid;
++  gap: 0.5rem;
++}
++.lp-prices li {
++  display: flex;
++  justify-content: space-between;
++  align-items: baseline;
++  gap: 1rem;
++  padding: 0.7rem 0;
++  border-bottom: 1px dashed var(--lp-line);
++}
++.lp-prices li:last-child {
++  border-bottom: 0;
++}
++.lp-prices b {
++  font-family: var(--lp-head);
++  font-size: 1.25rem;
++  white-space: nowrap;
++}
++.lp-prices span.tbd {
++  color: var(--lp-mute);
++  font-size: 0.9rem;
++  text-align: right;
++}
++
++/* ─── Galeria ─────────────────────────────────────────────────────────── */
++.lp-tabs {
++  display: flex;
++  gap: 0.5rem;
++  overflow-x: auto;
++  padding-bottom: 0.5rem;
++  margin-bottom: 1.25rem;
++  scrollbar-width: thin;
++}
++.lp-tab {
++  flex: none;
++  min-height: 2.75rem;
++  padding: 0.55rem 1.1rem;
++  border-radius: 999px;
++  border: 1px solid var(--lp-line);
++  background: transparent;
++  color: var(--lp-mute);
++  font: 600 0.92rem var(--font-sans, "Inter", sans-serif);
++  cursor: pointer;
++}
++.lp-tab[aria-selected="true"] {
++  background: var(--lp-grad);
++  color: #1c0b03;
++  border-color: transparent;
++}
++.lp-gallery {
++  display: grid;
++  gap: 0.75rem;
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++}
++@media (min-width: 48rem) {
++  .lp-gallery {
++    grid-template-columns: repeat(3, minmax(0, 1fr));
++  }
++}
++.lp-photo {
++  position: relative;
++  aspect-ratio: 4 / 3;
++  border-radius: 14px;
++  overflow: hidden;
++  border: 1px solid var(--lp-line);
++  background: var(--lp-card);
++  padding: 0;
++  cursor: zoom-in;
++}
++.lp-photo img {
++  width: 100%;
++  height: 100%;
++  object-fit: cover;
++  display: block;
++  transition: transform 0.4s ease;
++}
++.lp-photo:hover img {
++  transform: scale(1.04);
++}
++.lp-empty {
++  display: grid;
++  place-items: center;
++  gap: 0.6rem;
++  text-align: center;
++  padding: 2.5rem 1.25rem;
++  border: 1px dashed rgba(255, 255, 255, 0.22);
++  border-radius: var(--lp-radius);
++  color: var(--lp-mute);
++  background: repeating-linear-gradient(
++    135deg,
++    rgba(255, 255, 255, 0.02) 0 14px,
++    transparent 14px 28px
++  );
++}
++.lp-empty svg {
++  color: var(--lp-amber);
++}
++.lp-video {
++  position: relative;
++  aspect-ratio: 16 / 9;
++  border-radius: 14px;
++  overflow: hidden;
++  border: 1px solid var(--lp-line);
++  background: #000;
++}
++.lp-video iframe {
++  position: absolute;
++  inset: 0;
++  width: 100%;
++  height: 100%;
++  border: 0;
++}
++.lp-videos {
++  display: grid;
++  gap: 1rem;
++}
++@media (min-width: 48rem) {
++  .lp-videos {
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++  }
++}
++.lp-lightbox {
++  position: fixed;
++  inset: 0;
++  z-index: 100;
++  display: grid;
++  place-items: center;
++  padding: 1rem;
++  background: rgba(3, 4, 9, 0.92);
++}
++.lp-lightbox img {
++  max-width: 100%;
++  max-height: 88vh;
++  border-radius: 12px;
++}
++.lp-lightbox button {
++  position: absolute;
++  top: 0.75rem;
++  right: 0.75rem;
++  width: 3rem;
++  height: 3rem;
++  border-radius: 50%;
++  border: 1px solid var(--lp-line);
++  background: var(--lp-card);
++  color: var(--lp-ink);
++  cursor: pointer;
++}
++
++/* ─── Programação ─────────────────────────────────────────────────────── */
++.lp-day {
++  background: var(--lp-card);
++  border: 1px solid var(--lp-line);
++  border-radius: var(--lp-radius);
++  padding: 1.5rem;
++}
++.lp-day h3 {
++  font-family: var(--lp-head);
++  margin: 0 0 0.25rem;
++  font-size: 1.35rem;
++}
++.lp-day small {
++  color: var(--lp-mute);
++}
++.lp-slots {
++  list-style: none;
++  margin: 1rem 0 0;
++  padding: 0;
++}
++.lp-slots li {
++  display: grid;
++  grid-template-columns: 4.25rem 1fr;
++  gap: 0.75rem;
++  padding: 0.7rem 0;
++  border-top: 1px solid var(--lp-line);
++}
++.lp-slots time {
++  color: var(--lp-amber);
++  font-weight: 700;
++}
++
++/* ─── FAQ ─────────────────────────────────────────────────────────────── */
++.lp-faq {
++  display: grid;
++  gap: 0.75rem;
++  max-width: 50rem;
++}
++.lp-faq details {
++  background: var(--lp-card);
++  border: 1px solid var(--lp-line);
++  border-radius: 14px;
++  padding: 0 1.25rem;
++}
++.lp-faq summary {
++  list-style: none;
++  cursor: pointer;
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 1rem;
++  min-height: 3.5rem;
++  padding: 0.5rem 0;
++  font-weight: 600;
++}
++.lp-faq summary::-webkit-details-marker {
++  display: none;
++}
++.lp-faq summary svg {
++  flex: none;
++  transition: transform 0.2s ease;
++  color: var(--lp-amber);
++}
++.lp-faq details[open] summary svg {
++  transform: rotate(45deg);
++}
++.lp-faq details p {
++  margin: 0 0 1.1rem;
++  color: var(--lp-mute);
++}
++
++/* ─── CTA final e rodapé ──────────────────────────────────────────────── */
++.lp-final {
++  position: relative;
++  isolation: isolate;
++  text-align: center;
++  padding: clamp(4rem, 10vw, 7rem) 0;
++  background:
++    radial-gradient(40rem 22rem at 50% 120%, rgba(255, 90, 31, 0.45), transparent 70%),
++    var(--lp-bg2);
++  border-top: 1px solid var(--lp-line);
++}
++.lp-final .lp-h2 {
++  margin-inline: auto;
++  max-width: 24ch;
++}
++.lp-final .lp-lead {
++  margin-inline: auto;
++  margin-bottom: 2rem;
++}
++.lp-foot {
++  padding: 2rem 0 2.5rem;
++  color: var(--lp-mute);
++  font-size: 0.85rem;
++  border-top: 1px solid var(--lp-line);
++}
++.lp-foot-in {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 0.5rem 1.5rem;
++  justify-content: space-between;
++}
++.lp-foot a {
++  color: var(--lp-ink);
++}
++
++/* ─── Formulário ──────────────────────────────────────────────────────── */
++.lp-formhead {
++  padding: 2.5rem 0 1.5rem;
++  background:
++    radial-gradient(40rem 20rem at 90% -20%, rgba(255, 90, 31, 0.28), transparent 65%), var(--lp-bg);
++}
++.lp-back {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.4rem;
++  min-height: 2.75rem;
++  color: var(--lp-mute);
++  text-decoration: none;
++  font-size: 0.92rem;
++}
++.lp-form {
++  display: grid;
++  gap: 1.25rem;
++  max-width: 46rem;
++  margin: 0 auto;
++}
++.lp-fs {
++  border: 1px solid var(--lp-line);
++  border-radius: var(--lp-radius);
++  background: var(--lp-card);
++  padding: 1.25rem 1.25rem 1.4rem;
++  margin: 0;
++  min-width: 0;
++}
++.lp-fs legend {
++  padding: 0 0.5rem;
++  font-family: var(--lp-head);
++  font-weight: 700;
++  font-size: 1.1rem;
++}
++.lp-fs .hint {
++  margin: 0 0 1rem;
++  color: var(--lp-mute);
++  font-size: 0.9rem;
++}
++.lp-row {
++  display: grid;
++  gap: 1rem;
++}
++@media (min-width: 40rem) {
++  .lp-row.two {
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++  }
++}
++.lp-field {
++  display: grid;
++  gap: 0.4rem;
++  margin-top: 1rem;
++  min-width: 0;
++}
++.lp-row > .lp-field {
++  margin-top: 0;
++}
++.lp-field label,
++.lp-field .lbl {
++  font-size: 0.92rem;
++  font-weight: 600;
++}
++.lp-field label small {
++  font-weight: 400;
++  color: var(--lp-mute);
++}
++.lp-field input:not([type="checkbox"]),
++.lp-field textarea {
++  width: 100%;
++  min-height: 3.1rem;
++  padding: 0.7rem 0.9rem;
++  border-radius: 12px;
++  border: 1.5px solid rgba(255, 255, 255, 0.18);
++  background: #0b0d1a;
++  color: var(--lp-ink);
++  font: 400 1rem/1.4 var(--font-sans, "Inter", sans-serif); /* 16px evita zoom no iOS */
++  appearance: none;
++  -webkit-appearance: none;
++}
++.lp-field textarea {
++  min-height: 6.5rem;
++  resize: vertical;
++}
++.lp-field input::placeholder,
++.lp-field textarea::placeholder {
++  color: #6f7590;
++}
++.lp-field input:focus,
++.lp-field textarea:focus {
++  outline: none;
++  border-color: var(--lp-amber);
++  box-shadow: 0 0 0 3px rgba(255, 176, 46, 0.25);
++}
++.lp-field [aria-invalid="true"] {
++  border-color: var(--lp-err) !important;
++}
++.lp-err {
++  color: var(--lp-err);
++  font-size: 0.85rem;
++  margin: 0;
++}
++.lp-check {
++  display: grid;
++  grid-template-columns: 1.6rem 1fr;
++  gap: 0.75rem;
++  align-items: start;
++  margin-top: 1rem;
++  font-size: 0.95rem;
++}
++.lp-check input {
++  width: 1.5rem;
++  height: 1.5rem;
++  margin: 0.1rem 0 0;
++  accent-color: var(--lp-fire);
++}
++.lp-check a {
++  color: var(--lp-amber);
++}
++.lp-honey {
++  position: absolute !important;
++  left: -9999px !important;
++  width: 1px;
++  height: 1px;
++  overflow: hidden;
++}
++.lp-price {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 1rem;
++  flex-wrap: wrap;
++  padding: 1.1rem 1.25rem;
++  border-radius: var(--lp-radius);
++  border: 1px solid rgba(255, 176, 46, 0.45);
++  background: linear-gradient(135deg, rgba(255, 90, 31, 0.16), rgba(255, 176, 46, 0.08));
++}
++.lp-price small {
++  display: block;
++  color: var(--lp-mute);
++  font-size: 0.78rem;
++  letter-spacing: 0.1em;
++  text-transform: uppercase;
++}
++.lp-price strong {
++  font-family: var(--lp-head);
++  font-size: clamp(1.6rem, 6vw, 2.2rem);
++  line-height: 1.1;
++}
++.lp-price p {
++  margin: 0;
++  color: var(--lp-mute);
++  font-size: 0.88rem;
++  max-width: 22rem;
++}
++.lp-alert {
++  display: flex;
++  gap: 0.75rem;
++  align-items: flex-start;
++  padding: 1rem 1.1rem;
++  border-radius: 14px;
++  border: 1px solid rgba(255, 123, 123, 0.5);
++  background: rgba(255, 123, 123, 0.09);
++}
++.lp-alert svg {
++  flex: none;
++  color: var(--lp-err);
++  margin-top: 0.15rem;
++}
++.lp-alert p {
++  margin: 0;
++}
++.lp-submit {
++  width: 100%;
++}
++.lp-spin {
++  animation: lp-spin 0.9s linear infinite;
++}
++@keyframes lp-spin {
++  to {
++    transform: rotate(360deg);
++  }
++}
++
++/* Confirmação */
++.lp-done {
++  max-width: 40rem;
++  margin: 0 auto;
++  padding: 1.75rem 1.5rem;
++  border-radius: 22px;
++  border: 1px solid rgba(79, 209, 160, 0.5);
++  background: linear-gradient(180deg, rgba(79, 209, 160, 0.1), var(--lp-card) 60%);
++}
++.lp-done-ico {
++  display: inline-grid;
++  place-items: center;
++  width: 3.5rem;
++  height: 3.5rem;
++  border-radius: 50%;
++  background: rgba(79, 209, 160, 0.18);
++  color: var(--lp-ok);
++}
++.lp-done h2 {
++  font-family: var(--lp-head);
++  font-size: clamp(1.6rem, 5vw, 2.1rem);
++  line-height: 1.1;
++  margin: 1rem 0 0.35rem;
++}
++.lp-done dl {
++  display: grid;
++  gap: 0.75rem;
++  margin: 1.25rem 0;
++  padding: 1rem 1.1rem;
++  border-radius: 14px;
++  background: rgba(255, 255, 255, 0.04);
++  border: 1px solid var(--lp-line);
++}
++.lp-done dt {
++  font-size: 0.72rem;
++  letter-spacing: 0.12em;
++  text-transform: uppercase;
++  color: var(--lp-mute);
++}
++.lp-done dd {
++  margin: 0.1rem 0 0;
++  font-weight: 600;
++}
++.lp-done ol {
++  margin: 0.5rem 0 1.5rem;
++  padding-left: 1.2rem;
++  color: var(--lp-mute);
++}
++.lp-done ol li {
++  margin: 0.4rem 0;
++}
++.lp-note {
++  margin: 0;
++  padding: 0.85rem 1rem;
++  border-radius: 12px;
++  background: rgba(255, 176, 46, 0.1);
++  border: 1px solid rgba(255, 176, 46, 0.4);
++  font-weight: 600;
++}
++
++/* Termos */
++.lp-terms {
++  max-width: 46rem;
++  margin: 3rem auto 0;
++  display: grid;
++  gap: 1rem;
++}
++.lp-terms details {
++  background: var(--lp-card);
++  border: 1px solid var(--lp-line);
++  border-radius: 14px;
++  padding: 0 1.25rem;
++}
++.lp-terms summary {
++  cursor: pointer;
++  min-height: 3.5rem;
++  display: flex;
++  align-items: center;
++  font-weight: 700;
++}
++.lp-terms .body {
++  padding-bottom: 1.2rem;
++  color: var(--lp-mute);
++  font-size: 0.95rem;
++}
++.lp-terms .body h4 {
++  color: var(--lp-ink);
++  margin: 1rem 0 0.25rem;
++}
++.lp-terms .body p,
++.lp-terms .body ul {
++  margin: 0.25rem 0;
++}
++
++@media (prefers-reduced-motion: no-preference) {
++  .lp-rise {
++    animation: lp-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
++  }
++  .lp-rise.d1 {
++    animation-delay: 0.08s;
++  }
++  .lp-rise.d2 {
++    animation-delay: 0.16s;
++  }
++  .lp-rise.d3 {
++    animation-delay: 0.24s;
++  }
++}
++@keyframes lp-rise {
++  from {
++    opacity: 0;
++    transform: translateY(18px);
++  }
++  to {
++    opacity: 1;
++    transform: none;
++  }
++}
++@media (prefers-reduced-motion: reduce) {
++  .lp * {
++    animation: none !important;
++    transition: none !important;
++  }
++}
+diff --git a/src/lib/inscricao.ts b/src/lib/inscricao.ts
+new file mode 100644
+index 0000000..42471f1
+--- /dev/null
++++ b/src/lib/inscricao.ts
+@@ -0,0 +1,349 @@
++// ============================================================================
++// Regras de inscrição — funções puras, sem dependências, compartilhadas entre
++// o navegador (feedback imediato) e o servidor (validação autoritativa).
++// O servidor SEMPRE recalcula idade e valor; nunca confia no que veio do cliente.
++// ============================================================================
++
++export type Faixa = {
++  id: string;
++  rotulo: string;
++  idadeMin: number;
++  idadeMax: number | null;
++  valor: number | null;
++  nota?: string;
++};
++
++export type FormValues = {
++  nomeCompleto: string;
++  dataNascimento: string; // YYYY-MM-DD
++  cpf: string;
++  telefone: string;
++  whatsapp: string;
++  igreja: string;
++  cidade: string;
++  email: string;
++  responsavelNome: string;
++  responsavelTelefone: string;
++  emergenciaNome: string;
++  emergenciaTelefone: string;
++  necessidades: string;
++  aceiteRegras: boolean;
++  aceitePrivacidade: boolean;
++  /** Campo-isca invisível: pessoas não preenchem, robôs sim. */
++  website: string;
++};
++
++export type Campo = keyof FormValues;
++export type Erros = Partial<Record<Campo, string>>;
++
++/** Ordem visual dos campos, usada para focar o primeiro erro. */
++export const ORDEM_CAMPOS: Campo[] = [
++  "nomeCompleto",
++  "dataNascimento",
++  "cpf",
++  "telefone",
++  "whatsapp",
++  "email",
++  "igreja",
++  "cidade",
++  "responsavelNome",
++  "responsavelTelefone",
++  "emergenciaNome",
++  "emergenciaTelefone",
++  "necessidades",
++  "aceiteRegras",
++  "aceitePrivacidade",
++];
++
++export const VALORES_VAZIOS: FormValues = {
++  nomeCompleto: "",
++  dataNascimento: "",
++  cpf: "",
++  telefone: "",
++  whatsapp: "",
++  igreja: "",
++  cidade: "",
++  email: "",
++  responsavelNome: "",
++  responsavelTelefone: "",
++  emergenciaNome: "",
++  emergenciaTelefone: "",
++  necessidades: "",
++  aceiteRegras: false,
++  aceitePrivacidade: false,
++  website: "",
++};
++
++// ─── Utilidades de texto ─────────────────────────────────────────────────────
++
++export const somenteDigitos = (s: string): string => (s ?? "").replace(/\D+/g, "");
++
++export function formatarCpf(s: string): string {
++  const d = somenteDigitos(s).slice(0, 11);
++  if (d.length <= 3) return d;
++  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
++  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
++  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
++}
++
++/** Normaliza para 10 ou 11 dígitos (remove DDI 55 quando presente). */
++export function normalizarTelefone(s: string): string {
++  let d = somenteDigitos(s);
++  if ((d.length === 12 || d.length === 13) && d.startsWith("55")) d = d.slice(2);
++  return d;
++}
++
++export function formatarTelefone(s: string): string {
++  const d = somenteDigitos(s).slice(0, 11);
++  if (d.length === 0) return "";
++  if (d.length <= 2) return `(${d}`;
++  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
++  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
++  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
++}
++
++export function formatarReais(valor: number): string {
++  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
++}
++
++// ─── Validadores ─────────────────────────────────────────────────────────────
++
++export function cpfValido(entrada: string): boolean {
++  const d = somenteDigitos(entrada);
++  if (d.length !== 11) return false;
++  if (/^(\d)\1{10}$/.test(d)) return false;
++  const calc = (base: string, pesoInicial: number): number => {
++    let soma = 0;
++    for (let i = 0; i < base.length; i++) soma += Number(base[i]) * (pesoInicial - i);
++    const resto = (soma * 10) % 11;
++    return resto === 10 ? 0 : resto;
++  };
++  const d1 = calc(d.slice(0, 9), 10);
++  const d2 = calc(d.slice(0, 10), 11);
++  return d1 === Number(d[9]) && d2 === Number(d[10]);
++}
++
++export function telefoneValido(entrada: string): boolean {
++  const d = normalizarTelefone(entrada);
++  if (d.length !== 10 && d.length !== 11) return false;
++  const ddd = Number(d.slice(0, 2));
++  if (ddd < 11 || ddd > 99) return false;
++  if (d.length === 11 && d[2] !== "9") return false; // celular
++  return true;
++}
++
++export function emailValido(entrada: string): boolean {
++  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(entrada) && entrada.length <= 120;
++}
++
++function nomeValido(entrada: string): boolean {
++  const nome = entrada.trim().replace(/\s+/g, " ");
++  if (nome.length < 5 || nome.length > 100) return false;
++  if (!/^[\p{L}][\p{L}\p{M}'’.\- ]*$/u.test(nome)) return false;
++  return nome.split(" ").length >= 2;
++}
++
++// ─── Datas (sem fuso: trabalhamos com strings YYYY-MM-DD) ────────────────────
++
++export function lerDataIso(s: string): { y: number; m: number; d: number } | null {
++  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s ?? "");
++  if (!m) return null;
++  const y = Number(m[1]);
++  const mo = Number(m[2]);
++  const d = Number(m[3]);
++  const dt = new Date(Date.UTC(y, mo - 1, d));
++  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d)
++    return null;
++  return { y, m: mo, d };
++}
++
++/** Idade completa em `referencia` (YYYY-MM-DD). Null se alguma data for inválida. */
++export function calcularIdade(nascimento: string, referencia: string): number | null {
++  const n = lerDataIso(nascimento);
++  const r = lerDataIso(referencia);
++  if (!n || !r) return null;
++  let idade = r.y - n.y;
++  if (r.m < n.m || (r.m === n.m && r.d < n.d)) idade -= 1;
++  return idade;
++}
++
++/** Data de hoje em America/Sao_Paulo no formato YYYY-MM-DD. */
++export function hojeSaoPaulo(agora: Date = new Date()): string {
++  const partes = new Intl.DateTimeFormat("en-CA", {
++    timeZone: "America/Sao_Paulo",
++    year: "numeric",
++    month: "2-digit",
++    day: "2-digit",
++  }).format(agora);
++  return partes; // en-CA → YYYY-MM-DD
++}
++
++export function faixaPorIdade(idade: number, faixas: Faixa[]): Faixa | null {
++  return (
++    faixas.find((f) => idade >= f.idadeMin && (f.idadeMax === null || idade <= f.idadeMax)) ?? null
++  );
++}
++
++// ─── Validação completa ──────────────────────────────────────────────────────
++
++export type ContextoValidacao = {
++  /** Data de início do retiro (YYYY-MM-DD) — referência para a idade. */
++  dataReferencia: string;
++  /** Hoje (YYYY-MM-DD) — para rejeitar nascimento no futuro. */
++  hoje: string;
++  faixas: Faixa[];
++};
++
++export type ResultadoValidacao = {
++  erros: Erros;
++  idade: number | null;
++  menorDeIdade: boolean;
++  faixa: Faixa | null;
++  /** null = valor a definir (ou idade ainda desconhecida) */
++  valor: number | null;
++};
++
++const texto = (s: string): string => (s ?? "").trim().replace(/\s+/g, " ");
++
++export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidacao {
++  const erros: Erros = {};
++
++  if (!nomeValido(v.nomeCompleto))
++    erros.nomeCompleto = "Informe o nome completo (nome e sobrenome).";
++
++  let idade: number | null = null;
++  if (!v.dataNascimento) {
++    erros.dataNascimento = "Informe a data de nascimento.";
++  } else if (!lerDataIso(v.dataNascimento)) {
++    erros.dataNascimento = "Data de nascimento inválida.";
++  } else if (v.dataNascimento > ctx.hoje) {
++    erros.dataNascimento = "A data de nascimento não pode estar no futuro.";
++  } else {
++    idade = calcularIdade(v.dataNascimento, ctx.dataReferencia);
++    if (idade === null || idade < 0) {
++      erros.dataNascimento = "O participante precisa ter nascido antes do início do retiro.";
++      idade = null;
++    } else if (idade > 110) {
++      erros.dataNascimento = "Confira o ano de nascimento.";
++      idade = null;
++    }
++  }
++
++  if (!v.cpf) erros.cpf = "Informe o CPF.";
++  else if (!cpfValido(v.cpf)) erros.cpf = "CPF inválido. Confira os números.";
++
++  if (!v.telefone) erros.telefone = "Informe o telefone.";
++  else if (!telefoneValido(v.telefone)) erros.telefone = "Telefone inválido. Use DDD + número.";
++
++  if (!v.whatsapp) erros.whatsapp = "Informe o WhatsApp.";
++  else if (!telefoneValido(v.whatsapp)) erros.whatsapp = "WhatsApp inválido. Use DDD + número.";
++
++  const igreja = texto(v.igreja);
++  if (igreja.length < 2) erros.igreja = "Informe a igreja ou congregação.";
++  else if (igreja.length > 100) erros.igreja = "Use no máximo 100 caracteres.";
++
++  const cidade = texto(v.cidade);
++  if (cidade.length < 2) erros.cidade = "Informe a cidade.";
++  else if (cidade.length > 80) erros.cidade = "Use no máximo 80 caracteres.";
++
++  if (v.email.trim() && !emailValido(v.email.trim())) erros.email = "E-mail inválido.";
++
++  const menorDeIdade = idade !== null && idade < 18;
++  if (menorDeIdade) {
++    if (!nomeValido(v.responsavelNome))
++      erros.responsavelNome = "Informe o nome completo do responsável legal.";
++    if (!v.responsavelTelefone) erros.responsavelTelefone = "Informe o telefone do responsável.";
++    else if (!telefoneValido(v.responsavelTelefone))
++      erros.responsavelTelefone = "Telefone inválido. Use DDD + número.";
++  }
++
++  if (!nomeValido(v.emergenciaNome))
++    erros.emergenciaNome = "Informe o nome do contato de emergência.";
++  if (!v.emergenciaTelefone) erros.emergenciaTelefone = "Informe o telefone de emergência.";
++  else if (!telefoneValido(v.emergenciaTelefone))
++    erros.emergenciaTelefone = "Telefone inválido. Use DDD + número.";
++
++  if (v.necessidades.length > 500) erros.necessidades = "Use no máximo 500 caracteres.";
++
++  if (!v.aceiteRegras) erros.aceiteRegras = "É necessário aceitar as regras do retiro.";
++  if (!v.aceitePrivacidade)
++    erros.aceitePrivacidade = "É necessário confirmar a ciência da política de privacidade.";
++
++  const faixa = idade === null ? null : faixaPorIdade(idade, ctx.faixas);
++  if (idade !== null && !faixa)
++    erros.dataNascimento = "Não foi possível determinar o valor para esta idade.";
++
++  return { erros, idade, menorDeIdade, faixa, valor: faixa ? faixa.valor : null };
++}
++
++// ─── Corpo enviado à planilha ────────────────────────────────────────────────
++
++/** Evita injeção de fórmulas em planilhas (=, +, -, @ no início da célula). */
++export function higienizarCelula(s: string): string {
++  const t = texto(s);
++  return /^[=+\-@\t\r]/.test(t) ? `'${t}` : t;
++}
++
++export type CorpoPlanilha = {
++  idempotencyKey: string;
++  enviadoEm: string; // ISO UTC, gerado no servidor
++  nomeCompleto: string;
++  dataNascimento: string;
++  idadeNaDataDoRetiro: number;
++  faixa: string;
++  valor: number | null;
++  valorTexto: string;
++  cpf: string; // somente dígitos
++  telefone: string;
++  whatsapp: string;
++  email: string;
++  igreja: string;
++  cidade: string;
++  menorDeIdade: "SIM" | "NÃO";
++  responsavelNome: string;
++  responsavelTelefone: string;
++  emergenciaNome: string;
++  emergenciaTelefone: string;
++  necessidades: string;
++  aceiteRegras: "SIM";
++  aceitePrivacidade: "SIM";
++  versaoTermos: string;
++  statusPagamento: "NÃO CONFIRMADO";
++  origem: "landing-retiro-2027";
++};
++
++export function montarCorpo(
++  v: FormValues,
++  r: ResultadoValidacao,
++  extra: { idempotencyKey: string; enviadoEm: string; versaoTermos: string },
++): CorpoPlanilha {
++  if (r.idade === null || !r.faixa) throw new Error("montarCorpo chamado com dados inválidos");
++  const menor = r.menorDeIdade;
++  return {
++    idempotencyKey: extra.idempotencyKey,
++    enviadoEm: extra.enviadoEm,
++    nomeCompleto: higienizarCelula(v.nomeCompleto),
++    dataNascimento: v.dataNascimento,
++    idadeNaDataDoRetiro: r.idade,
++    faixa: r.faixa.rotulo,
++    valor: r.valor,
++    valorTexto: r.valor === null ? "A definir" : formatarReais(r.valor),
++    cpf: somenteDigitos(v.cpf),
++    telefone: normalizarTelefone(v.telefone),
++    whatsapp: normalizarTelefone(v.whatsapp),
++    email: higienizarCelula(v.email),
++    igreja: higienizarCelula(v.igreja),
++    cidade: higienizarCelula(v.cidade),
++    menorDeIdade: menor ? "SIM" : "NÃO",
++    responsavelNome: menor ? higienizarCelula(v.responsavelNome) : "",
++    responsavelTelefone: menor ? normalizarTelefone(v.responsavelTelefone) : "",
++    emergenciaNome: higienizarCelula(v.emergenciaNome),
++    emergenciaTelefone: normalizarTelefone(v.emergenciaTelefone),
++    necessidades: higienizarCelula(v.necessidades),
++    aceiteRegras: "SIM",
++    aceitePrivacidade: "SIM",
++    versaoTermos: extra.versaoTermos,
++    statusPagamento: "NÃO CONFIRMADO",
++    origem: "landing-retiro-2027",
++  };
++}
+diff --git a/src/routeTree.gen.ts b/src/routeTree.gen.ts
+index d6be503..9f49f3b 100644
+--- a/src/routeTree.gen.ts
++++ b/src/routeTree.gen.ts
+@@ -10,6 +10,8 @@
+ 
+ import { Route as rootRouteImport } from './routes/__root'
+ import { Route as IndexRouteImport } from './routes/index'
++import { Route as InscricaoRouteImport } from './routes/inscricao'
++import { Route as DeckIndexRouteImport } from './routes/deck.index'
+ import { Route as DeckPrintRouteImport } from './routes/deck.print'
+ import { Route as DeckSlugRouteImport } from './routes/deck.$slug'
+ 
+@@ -18,6 +20,16 @@ const IndexRoute = IndexRouteImport.update({
+   path: '/',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const InscricaoRoute = InscricaoRouteImport.update({
++  id: '/inscricao',
++  path: '/inscricao',
++  getParentRoute: () => rootRouteImport,
++} as any)
++const DeckIndexRoute = DeckIndexRouteImport.update({
++  id: '/deck/',
++  path: '/deck/',
++  getParentRoute: () => rootRouteImport,
++} as any)
+ const DeckPrintRoute = DeckPrintRouteImport.update({
+   id: '/deck/print',
+   path: '/deck/print',
+@@ -31,30 +43,38 @@ const DeckSlugRoute = DeckSlugRouteImport.update({
+ 
+ export interface FileRoutesByFullPath {
+   '/': typeof IndexRoute
++  '/inscricao': typeof InscricaoRoute
++  '/deck/': typeof DeckIndexRoute
+   '/deck/$slug': typeof DeckSlugRoute
+   '/deck/print': typeof DeckPrintRoute
+ }
+ export interface FileRoutesByTo {
+   '/': typeof IndexRoute
++  '/inscricao': typeof InscricaoRoute
++  '/deck': typeof DeckIndexRoute
+   '/deck/$slug': typeof DeckSlugRoute
+   '/deck/print': typeof DeckPrintRoute
+ }
+ export interface FileRoutesById {
+   __root__: typeof rootRouteImport
+   '/': typeof IndexRoute
++  '/inscricao': typeof InscricaoRoute
++  '/deck/': typeof DeckIndexRoute
+   '/deck/$slug': typeof DeckSlugRoute
+   '/deck/print': typeof DeckPrintRoute
+ }
+ export interface FileRouteTypes {
+   fileRoutesByFullPath: FileRoutesByFullPath
+-  fullPaths: '/' | '/deck/$slug' | '/deck/print'
++  fullPaths: '/' | '/inscricao' | '/deck/' | '/deck/$slug' | '/deck/print'
+   fileRoutesByTo: FileRoutesByTo
+-  to: '/' | '/deck/$slug' | '/deck/print'
+-  id: '__root__' | '/' | '/deck/$slug' | '/deck/print'
++  to: '/' | '/inscricao' | '/deck' | '/deck/$slug' | '/deck/print'
++  id: '__root__' | '/' | '/inscricao' | '/deck/' | '/deck/$slug' | '/deck/print'
+   fileRoutesById: FileRoutesById
+ }
+ export interface RootRouteChildren {
+   IndexRoute: typeof IndexRoute
++  InscricaoRoute: typeof InscricaoRoute
++  DeckIndexRoute: typeof DeckIndexRoute
+   DeckSlugRoute: typeof DeckSlugRoute
+   DeckPrintRoute: typeof DeckPrintRoute
+ }
+@@ -68,6 +88,20 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof IndexRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/inscricao': {
++      id: '/inscricao'
++      path: '/inscricao'
++      fullPath: '/inscricao'
++      preLoaderRoute: typeof InscricaoRouteImport
++      parentRoute: typeof rootRouteImport
++    }
++    '/deck/': {
++      id: '/deck/'
++      path: '/deck'
++      fullPath: '/deck/'
++      preLoaderRoute: typeof DeckIndexRouteImport
++      parentRoute: typeof rootRouteImport
++    }
+     '/deck/print': {
+       id: '/deck/print'
+       path: '/deck/print'
+@@ -87,6 +121,8 @@ declare module '@tanstack/react-router' {
+ 
+ const rootRouteChildren: RootRouteChildren = {
+   IndexRoute: IndexRoute,
++  InscricaoRoute: InscricaoRoute,
++  DeckIndexRoute: DeckIndexRoute,
+   DeckSlugRoute: DeckSlugRoute,
+   DeckPrintRoute: DeckPrintRoute,
+ }
+diff --git a/src/routes/__root.tsx b/src/routes/__root.tsx
+index b8216c0..fa78ea1 100644
+--- a/src/routes/__root.tsx
++++ b/src/routes/__root.tsx
+@@ -18,16 +18,16 @@ function NotFoundComponent() {
+     <div className="flex min-h-screen items-center justify-center bg-background px-4">
+       <div className="max-w-md text-center">
+         <h1 className="text-7xl font-bold text-foreground">404</h1>
+-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
++        <h2 className="mt-4 text-xl font-semibold text-foreground">Página não encontrada</h2>
+         <p className="mt-2 text-sm text-muted-foreground">
+-          The page you're looking for doesn't exist or has been moved.
++          A página que você procura não existe ou foi movida.
+         </p>
+         <div className="mt-6">
+           <Link
+             to="/"
+             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+           >
+-            Go home
++            Ir para o início
+           </Link>
+         </div>
+       </div>
+@@ -46,10 +46,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+     <div className="flex min-h-screen items-center justify-center bg-background px-4">
+       <div className="max-w-md text-center">
+         <h1 className="text-xl font-semibold tracking-tight text-foreground">
+-          This page didn't load
++          Esta página não carregou
+         </h1>
+         <p className="mt-2 text-sm text-muted-foreground">
+-          Something went wrong on our end. You can try refreshing or head back home.
++          Algo deu errado do nosso lado. Tente recarregar ou volte ao início.
+         </p>
+         <div className="mt-6 flex flex-wrap justify-center gap-2">
+           <button
+@@ -59,13 +59,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+             }}
+             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+           >
+-            Try again
++            Tentar de novo
+           </button>
+           <a
+             href="/"
+             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+           >
+-            Go home
++            Ir para o início
+           </a>
+         </div>
+       </div>
+@@ -78,9 +78,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+     meta: [
+       { charSet: "utf-8" },
+       { name: "viewport", content: "width=device-width, initial-scale=1" },
+-      { name: "theme-color", content: "#08090c" },
+-      { title: "Retiro Conexão Jovem 2026" },
+-      { name: "description", content: "Retiro Conexão Jovem 2026 no Sítio Santa Clara, Campos do Jordão. Três dias de comunhão, cultos e crescimento. Inscrições abertas." },
++      { name: "theme-color", content: "#090a12" },
++      { title: "Retiro Conexão Jovem 2027" },
++      { name: "description", content: "Retiro Conexão Jovem 2027 — Primeira Assembleia de Deus de Santa Rita do Sapucaí. Informações e inscrições." },
+       { property: "og:site_name", content: "Retiro Conexão Jovem" },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
+@@ -90,7 +90,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+       {
+         rel: "stylesheet",
+-        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
++        href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
+       },
+       { rel: "stylesheet", href: appCss },
+       { rel: "icon", href: "/favicon.png", type: "image/png" },
+@@ -104,7 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+ 
+ function RootShell({ children }: { children: ReactNode }) {
+   return (
+-    <html lang="en">
++    <html lang="pt-BR">
+       <head>
+         <HeadContent />
+       </head>
+diff --git a/src/routes/deck.$slug.tsx b/src/routes/deck.$slug.tsx
+index 241b8dc..c3d03e3 100644
+--- a/src/routes/deck.$slug.tsx
++++ b/src/routes/deck.$slug.tsx
+@@ -24,7 +24,7 @@ export const Route = createFileRoute("/deck/$slug")({
+   notFoundComponent: () => (
+     <div className="deck-404">
+       <h1>Seção não encontrada</h1>
+-      <a href="/" className="btn btn-ghost mt-4">Voltar ao índice</a>
++      <a href="/deck" className="btn btn-ghost mt-4">Voltar ao índice</a>
+     </div>
+   ),
+ });
+diff --git a/src/routes/deck.index.tsx b/src/routes/deck.index.tsx
+new file mode 100644
+index 0000000..98bd4df
+--- /dev/null
++++ b/src/routes/deck.index.tsx
+@@ -0,0 +1,107 @@
++import { createFileRoute, Link } from "@tanstack/react-router";
++import { ArrowRight, PlayCircle, Printer, Sparkles } from "lucide-react";
++
++import { retiro, calcCenario, pontoEquilibrio } from "../content/retiro";
++import { brl, num } from "../lib/format";
++import { sections } from "../deck/sections";
++
++export const Route = createFileRoute("/deck/")({
++  head: () => ({
++    meta: [
++      { title: "Retiro de Carnaval 2027 — Apresentação Executiva" },
++      {
++        name: "description",
++        content: `Estudo executivo do Retiro de Carnaval 2027 no Sítio Santa Clara. ${retiro.dataTexto}.`,
++      },
++      { property: "og:title", content: "Retiro de Carnaval 2027 — Apresentação Executiva" },
++      {
++        property: "og:description",
++        content: `Viabilidade, cenários, riscos e recomendações — ${retiro.dataTexto}.`,
++      },
++      { name: "robots", content: "noindex, nofollow" },
++    ],
++  }),
++  component: Cover,
++});
++
++function Cover() {
++  const meta = retiro.financas.metaParticipantes;
++  const cen = calcCenario(meta);
++  const pe = pontoEquilibrio();
++  const first = sections[0];
++
++  return (
++    <div className="cover">
++      <header className="cover-topbar">
++        <div className="cover-brand">
++          <Sparkles size={16} /> Apresentação Executiva
++        </div>
++        <div className="cover-date">{retiro.dataTexto}</div>
++      </header>
++
++      <main className="cover-main container-x">
++        <div className="cover-hero">
++          <span className="kicker">Reunião de Liderança</span>
++          <h1 className="cover-title">
++            Retiro de Carnaval <span className="gold">{retiro.edicao}</span>
++          </h1>
++          <p className="cover-sub">
++            Estudo de viabilidade, cenários e recomendações para a realização do retiro no{" "}
++            <strong>{retiro.local.nome}</strong>, {retiro.local.cidade}/{retiro.local.uf}.
++          </p>
++
++          <div className="cover-kpis">
++            <div>
++              <div className="k-v">{num(meta)}</div>
++              <div className="k-l">Meta de participantes</div>
++            </div>
++            <div>
++              <div className="k-v">{brl(retiro.financas.inscricao)}</div>
++              <div className="k-l">Inscrição individual</div>
++            </div>
++            <div>
++              <div className="k-v">{brl(cen.custoTotal)}</div>
++              <div className="k-l">Investimento total</div>
++            </div>
++            <div>
++              <div className="k-v">{pe}</div>
++              <div className="k-l">Ponto de equilíbrio</div>
++            </div>
++          </div>
++
++          <div className="cover-cta">
++            <Link to="/deck/$slug" params={{ slug: first.slug }} className="btn btn-primary">
++              <PlayCircle size={18} /> Iniciar apresentação
++            </Link>
++            <Link to="/deck/print" className="btn btn-ghost">
++              <Printer size={16} /> Ver versão para impressão
++            </Link>
++          </div>
++        </div>
++
++        <section className="cover-index">
++          <div className="cover-index-head">
++            <span className="kicker">Índice</span>
++            <span className="hint">{sections.length} seções · use ← → para navegar</span>
++          </div>
++          <ol className="cover-list">
++            {sections.map((s) => (
++              <li key={s.slug}>
++                <Link to="/deck/$slug" params={{ slug: s.slug }} className="cover-link">
++                  <span className="cover-num">{String(s.n).padStart(2, "0")}</span>
++                  <span className="cover-item-title">{s.title}</span>
++                  <ArrowRight size={16} />
++                </Link>
++              </li>
++            ))}
++          </ol>
++        </section>
++      </main>
++
++      <footer className="cover-foot container-x">
++        <span>Ministério de Jovens · Retiro {retiro.edicao}</span>
++        <span>Confidencial — uso interno da liderança</span>
++      </footer>
++    </div>
++  );
++}
+diff --git a/src/routes/deck.print.tsx b/src/routes/deck.print.tsx
+index 6f8620c..0103035 100644
+--- a/src/routes/deck.print.tsx
++++ b/src/routes/deck.print.tsx
+@@ -19,7 +19,7 @@ function PrintDeck() {
+   return (
+     <div className="print-shell">
+       <div className="print-actions no-print">
+-        <Link to="/" className="btn btn-ghost"><ArrowLeft size={16} /> Voltar</Link>
++        <Link to="/deck" className="btn btn-ghost"><ArrowLeft size={16} /> Voltar</Link>
+         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+           <Printer size={16} /> Imprimir / Salvar PDF
+         </button>
+diff --git a/src/routes/index.tsx b/src/routes/index.tsx
+index 205b33f..da0b2b8 100644
+--- a/src/routes/index.tsx
++++ b/src/routes/index.tsx
+@@ -1,88 +1,20 @@
+-import { createFileRoute, Link } from "@tanstack/react-router";
+-import { ArrowRight, PlayCircle, Printer, Sparkles } from "lucide-react";
++import { createFileRoute } from "@tanstack/react-router";
+ 
+-import { retiro, calcCenario, pontoEquilibrio } from "../content/retiro";
+-import { brl, num } from "../lib/format";
+-import { sections } from "../deck/sections";
++import { evento } from "../content/evento";
++import { Landing } from "../landing/Landing";
++
++const titulo = `${evento.nome} ${evento.edicao} — Inscrições | ${evento.ministerio}`;
++const descricao = `${evento.nome} ${evento.edicao} da ${evento.igreja} de ${evento.igrejaCidade}. ${evento.dataTexto}. Veja as informações e faça sua inscrição.`;
+ 
+ export const Route = createFileRoute("/")({
+   head: () => ({
+     meta: [
+-      { title: "Retiro de Carnaval 2027 — Apresentação Executiva" },
+-      {
+-        name: "description",
+-        content: `Estudo executivo do Retiro de Carnaval 2027 no Sítio Santa Clara. ${retiro.dataTexto}.`,
+-      },
+-      { property: "og:title", content: "Retiro de Carnaval 2027 — Apresentação Executiva" },
+-      { property: "og:description", content: `Viabilidade, cenários, riscos e recomendações — ${retiro.dataTexto}.` },
++      { title: titulo },
++      { name: "description", content: descricao },
++      { property: "og:title", content: titulo },
++      { property: "og:description", content: descricao },
+       { property: "og:type", content: "website" },
+     ],
+   }),
+-  component: Cover,
++  component: Landing,
+ });
+-
+-function Cover() {
+-  const meta = retiro.financas.metaParticipantes;
+-  const cen = calcCenario(meta);
+-  const pe = pontoEquilibrio();
+-  const first = sections[0];
+-
+-  return (
+-    <div className="cover">
+-      <header className="cover-topbar">
+-        <div className="cover-brand"><Sparkles size={16} /> Apresentação Executiva</div>
+-        <div className="cover-date">{retiro.dataTexto}</div>
+-      </header>
+-
+-      <main className="cover-main container-x">
+-        <div className="cover-hero">
+-          <span className="kicker">Reunião de Liderança</span>
+-          <h1 className="cover-title">Retiro de Carnaval <span className="gold">{retiro.edicao}</span></h1>
+-          <p className="cover-sub">
+-            Estudo de viabilidade, cenários e recomendações para a realização do retiro no{" "}
+-            <strong>{retiro.local.nome}</strong>, {retiro.local.cidade}/{retiro.local.uf}.
+-          </p>
+-
+-          <div className="cover-kpis">
+-            <div><div className="k-v">{num(meta)}</div><div className="k-l">Meta de participantes</div></div>
+-            <div><div className="k-v">{brl(retiro.financas.inscricao)}</div><div className="k-l">Inscrição individual</div></div>
+-            <div><div className="k-v">{brl(cen.custoTotal)}</div><div className="k-l">Investimento total</div></div>
+-            <div><div className="k-v">{pe}</div><div className="k-l">Ponto de equilíbrio</div></div>
+-          </div>
+-
+-          <div className="cover-cta">
+-            <Link to="/deck/$slug" params={{ slug: first.slug }} className="btn btn-primary">
+-              <PlayCircle size={18} /> Iniciar apresentação
+-            </Link>
+-            <Link to="/deck/print" className="btn btn-ghost">
+-              <Printer size={16} /> Ver versão para impressão
+-            </Link>
+-          </div>
+-        </div>
+-
+-        <section className="cover-index">
+-          <div className="cover-index-head">
+-            <span className="kicker">Índice</span>
+-            <span className="hint">{sections.length} seções · use ← → para navegar</span>
+-          </div>
+-          <ol className="cover-list">
+-            {sections.map((s) => (
+-              <li key={s.slug}>
+-                <Link to="/deck/$slug" params={{ slug: s.slug }} className="cover-link">
+-                  <span className="cover-num">{String(s.n).padStart(2, "0")}</span>
+-                  <span className="cover-item-title">{s.title}</span>
+-                  <ArrowRight size={16} />
+-                </Link>
+-              </li>
+-            ))}
+-          </ol>
+-        </section>
+-      </main>
+-
+-      <footer className="cover-foot container-x">
+-        <span>Ministério de Jovens · Retiro {retiro.edicao}</span>
+-        <span>Confidencial — uso interno da liderança</span>
+-      </footer>
+-    </div>
+-  );
+-}
+diff --git a/src/routes/inscricao.tsx b/src/routes/inscricao.tsx
+new file mode 100644
+index 0000000..6358033
+--- /dev/null
++++ b/src/routes/inscricao.tsx
+@@ -0,0 +1,49 @@
++import { createFileRoute } from "@tanstack/react-router";
++
++import { evento } from "../content/evento";
++import { RegistrationForm } from "../landing/RegistrationForm";
++import { Rodape } from "../landing/Landing";
++import { Termos } from "../landing/Termos";
++
++export const Route = createFileRoute("/inscricao")({
++  head: () => ({
++    meta: [
++      { title: `Inscrição — ${evento.nome} ${evento.edicao}` },
++      {
++        name: "description",
++        content: `Faça sua inscrição no ${evento.nome} ${evento.edicao} (${evento.dataTexto}). O valor é calculado antes do envio.`,
++      },
++      { name: "robots", content: "noindex" },
++    ],
++  }),
++  component: Inscricao,
++});
++
++function Inscricao() {
++  return (
++    <div className="lp">
++      <header className="lp-formhead">
++        <div className="lp-wrap" style={{ maxWidth: "46rem" }}>
++          <a href="/" className="lp-back">
++            ← {evento.ministerio}
++          </a>
++          <span className="lp-eyebrow" style={{ display: "flex", marginTop: "0.5rem" }}>
++            Inscrição
++          </span>
++          <h1 className="lp-h2" style={{ marginBottom: "0.5rem" }}>
++            {evento.nome} {evento.edicao}
++          </h1>
++          <p className="lp-lead" style={{ marginBottom: 0 }}>
++            {evento.dataTexto} · {evento.local.nome}, {evento.local.cidade}/{evento.local.uf}.
++            Preencha os dados do participante: o valor é calculado antes do envio.
++          </p>
++        </div>
++      </header>
++      <main className="lp-wrap" style={{ paddingBottom: "4rem", paddingTop: "1.5rem" }}>
++        <RegistrationForm />
++        <Termos />
++      </main>
++      <Rodape />
++    </div>
++  );
++}
+diff --git a/src/server/inscricao.functions.ts b/src/server/inscricao.functions.ts
+new file mode 100644
+index 0000000..20cc942
+--- /dev/null
++++ b/src/server/inscricao.functions.ts
+@@ -0,0 +1,21 @@
++import { createServerFn } from "@tanstack/react-start";
++
++import type { EntradaInscricao, RespostaInscricao } from "./inscricao.server";
++
++export type { EntradaInscricao, RespostaInscricao };
++
++/**
++ * Endpoint de inscrição (executa só no servidor).
++ * Variáveis de ambiente (nunca commitadas):
++ *   APPS_SCRIPT_URL    URL do web app do Google Apps Script (obrigatória)
++ *   APPS_SCRIPT_TOKEN  segredo opcional, enviado no corpo como `token`
++ */
++export const enviarInscricao = createServerFn({ method: "POST" })
++  .inputValidator((data: EntradaInscricao) => data)
++  .handler(async ({ data }): Promise<RespostaInscricao> => {
++    const { processarInscricao } = await import("./inscricao.server");
++    return processarInscricao(data, {
++      url: process.env.APPS_SCRIPT_URL,
++      token: process.env.APPS_SCRIPT_TOKEN,
++    });
++  });
+diff --git a/src/server/inscricao.server.ts b/src/server/inscricao.server.ts
+new file mode 100644
+index 0000000..16fac19
+--- /dev/null
++++ b/src/server/inscricao.server.ts
+@@ -0,0 +1,171 @@
++// Processa uma inscrição no servidor: valida de novo, calcula idade/valor,
++// bloqueia reenvios e grava na planilha. Nunca registra CPF/dados em log.
++import { evento } from "../content/evento";
++import { hojeSaoPaulo, montarCorpo, validar, type Erros, type FormValues } from "../lib/inscricao";
++import { enviarParaPlanilha, type OpcoesEnvio } from "./sheets.server";
++
++export type EntradaInscricao = { values: FormValues; idempotencyKey: string };
++
++export type CodigoErro =
++  | "VALIDACAO"
++  | "DUPLICADO"
++  | "NAO_CONFIGURADO"
++  | "NAO_CONFIRMADO"
++  | "RECUSADO"
++  | "ENCERRADAS"
++  | "SOLICITACAO_INVALIDA";
++
++export type RespostaInscricao =
++  | {
++      ok: true;
++      nome: string;
++      idade: number;
++      faixa: string;
++      valor: number | null;
++      jaRegistrada?: boolean;
++    }
++  | { ok: false; codigo: CodigoErro; mensagem: string; erros?: Erros };
++
++type Ambiente = { url?: string; token?: string };
++
++// Memória do processo (melhor esforço; o bloqueio definitivo por CPF é feito na planilha).
++const JANELA_MS = 10 * 60 * 1000;
++const recentes = new Map<string, { em: number; resposta: RespostaInscricao }>();
++const emAndamento = new Set<string>();
++
++function limpar(agora: number) {
++  for (const [k, v] of recentes) if (agora - v.em > JANELA_MS) recentes.delete(k);
++  if (recentes.size > 500) recentes.clear();
++}
++
++async function hashCpf(cpf: string): Promise<string> {
++  const dados = new TextEncoder().encode(`retiro:${cpf}`);
++  const h = await crypto.subtle.digest("SHA-256", dados);
++  return Array.from(new Uint8Array(h), (b) => b.toString(16).padStart(2, "0")).join("");
++}
++
++export async function processarInscricao(
++  entrada: EntradaInscricao,
++  ambiente: Ambiente,
++  opcoes: OpcoesEnvio = {},
++): Promise<RespostaInscricao> {
++  if (!evento.inscricoesAbertas) {
++    return {
++      ok: false,
++      codigo: "ENCERRADAS",
++      mensagem: "As inscrições não estão abertas no momento.",
++    };
++  }
++  if (!ambiente.url) {
++    return {
++      ok: false,
++      codigo: "NAO_CONFIGURADO",
++      mensagem: "As inscrições estão temporariamente indisponíveis. Tente novamente mais tarde.",
++    };
++  }
++
++  const v = entrada?.values;
++  const chave = entrada?.idempotencyKey;
++  if (!v || typeof chave !== "string" || chave.length < 8 || chave.length > 80) {
++    return {
++      ok: false,
++      codigo: "SOLICITACAO_INVALIDA",
++      mensagem: "Solicitação inválida. Recarregue a página.",
++    };
++  }
++  // Campo-isca preenchido = robô. Resposta genérica, nada é gravado.
++  if (typeof v.website === "string" && v.website.trim() !== "") {
++    return {
++      ok: false,
++      codigo: "SOLICITACAO_INVALIDA",
++      mensagem: "Não foi possível processar a solicitação.",
++    };
++  }
++
++  const resultado = validar(v, {
++    dataReferencia: evento.inicioData,
++    hoje: hojeSaoPaulo(),
++    faixas: evento.faixas,
++  });
++  if (Object.keys(resultado.erros).length > 0 || resultado.idade === null || !resultado.faixa) {
++    return {
++      ok: false,
++      codigo: "VALIDACAO",
++      mensagem: "Revise os campos destacados.",
++      erros: resultado.erros,
++    };
++  }
++
++  const agora = Date.now();
++  limpar(agora);
++  const chaveCpf = await hashCpf(v.cpf.replace(/\D+/g, ""));
++
++  // Mesmo envio repetido (duplo clique / reenvio): devolve o resultado já obtido.
++  const anterior = recentes.get(chave);
++  if (anterior && anterior.resposta.ok) return { ...anterior.resposta, jaRegistrada: true };
++  if (emAndamento.has(chave) || emAndamento.has(chaveCpf)) {
++    return {
++      ok: false,
++      codigo: "DUPLICADO",
++      mensagem: "Sua inscrição já está sendo enviada. Aguarde alguns segundos.",
++    };
++  }
++  const cpfRecente = recentes.get(chaveCpf);
++  if (cpfRecente && cpfRecente.resposta.ok) {
++    return {
++      ok: false,
++      codigo: "DUPLICADO",
++      mensagem: "Já recebemos uma inscrição com este CPF.",
++    };
++  }
++
++  emAndamento.add(chave);
++  emAndamento.add(chaveCpf);
++  try {
++    const corpo = montarCorpo(v, resultado, {
++      idempotencyKey: chave,
++      enviadoEm: new Date(agora).toISOString(),
++      versaoTermos: evento.versaoTermos,
++    });
++    const r = await enviarParaPlanilha(ambiente.url, corpo, { ...opcoes, token: ambiente.token });
++
++    if (r.status === "ok") {
++      const ok: RespostaInscricao = {
++        ok: true,
++        nome: corpo.nomeCompleto.replace(/^'/, ""),
++        idade: resultado.idade,
++        faixa: resultado.faixa.rotulo,
++        valor: resultado.valor,
++      };
++      recentes.set(chave, { em: agora, resposta: ok });
++      recentes.set(chaveCpf, { em: agora, resposta: ok });
++      return ok;
++    }
++    if (r.status === "duplicado") {
++      return {
++        ok: false,
++        codigo: "DUPLICADO",
++        mensagem:
++          "Já existe uma inscrição com este CPF. Se você acabou de tentar se inscrever, ela já foi registrada.",
++      };
++    }
++    if (r.status === "recusado") {
++      console.error("[inscricao] planilha recusou o registro", r.mensagem ?? "");
++      return {
++        ok: false,
++        codigo: "RECUSADO",
++        mensagem: "Não foi possível registrar sua inscrição agora. Tente novamente em instantes.",
++      };
++    }
++    console.error("[inscricao] envio não confirmado:", r.motivo);
++    return {
++      ok: false,
++      codigo: "NAO_CONFIRMADO",
++      mensagem:
++        "Não conseguimos confirmar o registro da sua inscrição. Você pode tentar de novo: se ela já tiver sido gravada, avisaremos. Persistindo, procure a liderança da Conexão Jovem.",
++    };
++  } finally {
++    emAndamento.delete(chave);
++    emAndamento.delete(chaveCpf);
++  }
++}
+diff --git a/src/server/sheets.server.ts b/src/server/sheets.server.ts
+new file mode 100644
+index 0000000..aeee11f
+--- /dev/null
++++ b/src/server/sheets.server.ts
+@@ -0,0 +1,99 @@
++// ============================================================================
++// Adaptador do Google Apps Script (web app da planilha de inscrições).
++//
++// Roda SOMENTE no servidor: a URL do script e o token ficam em variáveis de
++// ambiente e nunca chegam ao navegador. Este arquivo concentra tudo o que
++// depende do formato do script — se o seu doPost esperar outros nomes de
++// campos, ajuste `montarRequisicao` (e só ele).
++// ============================================================================
++
++export type ResultadoPlanilha =
++  | { status: "ok" }
++  | { status: "duplicado" }
++  | { status: "recusado"; mensagem?: string }
++  /** Rede/timeout/resposta inesperada: NÃO sabemos se a linha foi gravada. */
++  | { status: "nao-confirmado"; motivo: string };
++
++export type OpcoesEnvio = {
++  timeoutMs?: number;
++  token?: string;
++  fetchImpl?: typeof fetch;
++};
++
++function montarRequisicao(corpo: Record<string, unknown>, token?: string): RequestInit {
++  const payload = token ? { ...corpo, token } : corpo;
++  return {
++    method: "POST",
++    // Apps Script lê e.postData.contents; text/plain evita pré-voo CORS em qualquer cenário.
++    headers: { "content-type": "text/plain;charset=utf-8" },
++    body: JSON.stringify(payload),
++    redirect: "follow",
++  };
++}
++
++const MARCAS_DUPLICADO = /duplic|já (existe|cadastrad|inscrit)|already/i;
++
++export function interpretarResposta(texto: string): ResultadoPlanilha {
++  const bruto = texto.trim();
++
++  let json: unknown = null;
++  try {
++    json = JSON.parse(bruto);
++  } catch {
++    json = null;
++  }
++
++  if (json && typeof json === "object") {
++    const o = json as Record<string, unknown>;
++    const mensagem =
++      typeof o.message === "string" ? o.message : typeof o.error === "string" ? o.error : undefined;
++    const sucesso =
++      o.ok === true || o.success === true || o.status === "ok" || o.status === "success";
++    if (sucesso) return { status: "ok" };
++    if (
++      o.code === "DUPLICATE" ||
++      o.duplicate === true ||
++      o.status === "duplicate" ||
++      (mensagem && MARCAS_DUPLICADO.test(mensagem))
++    ) {
++      return { status: "duplicado" };
++    }
++    const falha = o.ok === false || o.success === false || o.status === "error" || "error" in o;
++    if (falha) return { status: "recusado", mensagem };
++    return { status: "nao-confirmado", motivo: "resposta JSON sem indicação de sucesso" };
++  }
++
++  if (/^(ok|success|sucesso)$/i.test(bruto)) return { status: "ok" };
++
++  // Páginas HTML de erro do Apps Script (ex.: "Script function not found: doPost").
++  const pagina = /<title>\s*([^<]{0,80})/i.exec(bruto)?.[1]?.trim();
++  return {
++    status: "nao-confirmado",
++    motivo: `resposta não reconhecida${pagina ? ` (${pagina})` : ""}`,
++  };
++}
++
++export async function enviarParaPlanilha(
++  url: string,
++  corpo: Record<string, unknown>,
++  opcoes: OpcoesEnvio = {},
++): Promise<ResultadoPlanilha> {
++  const f = opcoes.fetchImpl ?? fetch;
++  const controle = new AbortController();
++  const timer = setTimeout(() => controle.abort(), opcoes.timeoutMs ?? 25_000);
++  try {
++    const resposta = await f(url, {
++      ...montarRequisicao(corpo, opcoes.token),
++      signal: controle.signal,
++    });
++    const texto = await resposta.text();
++    if (!resposta.ok) return { status: "nao-confirmado", motivo: `HTTP ${resposta.status}` };
++    return interpretarResposta(texto);
++  } catch (e) {
++    const motivo =
++      e instanceof Error && e.name === "AbortError" ? "tempo esgotado" : "falha de rede";
++    return { status: "nao-confirmado", motivo };
++  } finally {
++    clearTimeout(timer);
++  }
++}
+diff --git a/src/styles.css b/src/styles.css
+index 98f48df..68785e2 100644
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -1,4 +1,5 @@
+ @import "tailwindcss";
++@import "./landing/landing.css";
+ 
+ @theme {
+   --color-bg: #08090c;
+diff --git a/tests/inscricao.test.ts b/tests/inscricao.test.ts
+new file mode 100644
+index 0000000..8da047d
+--- /dev/null
++++ b/tests/inscricao.test.ts
+@@ -0,0 +1,156 @@
++// Testes das regras de inscrição. Rodar: npx tsx --test tests/*.test.ts
++import { test } from "node:test";
++import assert from "node:assert/strict";
++
++import {
++  calcularIdade,
++  cpfValido,
++  faixaPorIdade,
++  formatarCpf,
++  formatarTelefone,
++  higienizarCelula,
++  montarCorpo,
++  normalizarTelefone,
++  telefoneValido,
++  validar,
++  VALORES_VAZIOS,
++  type FormValues,
++} from "../src/lib/inscricao.ts";
++import { evento } from "../src/content/evento.ts";
++
++const ctx = { dataReferencia: evento.inicioData, hoje: "2026-10-21", faixas: evento.faixas };
++
++const base = (extra: Partial<FormValues> = {}): FormValues => ({
++  ...VALORES_VAZIOS,
++  nomeCompleto: "Maria da Silva",
++  dataNascimento: "1995-06-15",
++  cpf: "529.982.247-25",
++  telefone: "(35) 99999-1234",
++  whatsapp: "(35) 99999-1234",
++  igreja: "Primeira Assembleia de Deus",
++  cidade: "Santa Rita do Sapucaí",
++  emergenciaNome: "José da Silva",
++  emergenciaTelefone: "(35) 98888-4321",
++  aceiteRegras: true,
++  aceitePrivacidade: true,
++  ...extra,
++});
++
++test("data de início do evento", () => assert.equal(evento.inicioData, "2027-02-12"));
++
++test("CPF: válidos e inválidos", () => {
++  assert.equal(cpfValido("529.982.247-25"), true);
++  assert.equal(cpfValido("11144477735"), true);
++  assert.equal(cpfValido("529.982.247-26"), false);
++  assert.equal(cpfValido("111.111.111-11"), false);
++  assert.equal(cpfValido("123"), false);
++  assert.equal(cpfValido(""), false);
++});
++
++test("idade na data de início (limites de aniversário)", () => {
++  const ref = "2027-02-12";
++  assert.equal(calcularIdade("2022-02-12", ref), 5); // faz 5 no dia do início
++  assert.equal(calcularIdade("2022-02-13", ref), 4); // faz 5 um dia depois
++  assert.equal(calcularIdade("2017-02-12", ref), 10);
++  assert.equal(calcularIdade("2017-02-13", ref), 9);
++  assert.equal(calcularIdade("2009-02-12", ref), 18);
++  assert.equal(calcularIdade("2009-02-13", ref), 17);
++  assert.equal(calcularIdade("2024-02-29", ref), 2); // bissexto
++  assert.equal(calcularIdade("2023-02-30", ref), null); // data inexistente
++});
++
++test("faixas de valor: 4→a definir, 5→200, 9→200, 10→400, 60→400", () => {
++  const v = (i: number) => faixaPorIdade(i, evento.faixas)?.valor;
++  assert.equal(v(0), null);
++  assert.equal(v(4), null);
++  assert.equal(v(5), 200);
++  assert.equal(v(9), 200);
++  assert.equal(v(10), 400);
++  assert.equal(v(60), 400);
++});
++
++test("adulto válido: sem erros, R$ 400", () => {
++  const r = validar(base(), ctx);
++  assert.deepEqual(r.erros, {});
++  assert.equal(r.valor, 400);
++  assert.equal(r.menorDeIdade, false);
++});
++
++test("criança de 7 anos: R$ 200 e exige responsável", () => {
++  const r = validar(base({ dataNascimento: "2019-08-01" }), ctx);
++  assert.equal(r.idade, 7);
++  assert.equal(r.valor, 200);
++  assert.equal(r.menorDeIdade, true);
++  assert.ok(r.erros.responsavelNome);
++  assert.ok(r.erros.responsavelTelefone);
++  const ok = validar(
++    base({
++      dataNascimento: "2019-08-01",
++      responsavelNome: "Ana Souza",
++      responsavelTelefone: "35977776666",
++    }),
++    ctx,
++  );
++  assert.deepEqual(ok.erros, {});
++});
++
++test("menor de 5 anos: valor nulo (a definir), sem cobrança automática", () => {
++  const r = validar(
++    base({
++      dataNascimento: "2024-01-10",
++      responsavelNome: "Ana Souza",
++      responsavelTelefone: "35977776666",
++    }),
++    ctx,
++  );
++  assert.equal(r.idade, 3);
++  assert.equal(r.valor, null);
++  assert.deepEqual(r.erros, {});
++});
++
++test("nascimento no futuro e aceites obrigatórios", () => {
++  const r = validar(
++    base({ dataNascimento: "2026-12-01", aceiteRegras: false, aceitePrivacidade: false }),
++    ctx,
++  );
++  assert.ok(r.erros.dataNascimento);
++  assert.ok(r.erros.aceiteRegras);
++  assert.ok(r.erros.aceitePrivacidade);
++});
++
++test("e-mail é opcional, mas validado quando informado", () => {
++  assert.equal(validar(base({ email: "" }), ctx).erros.email, undefined);
++  assert.ok(validar(base({ email: "abc" }), ctx).erros.email);
++  assert.equal(validar(base({ email: "a@b.com" }), ctx).erros.email, undefined);
++});
++
++test("telefones e máscaras", () => {
++  assert.equal(telefoneValido("(35) 99999-1234"), true);
++  assert.equal(telefoneValido("+55 35 99999-1234"), true);
++  assert.equal(telefoneValido("(35) 3333-4444"), true);
++  assert.equal(telefoneValido("(35) 89999-1234"), false);
++  assert.equal(telefoneValido("(05) 99999-1234"), false);
++  assert.equal(normalizarTelefone("+55 (35) 99999-1234"), "35999991234");
++  assert.equal(formatarTelefone("35999991234"), "(35) 99999-1234");
++  assert.equal(formatarCpf("52998224725"), "529.982.247-25");
++});
++
++test("planilha: injeção de fórmula é neutralizada", () => {
++  assert.equal(higienizarCelula('=HYPERLINK("http://x")'), '\'=HYPERLINK("http://x")');
++  assert.equal(higienizarCelula("  Maria   Silva "), "Maria Silva");
++});
++
++test("corpo da planilha: CPF só dígitos, status de pagamento não confirmado", () => {
++  const v = base();
++  const r = validar(v, ctx);
++  const c = montarCorpo(v, r, {
++    idempotencyKey: "k1",
++    enviadoEm: "2026-10-21T00:00:00Z",
++    versaoTermos: "t",
++  });
++  assert.equal(c.cpf, "52998224725");
++  assert.equal(c.valor, 400);
++  assert.equal(c.statusPagamento, "NÃO CONFIRMADO");
++  assert.equal(c.menorDeIdade, "NÃO");
++  assert.equal(c.responsavelNome, "");
++});
+diff --git a/tests/servidor.test.ts b/tests/servidor.test.ts
+new file mode 100644
+index 0000000..b2ffd8b
+--- /dev/null
++++ b/tests/servidor.test.ts
+@@ -0,0 +1,184 @@
++// Testa o servidor de inscrição contra um MOCK local do Apps Script
++// (redirect 302 como no Google). Não fala com a planilha real.
++// Rodar: npx tsx --test tests/*.test.ts
++import { test, before, after } from "node:test";
++import assert from "node:assert/strict";
++import http from "node:http";
++import type { AddressInfo } from "node:net";
++
++import { processarInscricao } from "../src/server/inscricao.server.ts";
++import { VALORES_VAZIOS, cpfValido, type FormValues } from "../src/lib/inscricao.ts";
++
++let servidor: http.Server;
++let url = "";
++let modo: "ok" | "duplicado" | "html" | "lento" | "falha-json" = "ok";
++const recebidos: Record<string, unknown>[] = [];
++
++before(async () => {
++  servidor = http.createServer((req, res) => {
++    if (req.method === "POST" && req.url === "/macros/s/ABC/exec") {
++      let corpo = "";
++      req.on("data", (c) => (corpo += c));
++      req.on("end", () => {
++        recebidos.push(JSON.parse(corpo));
++        res.writeHead(302, { location: `/echo?m=${modo}` });
++        res.end();
++      });
++      return;
++    }
++    if (req.url?.startsWith("/echo")) {
++      const m = new URL(req.url, "http://x").searchParams.get("m");
++      if (m === "lento") return; // nunca responde → timeout
++      if (m === "html") {
++        res.writeHead(200, { "content-type": "text/html" });
++        return void res.end(
++          "<html><head><title>Error</title></head><body>Script function not found: doPost</body></html>",
++        );
++      }
++      res.writeHead(200, { "content-type": "application/json" });
++      if (m === "duplicado") return void res.end(JSON.stringify({ ok: false, code: "DUPLICATE" }));
++      if (m === "falha-json") return void res.end(JSON.stringify({ ok: false, error: "x" }));
++      return void res.end(JSON.stringify({ ok: true }));
++    }
++    res.writeHead(404);
++    res.end();
++  });
++  await new Promise<void>((r) => servidor.listen(0, "127.0.0.1", r));
++  url = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}/macros/s/ABC/exec`;
++});
++after(() => servidor.close());
++
++const valores = (cpf: string, extra: Partial<FormValues> = {}): FormValues => ({
++  ...VALORES_VAZIOS,
++  nomeCompleto: "Maria da Silva",
++  dataNascimento: "1995-06-15",
++  cpf,
++  telefone: "(35) 99999-1234",
++  whatsapp: "(35) 99999-1234",
++  igreja: "Primeira Assembleia de Deus",
++  cidade: "Santa Rita do Sapucaí",
++  emergenciaNome: "José da Silva",
++  emergenciaTelefone: "(35) 98888-4321",
++  aceiteRegras: true,
++  aceitePrivacidade: true,
++  ...extra,
++});
++
++for (const c of [
++  "529.982.247-25",
++  "111.444.777-35",
++  "390.533.447-05",
++  "123.456.789-09",
++  "935.411.347-80",
++])
++  assert.equal(cpfValido(c), true, `CPF de teste inválido: ${c}`);
++
++test("sucesso: grava corpo correto e devolve nome, faixa e valor", async () => {
++  modo = "ok";
++  recebidos.length = 0;
++  const r = await processarInscricao(
++    { values: valores("529.982.247-25"), idempotencyKey: "chave-0001-aaaa" },
++    { url, token: "segredo" },
++  );
++  assert.equal(r.ok, true);
++  if (r.ok) {
++    assert.equal(r.nome, "Maria da Silva");
++    assert.equal(r.valor, 400);
++  }
++  assert.equal(recebidos.length, 1);
++  assert.equal(recebidos[0].cpf, "52998224725");
++  assert.equal(recebidos[0].token, "segredo");
++  assert.equal(recebidos[0].statusPagamento, "NÃO CONFIRMADO");
++  assert.equal(recebidos[0].valor, 400);
++});
++
++test("mesmo envio repetido (duplo clique) não grava duas vezes", async () => {
++  modo = "ok";
++  recebidos.length = 0;
++  const entrada = { values: valores("111.444.777-35"), idempotencyKey: "chave-0002-bbbb" };
++  const a = await processarInscricao(entrada, { url });
++  const b = await processarInscricao(entrada, { url });
++  assert.equal(a.ok && b.ok, true);
++  assert.equal(recebidos.length, 1);
++});
++
++test("mesmo CPF com outra chave logo depois é bloqueado sem ir à planilha", async () => {
++  recebidos.length = 0;
++  const r = await processarInscricao(
++    { values: valores("111.444.777-35"), idempotencyKey: "chave-0003-cccc" },
++    { url },
++  );
++  assert.equal(r.ok, false);
++  if (!r.ok) assert.equal(r.codigo, "DUPLICADO");
++  assert.equal(recebidos.length, 0);
++});
++
++test("planilha responde DUPLICATE → mensagem de duplicidade", async () => {
++  modo = "duplicado";
++  const r = await processarInscricao(
++    { values: valores("390.533.447-05"), idempotencyKey: "chave-0004-dddd" },
++    { url },
++  );
++  assert.equal(r.ok, false);
++  if (!r.ok) assert.equal(r.codigo, "DUPLICADO");
++});
++
++test("resposta HTML de erro do Apps Script NÃO vira sucesso", async () => {
++  modo = "html";
++  const r = await processarInscricao(
++    { values: valores("123.456.789-09"), idempotencyKey: "chave-0005-eeee" },
++    { url },
++  );
++  assert.equal(r.ok, false);
++  if (!r.ok) assert.equal(r.codigo, "NAO_CONFIRMADO");
++});
++
++test("recusa explícita em JSON → erro, não sucesso", async () => {
++  modo = "falha-json";
++  const r = await processarInscricao(
++    { values: valores("935.411.347-80"), idempotencyKey: "chave-0006-ffff" },
++    { url },
++  );
++  assert.equal(r.ok, false);
++  if (!r.ok) assert.equal(r.codigo, "RECUSADO");
++});
++
++test("timeout → não confirmado", async () => {
++  modo = "lento";
++  const r = await processarInscricao(
++    { values: valores("935.411.347-80"), idempotencyKey: "chave-0007-gggg" },
++    { url },
++    { timeoutMs: 300 },
++  );
++  assert.equal(r.ok, false);
++  if (!r.ok) assert.equal(r.codigo, "NAO_CONFIRMADO");
++});
++
++test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", async () => {
++  modo = "ok";
++  recebidos.length = 0;
++  const ruim = await processarInscricao(
++    { values: valores("111.111.111-11"), idempotencyKey: "chave-0008-hhhh" },
++    { url },
++  );
++  assert.equal(ruim.ok, false);
++  if (!ruim.ok) {
++    assert.equal(ruim.codigo, "VALIDACAO");
++    assert.ok(ruim.erros?.cpf);
++  }
++  const robo = await processarInscricao(
++    {
++      values: valores("529.982.247-25", { website: "http://spam" }),
++      idempotencyKey: "chave-0009-iiii",
++    },
++    { url },
++  );
++  assert.equal(robo.ok, false);
++  const semUrl = await processarInscricao(
++    { values: valores("529.982.247-25"), idempotencyKey: "chave-0010-jjjj" },
++    {},
++  );
++  assert.equal(semUrl.ok, false);
++  if (!semUrl.ok) assert.equal(semUrl.codigo, "NAO_CONFIGURADO");
++  assert.equal(recebidos.length, 0);
++});
+diff --git a/vite.config.ts b/vite.config.ts
+index 556c38f..3cd319f 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -52,12 +52,12 @@ export default defineConfig({
+           ],
+         },
+         manifest: {
+-          name: "Retiro Conexão Jovem 2026",
++          name: "Retiro Conexão Jovem 2027",
+           short_name: "Conexão Jovem",
+-          description: "Retiro Conexão Jovem 2026 — Sítio Santa Clara, Campos do Jordão.",
++          description: "Retiro Conexão Jovem 2027 — informações e inscrições.",
+           display: "standalone",
+-          background_color: "#08090c",
+-          theme_color: "#08090c",
++          background_color: "#090a12",
++          theme_color: "#090a12",
+           start_url: "/",
+           icons: [
+             { src: "/favicon.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
