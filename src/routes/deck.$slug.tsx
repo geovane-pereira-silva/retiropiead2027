@@ -24,7 +24,7 @@ export const Route = createFileRoute("/deck/$slug")({
   notFoundComponent: () => (
     <div className="deck-404">
       <h1>Seção não encontrada</h1>
-      <a href="/" className="btn btn-ghost mt-4">Voltar ao índice</a>
+      <a href="/deck" className="btn btn-ghost mt-4">Voltar ao índice</a>
     </div>
   ),
 });
