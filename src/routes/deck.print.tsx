@@ -19,7 +19,7 @@ function PrintDeck() {
   return (
     <div className="print-shell">
       <div className="print-actions no-print">
-        <Link to="/" className="btn btn-ghost"><ArrowLeft size={16} /> Voltar</Link>
+        <Link to="/deck" className="btn btn-ghost"><ArrowLeft size={16} /> Voltar</Link>
         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
           <Printer size={16} /> Imprimir / Salvar PDF
         </button>

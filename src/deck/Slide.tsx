@@ -30,7 +30,7 @@ export function Slide({
       } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
         if (prev) navigate({ to: "/deck/$slug", params: { slug: prev.slug } });
       } else if (e.key === "Home") {
-        navigate({ to: "/" });
+        navigate({ to: "/deck" });
       } else if (e.key === "End") {
         const last = sections[sections.length - 1];
         navigate({ to: "/deck/$slug", params: { slug: last.slug } });
@@ -47,7 +47,7 @@ export function Slide({
   return (
     <div className="slide-shell">
       <header className="slide-topbar">
-        <Link to="/" className="slide-topbtn" aria-label="Índice">
+        <Link to="/deck" className="slide-topbtn" aria-label="Índice">
           <Home size={16} />
         </Link>
         <div className="slide-topmeta">
@@ -86,7 +86,7 @@ export function Slide({
           <span>{prev?.short ?? "Início"}</span>
         </button>
 
-        <Link to="/" className="slide-navbtn slide-navbtn-ghost" aria-label="Ver índice">
+        <Link to="/deck" className="slide-navbtn slide-navbtn-ghost" aria-label="Ver índice">
           <LayoutGrid size={16} />
           <span>Índice</span>
         </Link>

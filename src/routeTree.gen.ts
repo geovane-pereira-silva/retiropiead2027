@@ -10,12 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InscricaoRouteImport } from './routes/inscricao'
+import { Route as DeckIndexRouteImport } from './routes/deck.index'
 import { Route as DeckPrintRouteImport } from './routes/deck.print'
 import { Route as DeckSlugRouteImport } from './routes/deck.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InscricaoRoute = InscricaoRouteImport.update({
+  id: '/inscricao',
+  path: '/inscricao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeckIndexRoute = DeckIndexRouteImport.update({
+  id: '/deck/',
+  path: '/deck/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeckPrintRoute = DeckPrintRouteImport.update({
@@ -31,30 +43,38 @@ const DeckSlugRoute = DeckSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/inscricao': typeof InscricaoRoute
+  '/deck/': typeof DeckIndexRoute
   '/deck/$slug': typeof DeckSlugRoute
   '/deck/print': typeof DeckPrintRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/inscricao': typeof InscricaoRoute
+  '/deck': typeof DeckIndexRoute
   '/deck/$slug': typeof DeckSlugRoute
   '/deck/print': typeof DeckPrintRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/inscricao': typeof InscricaoRoute
+  '/deck/': typeof DeckIndexRoute
   '/deck/$slug': typeof DeckSlugRoute
   '/deck/print': typeof DeckPrintRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/deck/$slug' | '/deck/print'
+  fullPaths: '/' | '/inscricao' | '/deck/' | '/deck/$slug' | '/deck/print'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/deck/$slug' | '/deck/print'
-  id: '__root__' | '/' | '/deck/$slug' | '/deck/print'
+  to: '/' | '/inscricao' | '/deck' | '/deck/$slug' | '/deck/print'
+  id: '__root__' | '/' | '/inscricao' | '/deck/' | '/deck/$slug' | '/deck/print'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InscricaoRoute: typeof InscricaoRoute
+  DeckIndexRoute: typeof DeckIndexRoute
   DeckSlugRoute: typeof DeckSlugRoute
   DeckPrintRoute: typeof DeckPrintRoute
 }
@@ -66,6 +86,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inscricao': {
+      id: '/inscricao'
+      path: '/inscricao'
+      fullPath: '/inscricao'
+      preLoaderRoute: typeof InscricaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deck/': {
+      id: '/deck/'
+      path: '/deck'
+      fullPath: '/deck/'
+      preLoaderRoute: typeof DeckIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deck/print': {
@@ -87,6 +121,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InscricaoRoute: InscricaoRoute,
+  DeckIndexRoute: DeckIndexRoute,
   DeckSlugRoute: DeckSlugRoute,
   DeckPrintRoute: DeckPrintRoute,
 }
