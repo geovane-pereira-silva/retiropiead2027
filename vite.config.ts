@@ -42,7 +42,9 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url }) => url.origin === "https://fonts.googleapis.com" || url.origin === "https://fonts.gstatic.com",
+              urlPattern: ({ url }) =>
+                url.origin === "https://fonts.googleapis.com" ||
+                url.origin === "https://fonts.gstatic.com",
               handler: "CacheFirst",
               options: {
                 cacheName: "google-fonts",
@@ -60,11 +62,12 @@ export default defineConfig({
           theme_color: "#090a12",
           start_url: "/",
           icons: [
-            { src: "/favicon.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+            { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+            { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+            { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
           ],
         },
       }),
     ],
   },
 });
-

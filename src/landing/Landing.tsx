@@ -46,9 +46,18 @@ function Cabecalho() {
       <div className="lp-wrap">
         <div className="lp-nav-in">
           <a className="lp-brand" href="#topo" aria-label={`${evento.ministerio} — início`}>
-            <b>{evento.ministerio}</b>
-            <span>
-              {evento.igreja} · {evento.igrejaCidade}
+            <img
+              className="lp-brand-logo"
+              src="/logo-conexao-jovem.png"
+              alt=""
+              width="40"
+              height="50"
+            />
+            <span className="lp-brand-txt">
+              <b>{evento.ministerio}</b>
+              <span>
+                {evento.igreja} · {evento.igrejaCidade}
+              </span>
             </span>
           </a>
           <nav className="lp-links" aria-label="Seções da página">
@@ -448,8 +457,11 @@ export function Rodape() {
   return (
     <footer className="lp-foot">
       <div className="lp-wrap lp-foot-in">
-        <span>
-          {evento.ministerio} · {evento.igreja} · {evento.igrejaCidade}
+        <span className="lp-foot-brand">
+          <img src="/logo-igreja.png" alt="" width="42" height="52" loading="lazy" />
+          <span>
+            {evento.ministerio} · {evento.igreja} · {evento.igrejaCidade}
+          </span>
         </span>
         <span>
           <a href="/inscricao#regras">Regras</a> · <a href="/inscricao#privacidade">Privacidade</a>

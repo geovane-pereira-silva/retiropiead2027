@@ -80,10 +80,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "theme-color", content: "#090a12" },
       { title: "Retiro Conexão Jovem 2027" },
-      { name: "description", content: "Retiro Conexão Jovem 2027 — Primeira Assembleia de Deus de Santa Rita do Sapucaí. Informações e inscrições." },
+      {
+        name: "description",
+        content:
+          "Retiro Conexão Jovem 2027 — Primeira Assembleia de Deus de Santa Rita do Sapucaí. Informações e inscrições.",
+      },
       { property: "og:site_name", content: "Retiro Conexão Jovem" },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://retiro2027.igrejaassembleia.org/og-image.jpg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      {
+        property: "og:image:alt",
+        content: "Retiro Conexão Jovem 2027 — 12 a 16 de fevereiro de 2027",
+      },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://retiro2027.igrejaassembleia.org/og-image.jpg" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -94,6 +106,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -122,7 +135,6 @@ function RootComponent() {
   useEffect(() => {
     registerServiceWorker();
   }, []);
-
 
   return (
     <QueryClientProvider client={queryClient}>

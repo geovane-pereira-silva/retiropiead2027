@@ -156,9 +156,30 @@
 }
 .lp-brand {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
   line-height: 1.1;
   text-decoration: none;
+}
+.lp-brand-logo {
+  height: 2.6rem;
+  width: auto;
+  flex: none;
+}
+.lp-brand-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.lp-foot-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.lp-foot-brand img {
+  height: 2.6rem;
+  width: auto;
+  flex: none;
 }
 .lp-brand b {
   font-family: var(--lp-head);
