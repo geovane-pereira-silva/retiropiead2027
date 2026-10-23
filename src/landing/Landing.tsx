@@ -4,10 +4,13 @@ import {
   BedDouble,
   Bus,
   CalendarDays,
+  BookOpen,
   ClipboardList,
   Clock,
   Flame,
   HeartHandshake,
+  Home,
+  Moon,
   MapPin,
   Menu,
   Music,
@@ -31,7 +34,8 @@ const NAV = [
   { href: "#duvidas", rotulo: "Dúvidas" },
 ];
 
-const ICONE_SOBRE = [Flame, Users, Music, HeartHandshake];
+const ICONE_SOBRE = [Flame, BookOpen, HeartHandshake, Users];
+const ICONE_ATIV = [Music, Flame, BookOpen, Users, Moon, HeartHandshake];
 const ICONE_INFO = {
   hospedagem: BedDouble,
   alimentacao: Utensils,
@@ -89,7 +93,7 @@ function Cabecalho() {
               </a>
             ))}
             <Link to="/inscricao" className="lp-btn lp-btn-fire" onClick={() => setAberto(false)}>
-              Quero me inscrever <ArrowRight size={18} />
+              Inscrever minha família <ArrowRight size={18} />
             </Link>
           </nav>
         )}
@@ -178,17 +182,16 @@ function Inicio() {
       <Rede />
       <div className="lp-wrap">
         <span className="lp-hero-badge lp-rise">
-          <Flame size={15} aria-hidden="true" /> {evento.ministerio} · {evento.igreja}
+          <Users size={15} aria-hidden="true" /> {evento.tipo}
         </span>
         <h1 className="lp-title lp-rise d1" id="titulo">
           {evento.nome} <em>{evento.edicao}</em>
         </h1>
-        {evento.tema ? (
-          <p className="lp-tema lp-rise d1">{evento.tema}</p>
-        ) : (
-          <p className="lp-tema pendente lp-rise d1">Tema: a ser divulgado</p>
-        )}
+        {evento.tema && <p className="lp-tema lp-rise d1">{evento.tema}</p>}
         <p className="lp-impact lp-rise d2">{evento.fraseImpacto}</p>
+        <p className="lp-org lp-rise d2">
+          {evento.ministerio} · {evento.igreja} de {evento.igrejaCidade}
+        </p>
 
         <ul className="lp-facts lp-rise d2">
           <li className="lp-fact">
@@ -210,11 +213,25 @@ function Inicio() {
               </strong>
             </span>
           </li>
+          <li className="lp-fact">
+            <Home size={22} aria-hidden="true" />
+            <span>
+              <small>Hospedagem</small>
+              <strong>Quartos familiares</strong>
+            </span>
+          </li>
+          <li className="lp-fact">
+            <BookOpen size={22} aria-hidden="true" />
+            <span>
+              <small>Programação</small>
+              <strong>Cultos, oração e estudos bíblicos</strong>
+            </span>
+          </li>
         </ul>
 
         <div className="lp-cta-row lp-rise d3">
           <Link to="/inscricao" className="lp-btn lp-btn-fire lp-btn-big">
-            Quero me inscrever <ArrowRight size={20} />
+            Inscrever minha família <ArrowRight size={20} />
           </Link>
           <a href="#local" className="lp-btn lp-btn-ghost lp-btn-big">
             Conhecer o local
@@ -254,8 +271,8 @@ function Sobre() {
         <Titulo
           id="t-sobre"
           eyebrow="Sobre o retiro"
-          titulo="Dias para buscar a Deus, juntos"
-          lead="O retiro é um tempo separado pela Conexão Jovem para viver a fé em comunidade: louvor, oração, Palavra e convivência cristã."
+          titulo="Um tempo para a família estar com Deus"
+          lead="O retiro é um tempo separado, organizado pela Conexão Jovem, para as famílias da igreja viverem a fé juntas: adoração, oração, Palavra de Deus, convivência e descanso."
         />
         <div className="lp-grid c4">
           {evento.sobre.map((s, i) => {
@@ -284,8 +301,28 @@ function Local() {
           id="t-local"
           eyebrow="Conheça o local"
           titulo={`${evento.local.nome}, ${evento.local.cidade}/${evento.local.uf}`}
-          lead="Veja os quartos, salões, auditórios e áreas de convivência. As imagens exibidas são as enviadas pela organização."
+          lead="A estrutura do retiro é pensada para a convivência das famílias e para as atividades cristãs. Detalhes ainda não confirmados serão divulgados pela organização."
         />
+        <div className="lp-grid c3" style={{ marginBottom: "2.5rem" }}>
+          {evento.localDestaques.map((d, i) => (
+            <article className="lp-card lp-destaque" key={d.titulo}>
+              <span className={`lp-ico${i % 2 ? " sky" : ""}`}>
+                {i === 0 ? (
+                  <Home size={24} aria-hidden="true" />
+                ) : i === 1 ? (
+                  <BookOpen size={24} aria-hidden="true" />
+                ) : (
+                  <Users size={24} aria-hidden="true" />
+                )}
+              </span>
+              <h3>{d.titulo}</h3>
+              <p>{d.texto}</p>
+              <p className="lp-nota">
+                <span className="lp-badge pend">A confirmar</span> {d.nota}
+              </p>
+            </article>
+          ))}
+        </div>
         <Gallery />
         {evento.local.mapsUrl && (
           <p style={{ marginTop: "1.5rem" }}>
@@ -334,8 +371,9 @@ function Informacoes() {
                 </li>
               ))}
             </ul>
-            <p style={{ marginTop: "0.75rem", fontSize: "0.85rem" }}>
-              Idade calculada na data de início do retiro.
+            <p style={{ marginTop: "0.75rem", fontSize: "0.9rem" }}>
+              Valor por pessoa, conforme a idade em 05/02/2027 (início do retiro). Os valores serão
+              confirmados pela organização para o formato familiar.
             </p>
           </article>
 
@@ -373,15 +411,37 @@ function Programacao() {
   return (
     <section className="lp-section alt" id="programacao" aria-labelledby="t-prog">
       <div className="lp-wrap">
-        <Titulo id="t-prog" eyebrow="Programação" titulo="Atividades do retiro" />
+        <Titulo
+          id="t-prog"
+          eyebrow="Programação"
+          titulo="O que vamos viver juntos"
+          lead="Esta é a proposta geral do retiro. Horários, temas e ministradores ainda serão divulgados pela organização."
+        />
+        <div className="lp-grid c3">
+          {evento.atividades.map((a, i) => {
+            const Icone = ICONE_ATIV[i % ICONE_ATIV.length];
+            return (
+              <article className="lp-card" key={a.titulo}>
+                <span className={`lp-ico${i % 2 ? " sky" : ""}`}>
+                  <Icone size={24} aria-hidden="true" />
+                </span>
+                <h3>{a.titulo}</h3>
+                <p>{a.texto}</p>
+              </article>
+            );
+          })}
+        </div>
+
         {evento.programacao.length === 0 ? (
-          <div className="lp-empty">
+          <div className="lp-empty" style={{ marginTop: "2rem" }}>
             <Clock size={28} aria-hidden="true" />
-            <strong>A programação será divulgada em breve</strong>
-            <span>Somente atividades confirmadas pela organização serão publicadas aqui.</span>
+            <strong>Horários a divulgar</strong>
+            <span>
+              O cronograma completo será publicado aqui quando for confirmado pela organização.
+            </span>
           </div>
         ) : (
-          <div className="lp-grid c3">
+          <div className="lp-grid c3" style={{ marginTop: "2rem" }}>
             {evento.programacao.map((d) => (
               <article className="lp-day" key={d.titulo}>
                 <h3>{d.titulo}</h3>
@@ -439,13 +499,14 @@ function ChamadaFinal() {
     <section className="lp-final" aria-labelledby="t-final">
       <div className="lp-wrap">
         <h2 className="lp-h2" id="t-final">
-          Faça parte do {evento.nome} {evento.edicao}
+          Venha com a sua família ao {evento.nome} {evento.edicao}
         </h2>
         <p className="lp-lead">
-          Preencha o formulário em poucos minutos. Você vê o valor da sua inscrição antes de enviar.
+          Uma pessoa maior de idade inscreve toda a família em poucos minutos. O valor de cada
+          pessoa e o total aparecem antes do envio.
         </p>
         <Link to="/inscricao" className="lp-btn lp-btn-fire lp-btn-big">
-          Fazer minha inscrição <ArrowRight size={20} />
+          Inscrever minha família <ArrowRight size={20} />
         </Link>
       </div>
     </section>

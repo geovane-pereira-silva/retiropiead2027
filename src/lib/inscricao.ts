@@ -1,5 +1,5 @@
 // ============================================================================
-// Regras de inscrição — funções puras, sem dependências, compartilhadas entre
+// Regras de inscrição FAMILIAR — funções puras, sem dependências, compartilhadas entre
 // o navegador (feedback imediato) e o servidor (validação autoritativa).
 // O servidor SEMPRE recalcula idade e valor; nunca confia no que veio do cliente.
 // ============================================================================
@@ -13,17 +13,26 @@ export type Faixa = {
   nota?: string;
 };
 
-export type FormValues = {
-  nomeCompleto: string;
+export type Pessoa = {
+  /** Identificador local (chave React). Ignorado pelo servidor. */
+  uid?: string;
+  nome: string;
   dataNascimento: string; // YYYY-MM-DD
   cpf: string;
+};
+
+export type FormValues = {
+  /** Quem faz a inscrição: sempre maior de idade e responsável legal pelos menores da família. */
+  responsavel: Pessoa;
+  /** Se o responsável também participa do retiro (entra no cálculo de valores). */
+  responsavelParticipa: boolean;
   telefone: string;
   whatsapp: string;
+  email: string;
   igreja: string;
   cidade: string;
-  email: string;
-  responsavelNome: string;
-  responsavelTelefone: string;
+  /** Demais integrantes da família que vão participar. */
+  integrantes: Pessoa[];
   emergenciaNome: string;
   emergenciaTelefone: string;
   necessidades: string;
@@ -33,39 +42,20 @@ export type FormValues = {
   website: string;
 };
 
-export type Campo = keyof FormValues;
-export type Erros = Partial<Record<Campo, string>>;
+/** Chaves de erro: "telefone", "responsavel.cpf", "integrantes.0.nome", "integrantes"… */
+export type Erros = Record<string, string>;
 
-/** Ordem visual dos campos, usada para focar o primeiro erro. */
-export const ORDEM_CAMPOS: Campo[] = [
-  "nomeCompleto",
-  "dataNascimento",
-  "cpf",
-  "telefone",
-  "whatsapp",
-  "email",
-  "igreja",
-  "cidade",
-  "responsavelNome",
-  "responsavelTelefone",
-  "emergenciaNome",
-  "emergenciaTelefone",
-  "necessidades",
-  "aceiteRegras",
-  "aceitePrivacidade",
-];
+export const PESSOA_VAZIA: Pessoa = { nome: "", dataNascimento: "", cpf: "" };
 
 export const VALORES_VAZIOS: FormValues = {
-  nomeCompleto: "",
-  dataNascimento: "",
-  cpf: "",
+  responsavel: { ...PESSOA_VAZIA },
+  responsavelParticipa: true,
   telefone: "",
   whatsapp: "",
+  email: "",
   igreja: "",
   cidade: "",
-  email: "",
-  responsavelNome: "",
-  responsavelTelefone: "",
+  integrantes: [],
   emergenciaNome: "",
   emergenciaTelefone: "",
   necessidades: "",
@@ -192,51 +182,110 @@ export type ContextoValidacao = {
   /** Hoje (YYYY-MM-DD) — para rejeitar nascimento no futuro. */
   hoje: string;
   faixas: Faixa[];
+  /** Máximo de participantes por envio. */
+  maxParticipantes: number;
+};
+
+export type Participante = {
+  papel: "Responsável" | "Integrante";
+  nome: string;
+  dataNascimento: string;
+  cpf: string; // só dígitos ("" se não informado)
+  idade: number;
+  menorDeIdade: boolean;
+  faixa: Faixa;
+  /** null = valor a definir */
+  valor: number | null;
+  /** chave do formulário (para ligar o valor ao cartão correspondente) */
+  chave: string;
 };
 
 export type ResultadoValidacao = {
   erros: Erros;
-  idade: number | null;
-  menorDeIdade: boolean;
-  faixa: Faixa | null;
-  /** null = valor a definir (ou idade ainda desconhecida) */
-  valor: number | null;
+  /** Participantes com idade/valor calculados (apenas os de data válida). */
+  participantes: Participante[];
+  /** Soma dos valores já definidos. */
+  total: number;
+  /** true se algum participante tem valor "a definir" (o total é parcial). */
+  temValorADefinir: boolean;
 };
 
 const texto = (s: string): string => (s ?? "").trim().replace(/\s+/g, " ");
 
-export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidacao {
-  const erros: Erros = {};
-
-  if (!nomeValido(v.nomeCompleto))
-    erros.nomeCompleto = "Informe o nome completo (nome e sobrenome).";
+/** Calcula idade/valor de uma pessoa e registra erros de nome e nascimento. */
+function avaliarPessoa(
+  p: Pessoa,
+  chave: string,
+  papel: Participante["papel"],
+  ctx: ContextoValidacao,
+  erros: Erros,
+): Participante | null {
+  if (!nomeValido(p.nome)) erros[`${chave}.nome`] = "Informe o nome completo (nome e sobrenome).";
 
   let idade: number | null = null;
-  if (!v.dataNascimento) {
-    erros.dataNascimento = "Informe a data de nascimento.";
-  } else if (!lerDataIso(v.dataNascimento)) {
-    erros.dataNascimento = "Data de nascimento inválida.";
-  } else if (v.dataNascimento > ctx.hoje) {
-    erros.dataNascimento = "A data de nascimento não pode estar no futuro.";
+  if (!p.dataNascimento) {
+    erros[`${chave}.dataNascimento`] = "Informe a data de nascimento.";
+  } else if (!lerDataIso(p.dataNascimento)) {
+    erros[`${chave}.dataNascimento`] = "Data de nascimento inválida.";
+  } else if (p.dataNascimento > ctx.hoje) {
+    erros[`${chave}.dataNascimento`] = "A data de nascimento não pode estar no futuro.";
   } else {
-    idade = calcularIdade(v.dataNascimento, ctx.dataReferencia);
+    idade = calcularIdade(p.dataNascimento, ctx.dataReferencia);
     if (idade === null || idade < 0) {
-      erros.dataNascimento = "O participante precisa ter nascido antes do início do retiro.";
+      erros[`${chave}.dataNascimento`] = "Nascimento posterior ao início do retiro.";
       idade = null;
     } else if (idade > 110) {
-      erros.dataNascimento = "Confira o ano de nascimento.";
+      erros[`${chave}.dataNascimento`] = "Confira o ano de nascimento.";
       idade = null;
     }
   }
 
-  if (!v.cpf) erros.cpf = "Informe o CPF.";
-  else if (!cpfValido(v.cpf)) erros.cpf = "CPF inválido. Confira os números.";
+  const cpfDigitos = somenteDigitos(p.cpf);
+  const adulto = idade !== null && idade >= 18;
+  if (!cpfDigitos) {
+    // Obrigatório para adultos; opcional para menores (crianças nem sempre têm CPF).
+    if (adulto || papel === "Responsável") erros[`${chave}.cpf`] = "Informe o CPF.";
+  } else if (!cpfValido(cpfDigitos)) {
+    erros[`${chave}.cpf`] = "CPF inválido. Confira os números.";
+  }
+
+  if (idade === null) return null;
+  const faixa = faixaPorIdade(idade, ctx.faixas);
+  if (!faixa) {
+    erros[`${chave}.dataNascimento`] = "Não foi possível determinar o valor para esta idade.";
+    return null;
+  }
+  return {
+    papel,
+    nome: texto(p.nome),
+    dataNascimento: p.dataNascimento,
+    cpf: cpfDigitos,
+    idade,
+    menorDeIdade: idade < 18,
+    faixa,
+    valor: faixa.valor,
+    chave,
+  };
+}
+
+export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidacao {
+  // A ordem de inserção das chaves segue a ordem visual do formulário.
+  const erros: Erros = {};
+  const participantes: Participante[] = [];
+
+  const resp = avaliarPessoa(v.responsavel, "responsavel", "Responsável", ctx, erros);
+  if (resp && resp.menorDeIdade) {
+    erros["responsavel.dataNascimento"] =
+      "O responsável pela inscrição precisa ter 18 anos ou mais na data do retiro.";
+  }
 
   if (!v.telefone) erros.telefone = "Informe o telefone.";
   else if (!telefoneValido(v.telefone)) erros.telefone = "Telefone inválido. Use DDD + número.";
 
   if (!v.whatsapp) erros.whatsapp = "Informe o WhatsApp.";
   else if (!telefoneValido(v.whatsapp)) erros.whatsapp = "WhatsApp inválido. Use DDD + número.";
+
+  if (v.email.trim() && !emailValido(v.email.trim())) erros.email = "E-mail inválido.";
 
   const igreja = texto(v.igreja);
   if (igreja.length < 2) erros.igreja = "Informe a igreja ou congregação.";
@@ -246,16 +295,34 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
   if (cidade.length < 2) erros.cidade = "Informe a cidade.";
   else if (cidade.length > 80) erros.cidade = "Use no máximo 80 caracteres.";
 
-  if (v.email.trim() && !emailValido(v.email.trim())) erros.email = "E-mail inválido.";
+  if (resp && v.responsavelParticipa) participantes.push(resp);
 
-  const menorDeIdade = idade !== null && idade < 18;
-  if (menorDeIdade) {
-    if (!nomeValido(v.responsavelNome))
-      erros.responsavelNome = "Informe o nome completo do responsável legal.";
-    if (!v.responsavelTelefone) erros.responsavelTelefone = "Informe o telefone do responsável.";
-    else if (!telefoneValido(v.responsavelTelefone))
-      erros.responsavelTelefone = "Telefone inválido. Use DDD + número.";
+  if (v.integrantes.length > ctx.maxParticipantes) {
+    erros.integrantes = `Máximo de ${ctx.maxParticipantes} pessoas por inscrição. Faça uma segunda inscrição para os demais.`;
   }
+  v.integrantes.forEach((p, i) => {
+    const a = avaliarPessoa(p, `integrantes.${i}`, "Integrante", ctx, erros);
+    if (a) participantes.push(a);
+  });
+
+  const total_ = (v.responsavelParticipa ? 1 : 0) + v.integrantes.length;
+  if (total_ === 0) erros.integrantes = "Inclua ao menos um participante.";
+  else if (total_ > ctx.maxParticipantes && !erros.integrantes) {
+    erros.integrantes = `Máximo de ${ctx.maxParticipantes} pessoas por inscrição. Faça uma segunda inscrição para os demais.`;
+  }
+
+  // CPF repetido dentro da mesma inscrição (responsável conta mesmo sem participar).
+  const vistos = new Map<string, string>();
+  const checar = (cpf: string, chave: string) => {
+    const d = somenteDigitos(cpf);
+    if (!d || !cpfValido(d)) return;
+    if (vistos.has(d)) {
+      if (!erros[`${chave}.cpf`])
+        erros[`${chave}.cpf`] = "Este CPF já foi informado nesta inscrição.";
+    } else vistos.set(d, chave);
+  };
+  checar(v.responsavel.cpf, "responsavel");
+  v.integrantes.forEach((p, i) => checar(p.cpf, `integrantes.${i}`));
 
   if (!nomeValido(v.emergenciaNome))
     erros.emergenciaNome = "Informe o nome do contato de emergência.";
@@ -269,11 +336,13 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
   if (!v.aceitePrivacidade)
     erros.aceitePrivacidade = "É necessário confirmar a ciência da política de privacidade.";
 
-  const faixa = idade === null ? null : faixaPorIdade(idade, ctx.faixas);
-  if (idade !== null && !faixa)
-    erros.dataNascimento = "Não foi possível determinar o valor para esta idade.";
-
-  return { erros, idade, menorDeIdade, faixa, valor: faixa ? faixa.valor : null };
+  const total = participantes.reduce((soma, p) => soma + (p.valor ?? 0), 0);
+  return {
+    erros,
+    participantes,
+    total,
+    temValorADefinir: participantes.some((p) => p.valor === null),
+  };
 }
 
 // ─── Corpo enviado à planilha ────────────────────────────────────────────────
@@ -284,66 +353,85 @@ export function higienizarCelula(s: string): string {
   return /^[=+\-@\t\r]/.test(t) ? `'${t}` : t;
 }
 
-export type CorpoPlanilha = {
-  idempotencyKey: string;
-  enviadoEm: string; // ISO UTC, gerado no servidor
-  nomeCompleto: string;
+export type ParticipantePlanilha = {
+  ordem: number;
+  papel: "Responsável" | "Integrante";
+  nome: string;
   dataNascimento: string;
   idadeNaDataDoRetiro: number;
+  menorDeIdade: "SIM" | "NÃO";
   faixa: string;
   valor: number | null;
   valorTexto: string;
-  cpf: string; // somente dígitos
+  cpf: string; // somente dígitos ("" se não informado)
+};
+
+export type CorpoPlanilha = {
+  idempotencyKey: string;
+  familiaId: string;
+  enviadoEm: string; // ISO UTC, gerado no servidor
+  responsavelNome: string;
+  responsavelCpf: string;
   telefone: string;
   whatsapp: string;
   email: string;
   igreja: string;
   cidade: string;
-  menorDeIdade: "SIM" | "NÃO";
-  responsavelNome: string;
-  responsavelTelefone: string;
   emergenciaNome: string;
   emergenciaTelefone: string;
   necessidades: string;
+  totalParticipantes: number;
+  totalValor: number;
+  totalTexto: string;
+  temValorADefinir: "SIM" | "NÃO";
   aceiteRegras: "SIM";
   aceitePrivacidade: "SIM";
   versaoTermos: string;
   statusPagamento: "NÃO CONFIRMADO";
   origem: "landing-retiro-2027";
+  participantes: ParticipantePlanilha[];
 };
 
 export function montarCorpo(
   v: FormValues,
   r: ResultadoValidacao,
-  extra: { idempotencyKey: string; enviadoEm: string; versaoTermos: string },
+  extra: { idempotencyKey: string; familiaId: string; enviadoEm: string; versaoTermos: string },
 ): CorpoPlanilha {
-  if (r.idade === null || !r.faixa) throw new Error("montarCorpo chamado com dados inválidos");
-  const menor = r.menorDeIdade;
+  if (r.participantes.length === 0) throw new Error("montarCorpo chamado com dados inválidos");
   return {
     idempotencyKey: extra.idempotencyKey,
+    familiaId: extra.familiaId,
     enviadoEm: extra.enviadoEm,
-    nomeCompleto: higienizarCelula(v.nomeCompleto),
-    dataNascimento: v.dataNascimento,
-    idadeNaDataDoRetiro: r.idade,
-    faixa: r.faixa.rotulo,
-    valor: r.valor,
-    valorTexto: r.valor === null ? "A definir" : formatarReais(r.valor),
-    cpf: somenteDigitos(v.cpf),
+    responsavelNome: higienizarCelula(v.responsavel.nome),
+    responsavelCpf: somenteDigitos(v.responsavel.cpf),
     telefone: normalizarTelefone(v.telefone),
     whatsapp: normalizarTelefone(v.whatsapp),
     email: higienizarCelula(v.email),
     igreja: higienizarCelula(v.igreja),
     cidade: higienizarCelula(v.cidade),
-    menorDeIdade: menor ? "SIM" : "NÃO",
-    responsavelNome: menor ? higienizarCelula(v.responsavelNome) : "",
-    responsavelTelefone: menor ? normalizarTelefone(v.responsavelTelefone) : "",
     emergenciaNome: higienizarCelula(v.emergenciaNome),
     emergenciaTelefone: normalizarTelefone(v.emergenciaTelefone),
     necessidades: higienizarCelula(v.necessidades),
+    totalParticipantes: r.participantes.length,
+    totalValor: r.total,
+    totalTexto: formatarReais(r.total) + (r.temValorADefinir ? " + valores a definir" : ""),
+    temValorADefinir: r.temValorADefinir ? "SIM" : "NÃO",
     aceiteRegras: "SIM",
     aceitePrivacidade: "SIM",
     versaoTermos: extra.versaoTermos,
     statusPagamento: "NÃO CONFIRMADO",
     origem: "landing-retiro-2027",
+    participantes: r.participantes.map((p, i) => ({
+      ordem: i + 1,
+      papel: p.papel,
+      nome: higienizarCelula(p.nome),
+      dataNascimento: p.dataNascimento,
+      idadeNaDataDoRetiro: p.idade,
+      menorDeIdade: p.menorDeIdade ? "SIM" : "NÃO",
+      faixa: p.faixa.rotulo,
+      valor: p.valor,
+      valorTexto: p.valor === null ? "A definir" : formatarReais(p.valor),
+      cpf: p.cpf,
+    })),
   };
 }

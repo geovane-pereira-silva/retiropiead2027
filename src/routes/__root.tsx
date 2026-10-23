@@ -83,7 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Retiro Conexão Jovem 2027 — Primeira Assembleia de Deus de Santa Rita do Sapucaí. Informações e inscrições.",
+          "Retiro para famílias da Primeira Assembleia de Deus de Santa Rita do Sapucaí, de 5 a 9 de fevereiro de 2027. Informações e inscrição.",
       },
       { property: "og:site_name", content: "Retiro Conexão Jovem" },
       { property: "og:type", content: "website" },
@@ -92,7 +92,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:image:height", content: "630" },
       {
         property: "og:image:alt",
-        content: "Retiro Conexão Jovem 2027 — 12 a 16 de fevereiro de 2027",
+        content: "Retiro Conexão Jovem 2027 — 5 a 9 de fevereiro de 2027",
       },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: "https://retiro2027.igrejaassembleia.org/og-image.jpg" },

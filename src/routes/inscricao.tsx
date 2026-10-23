@@ -11,7 +11,7 @@ export const Route = createFileRoute("/inscricao")({
       { title: `Inscrição — ${evento.nome} ${evento.edicao}` },
       {
         name: "description",
-        content: `Faça sua inscrição no ${evento.nome} ${evento.edicao} (${evento.dataTexto}). O valor é calculado antes do envio.`,
+        content: `Inscrição da família no ${evento.nome} ${evento.edicao} (${evento.dataTexto}). O valor de cada pessoa é calculado antes do envio.`,
       },
       { name: "robots", content: "noindex" },
     ],
@@ -28,14 +28,15 @@ function Inscricao() {
             ← {evento.ministerio}
           </a>
           <span className="lp-eyebrow" style={{ display: "flex", marginTop: "0.5rem" }}>
-            Inscrição
+            Inscrição da família
           </span>
           <h1 className="lp-h2" style={{ marginBottom: "0.5rem" }}>
             {evento.nome} {evento.edicao}
           </h1>
           <p className="lp-lead" style={{ marginBottom: 0 }}>
             {evento.dataTexto} · {evento.local.nome}, {evento.local.cidade}/{evento.local.uf}.
-            Preencha os dados do participante: o valor é calculado antes do envio.
+            Cadastre o responsável e os integrantes da família: o valor de cada pessoa e o total
+            aparecem antes do envio.
           </p>
         </div>
       </header>

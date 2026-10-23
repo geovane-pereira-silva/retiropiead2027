@@ -52,9 +52,10 @@ export function Termos() {
           </p>
           <h4>Quais dados coletamos</h4>
           <p>
-            Nome completo, data de nascimento, CPF, telefone, WhatsApp, e-mail (opcional), igreja ou
-            congregação, cidade, contato de emergência, necessidades de hospedagem ou alimentação e,
-            para menores de 18 anos, nome e telefone do responsável legal.
+            Do responsável pela inscrição: nome, data de nascimento, CPF, telefone, WhatsApp, e-mail
+            (opcional), igreja ou congregação, cidade e contato de emergência. De cada integrante da
+            família cadastrado: nome, data de nascimento e CPF (opcional para menores de 18 anos).
+            Também as necessidades de hospedagem ou alimentação informadas.
           </p>
           <h4>Para que usamos</h4>
           <p>
@@ -64,7 +65,8 @@ export function Termos() {
           </p>
           <h4>Dados de crianças e adolescentes</h4>
           <p>
-            Devem ser informados pelo responsável legal e são usados somente para os fins acima.
+            Os dados de menores de 18 anos são informados pelo responsável pela inscrição, que atua
+            como responsável legal, e são usados somente para os fins acima.
           </p>
           <h4>Compartilhamento e acesso</h4>
           <p>

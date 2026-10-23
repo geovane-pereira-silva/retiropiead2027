@@ -50,9 +50,7 @@ after(() => servidor.close());
 
 const valores = (cpf: string, extra: Partial<FormValues> = {}): FormValues => ({
   ...VALORES_VAZIOS,
-  nomeCompleto: "Maria da Silva",
-  dataNascimento: "1995-06-15",
-  cpf,
+  responsavel: { nome: "Maria da Silva", dataNascimento: "1985-06-15", cpf },
   telefone: "(35) 99999-1234",
   whatsapp: "(35) 99999-1234",
   igreja: "Primeira Assembleia de Deus",
@@ -82,14 +80,15 @@ test("sucesso: grava corpo correto e devolve nome, faixa e valor", async () => {
   );
   assert.equal(r.ok, true);
   if (r.ok) {
-    assert.equal(r.nome, "Maria da Silva");
-    assert.equal(r.valor, 400);
+    assert.equal(r.responsavel, "Maria da Silva");
+    assert.equal(r.total, 400);
+    assert.equal(r.participantes.length, 1);
   }
   assert.equal(recebidos.length, 1);
-  assert.equal(recebidos[0].cpf, "52998224725");
+  assert.equal((recebidos[0].participantes as { cpf: string }[])[0].cpf, "52998224725");
   assert.equal(recebidos[0].token, "segredo");
   assert.equal(recebidos[0].statusPagamento, "NÃO CONFIRMADO");
-  assert.equal(recebidos[0].valor, 400);
+  assert.equal(recebidos[0].totalValor, 400);
 });
 
 test("mesmo envio repetido (duplo clique) não grava duas vezes", async () => {
@@ -164,7 +163,7 @@ test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", a
   assert.equal(ruim.ok, false);
   if (!ruim.ok) {
     assert.equal(ruim.codigo, "VALIDACAO");
-    assert.ok(ruim.erros?.cpf);
+    assert.ok(ruim.erros?.["responsavel.cpf"]);
   }
   const robo = await processarInscricao(
     {
@@ -174,6 +173,29 @@ test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", a
     { url },
   );
   assert.equal(robo.ok, false);
+  // família: um único envio grava todos os participantes
+  recebidos.length = 0;
+  const fam = await processarInscricao(
+    {
+      values: valores("390.533.447-05", {
+        integrantes: [
+          { nome: "Pedro da Silva", dataNascimento: "2019-08-01", cpf: "" },
+          { nome: "Ana da Silva", dataNascimento: "2024-09-15", cpf: "" },
+        ],
+      }),
+      idempotencyKey: "chave-0011-kkkk",
+    },
+    { url },
+  );
+  assert.equal(fam.ok, true);
+  if (fam.ok) {
+    assert.equal(fam.participantes.length, 3);
+    assert.equal(fam.total, 600);
+    assert.equal(fam.temValorADefinir, true);
+  }
+  assert.equal(recebidos.length, 1);
+  assert.equal((recebidos[0].participantes as unknown[]).length, 3);
+  recebidos.length = 0;
   const semUrl = await processarInscricao(
     { values: valores("529.982.247-25"), idempotencyKey: "chave-0010-jjjj" },
     {},

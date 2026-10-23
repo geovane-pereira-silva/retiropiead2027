@@ -6,7 +6,7 @@
 - Nenhum componente precisa mudar para atualizar datas, valores ou programação.
 
 ## Fluxo
-Navegador → `enviarInscricao` (função de servidor) → valida de novo, recalcula idade/valor → Google Apps Script → planilha.
+Navegador (responsável + integrantes) → `enviarInscricao` (função de servidor) → valida de novo, recalcula idade/valor → Google Apps Script → planilha.
 O CPF e os demais dados nunca passam por URL, localStorage ou logs. A URL do script fica só no servidor.
 
 ## Configuração obrigatória (1 passo)
@@ -14,11 +14,16 @@ Defina `APPS_SCRIPT_URL` (e, opcionalmente, `APPS_SCRIPT_TOKEN`) no painel de va
 Sem isso o formulário informa "inscrições temporariamente indisponíveis" e **não** finge sucesso.
 
 ## Formato enviado à planilha
-JSON no corpo do POST (`text/plain`), com os campos de `CorpoPlanilha` em `src/lib/inscricao.ts`.
+JSON no corpo do POST (`text/plain`): dados da família + lista `participantes` (ver `CorpoPlanilha` em `src/lib/inscricao.ts`). O script antigo (1 pessoa por envio) NÃO serve mais: substitua pelo `Code.gs` de referência.
 Resposta esperada: `{ "ok": true }`, ou `{ "ok": false, "code": "DUPLICATE" }` para CPF repetido.
 Qualquer outra resposta (HTML de erro, timeout) é tratada como "não confirmado" — nunca como sucesso.
 Se o seu script usa outros nomes de campos, ajuste só `montarRequisicao` em `src/api/sheets.server.ts`.
-Referência pronta: `docs/apps-script/Code.gs`. Teste real: `node scripts/testar-planilha.mjs`.
+Referência pronta: `docs/apps-script/Code.gs` (grava uma linha por participante, de forma atômica, e recusa CPF repetido). Teste real: `node scripts/testar-planilha.mjs`.
 
 ## Testes automáticos
 `npx tsx --test tests/*.test.ts` (regras de idade/valor/CPF e fluxo do servidor contra um mock local do Apps Script).
+
+## Segurança das dependências (CVE-2026-102989)
+`bun run build` executa antes `scripts/verificar-dependencias.mjs`, que bloqueia o build se
+`@tanstack/react-start` < 1.168.60 ou `@tanstack/start-server-core` < 1.169.39 estiverem instalados.
+Não use `DANGEROUSLY_DEPLOY_VULNERABLE_TANSTACK_START_XSS`.

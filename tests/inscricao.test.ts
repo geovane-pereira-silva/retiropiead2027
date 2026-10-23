@@ -1,4 +1,4 @@
-// Testes das regras de inscrição. Rodar: npx tsx --test tests/*.test.ts
+// Testes das regras de inscrição familiar. Rodar: npx tsx --test tests/*.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -15,16 +15,26 @@ import {
   validar,
   VALORES_VAZIOS,
   type FormValues,
+  type Pessoa,
 } from "../src/lib/inscricao.ts";
 import { evento } from "../src/content/evento.ts";
 
-const ctx = { dataReferencia: evento.inicioData, hoje: "2026-10-21", faixas: evento.faixas };
+const ctx = {
+  dataReferencia: evento.inicioData,
+  hoje: "2026-10-22",
+  faixas: evento.faixas,
+  maxParticipantes: evento.maxParticipantesPorInscricao,
+};
+
+const pessoa = (nome: string, dataNascimento: string, cpf = ""): Pessoa => ({
+  nome,
+  dataNascimento,
+  cpf,
+});
 
 const base = (extra: Partial<FormValues> = {}): FormValues => ({
   ...VALORES_VAZIOS,
-  nomeCompleto: "Maria da Silva",
-  dataNascimento: "1995-06-15",
-  cpf: "529.982.247-25",
+  responsavel: pessoa("Maria da Silva", "1985-06-15", "529.982.247-25"),
   telefone: "(35) 99999-1234",
   whatsapp: "(35) 99999-1234",
   igreja: "Primeira Assembleia de Deus",
@@ -36,7 +46,14 @@ const base = (extra: Partial<FormValues> = {}): FormValues => ({
   ...extra,
 });
 
-test("data de início do evento", () => assert.equal(evento.inicioData, "2027-02-12"));
+test("datas do evento: 5 a 9 de fevereiro de 2027 (sexta a terça)", () => {
+  assert.equal(evento.inicioData, "2027-02-05");
+  assert.equal(evento.fimData, "2027-02-09");
+  const dia = (s: string) => new Date(`${s}T12:00:00Z`).getUTCDay();
+  assert.equal(dia(evento.inicioData), 5); // sexta
+  assert.equal(dia(evento.fimData), 2); // terça
+  assert.match(evento.dataTexto, /^5 a 9 de fevereiro de 2027$/);
+});
 
 test("CPF: válidos e inválidos", () => {
   assert.equal(cpfValido("529.982.247-25"), true);
@@ -48,13 +65,13 @@ test("CPF: válidos e inválidos", () => {
 });
 
 test("idade na data de início (limites de aniversário)", () => {
-  const ref = "2027-02-12";
-  assert.equal(calcularIdade("2022-02-12", ref), 5); // faz 5 no dia do início
-  assert.equal(calcularIdade("2022-02-13", ref), 4); // faz 5 um dia depois
-  assert.equal(calcularIdade("2017-02-12", ref), 10);
-  assert.equal(calcularIdade("2017-02-13", ref), 9);
-  assert.equal(calcularIdade("2009-02-12", ref), 18);
-  assert.equal(calcularIdade("2009-02-13", ref), 17);
+  const ref = evento.inicioData; // 2027-02-05
+  assert.equal(calcularIdade("2022-02-05", ref), 5); // faz 5 no dia do início
+  assert.equal(calcularIdade("2022-02-06", ref), 4); // faz 5 um dia depois
+  assert.equal(calcularIdade("2017-02-05", ref), 10);
+  assert.equal(calcularIdade("2017-02-06", ref), 9);
+  assert.equal(calcularIdade("2009-02-05", ref), 18);
+  assert.equal(calcularIdade("2009-02-06", ref), 17);
   assert.equal(calcularIdade("2024-02-29", ref), 2); // bissexto
   assert.equal(calcularIdade("2023-02-30", ref), null); // data inexistente
 });
@@ -69,51 +86,92 @@ test("faixas de valor: 4→a definir, 5→200, 9→200, 10→400, 60→400", () 
   assert.equal(v(60), 400);
 });
 
-test("adulto válido: sem erros, R$ 400", () => {
+test("responsável sozinho: sem erros, R$ 400", () => {
   const r = validar(base(), ctx);
   assert.deepEqual(r.erros, {});
-  assert.equal(r.valor, 400);
-  assert.equal(r.menorDeIdade, false);
+  assert.equal(r.participantes.length, 1);
+  assert.equal(r.total, 400);
+  assert.equal(r.temValorADefinir, false);
 });
 
-test("criança de 7 anos: R$ 200 e exige responsável", () => {
-  const r = validar(base({ dataNascimento: "2019-08-01" }), ctx);
-  assert.equal(r.idade, 7);
-  assert.equal(r.valor, 200);
-  assert.equal(r.menorDeIdade, true);
-  assert.ok(r.erros.responsavelNome);
-  assert.ok(r.erros.responsavelTelefone);
-  const ok = validar(
-    base({
-      dataNascimento: "2019-08-01",
-      responsavelNome: "Ana Souza",
-      responsavelTelefone: "35977776666",
-    }),
-    ctx,
-  );
-  assert.deepEqual(ok.erros, {});
-});
-
-test("menor de 5 anos: valor nulo (a definir), sem cobrança automática", () => {
+test("família: casal + filho de 7 + bebê de 2 → 400+400+200 e valor a definir", () => {
   const r = validar(
     base({
-      dataNascimento: "2024-01-10",
-      responsavelNome: "Ana Souza",
-      responsavelTelefone: "35977776666",
+      integrantes: [
+        pessoa("Carlos da Silva", "1983-03-10", "111.444.777-35"),
+        pessoa("Pedro da Silva", "2019-08-01"),
+        pessoa("Ana da Silva", "2024-09-15"),
+      ],
     }),
     ctx,
   );
-  assert.equal(r.idade, 3);
-  assert.equal(r.valor, null);
   assert.deepEqual(r.erros, {});
+  assert.equal(r.participantes.length, 4);
+  assert.deepEqual(
+    r.participantes.map((p) => p.valor),
+    [400, 400, 200, null],
+  );
+  assert.equal(r.total, 1000);
+  assert.equal(r.temValorADefinir, true);
+});
+
+test("CPF de menor é opcional; de adulto é obrigatório", () => {
+  const menor = validar(base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01")] }), ctx);
+  assert.deepEqual(menor.erros, {});
+  const adulto = validar(base({ integrantes: [pessoa("Carlos da Silva", "1983-03-10")] }), ctx);
+  assert.ok(adulto.erros["integrantes.0.cpf"]);
+  const invalido = validar(
+    base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01", "123.456.789-00")] }),
+    ctx,
+  );
+  assert.ok(invalido.erros["integrantes.0.cpf"]);
+});
+
+test("responsável menor de 18 anos é recusado", () => {
+  const r = validar(
+    base({ responsavel: pessoa("Joana Souza", "2010-01-01", "390.533.447-05") }),
+    ctx,
+  );
+  assert.ok(r.erros["responsavel.dataNascimento"]);
+});
+
+test("responsável que não participa: valor só dos integrantes", () => {
+  const r = validar(
+    base({ responsavelParticipa: false, integrantes: [pessoa("Pedro da Silva", "2019-08-01")] }),
+    ctx,
+  );
+  assert.deepEqual(r.erros, {});
+  assert.equal(r.participantes.length, 1);
+  assert.equal(r.total, 200);
+  const nenhum = validar(base({ responsavelParticipa: false, integrantes: [] }), ctx);
+  assert.ok(nenhum.erros.integrantes);
+});
+
+test("CPF repetido na mesma inscrição e limite de participantes", () => {
+  const dup = validar(
+    base({ integrantes: [pessoa("Carlos da Silva", "1983-03-10", "529.982.247-25")] }),
+    ctx,
+  );
+  assert.ok(dup.erros["integrantes.0.cpf"]);
+  const muitos = validar(
+    base({
+      integrantes: Array.from({ length: 10 }, (_, i) => pessoa(`Filho Numero${i}`, "2015-01-01")),
+    }),
+    ctx,
+  );
+  assert.ok(muitos.erros.integrantes);
 });
 
 test("nascimento no futuro e aceites obrigatórios", () => {
   const r = validar(
-    base({ dataNascimento: "2026-12-01", aceiteRegras: false, aceitePrivacidade: false }),
+    base({
+      responsavel: pessoa("Maria da Silva", "2026-12-01", "529.982.247-25"),
+      aceiteRegras: false,
+      aceitePrivacidade: false,
+    }),
     ctx,
   );
-  assert.ok(r.erros.dataNascimento);
+  assert.ok(r.erros["responsavel.dataNascimento"]);
   assert.ok(r.erros.aceiteRegras);
   assert.ok(r.erros.aceitePrivacidade);
 });
@@ -136,21 +194,24 @@ test("telefones e máscaras", () => {
 });
 
 test("planilha: injeção de fórmula é neutralizada", () => {
-  assert.equal(higienizarCelula('=HYPERLINK("http://x")'), '\'=HYPERLINK("http://x")');
+  assert.equal(higienizarCelula('=HYPERLINK("http://x")'), `'=HYPERLINK("http://x")`);
   assert.equal(higienizarCelula("  Maria   Silva "), "Maria Silva");
 });
 
-test("corpo da planilha: CPF só dígitos, status de pagamento não confirmado", () => {
-  const v = base();
+test("corpo da planilha: um participante por linha, CPF só dígitos, pagamento não confirmado", () => {
+  const v = base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01")] });
   const r = validar(v, ctx);
   const c = montarCorpo(v, r, {
     idempotencyKey: "k1",
-    enviadoEm: "2026-10-21T00:00:00Z",
+    familiaId: "F-1",
+    enviadoEm: "2026-10-22T00:00:00Z",
     versaoTermos: "t",
   });
-  assert.equal(c.cpf, "52998224725");
-  assert.equal(c.valor, 400);
   assert.equal(c.statusPagamento, "NÃO CONFIRMADO");
-  assert.equal(c.menorDeIdade, "NÃO");
-  assert.equal(c.responsavelNome, "");
+  assert.equal(c.totalParticipantes, 2);
+  assert.equal(c.totalValor, 600);
+  assert.equal(c.participantes[0].cpf, "52998224725");
+  assert.equal(c.participantes[1].cpf, "");
+  assert.equal(c.participantes[1].menorDeIdade, "SIM");
+  assert.equal(c.participantes[1].valor, 200);
 });

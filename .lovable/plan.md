@@ -4,7 +4,7 @@ Transformar o projeto atual (landing page) em uma **apresentação executiva** p
 
 ## Correção de data
 
-O evento acontece **sexta a terça de Carnaval de 2027** → **12/02/2027 (sex) a 16/02/2027 (ter)**. Todo `dataInicio`, `dataFim`, `dataTexto` e a edição em `retiro.ts` serão atualizados. `edicao: "2027"`.
+O evento acontece **sexta a terça de Carnaval de 2027** → **05/02/2027 (sex) a 09/02/2027 (ter)**. Todo `dataInicio`, `dataFim`, `dataTexto` e a edição em `retiro.ts` serão atualizados. `edicao: "2027"`.
 
 ## Nova arquitetura em uma frase
 
@@ -29,7 +29,7 @@ Toda a apresentação é **data-driven** — nada hardcoded em componente. Isso 
 // src/content/retiro.ts (expandido)
 export const retiro = {
   edicao: "2027",
-  dataInicio, dataFim, dataTexto,  // 12–16/02/2027
+  dataInicio, dataFim, dataTexto,  // 05–09/02/2027
   local, hero, sobre, estrutura, programacao, incluso, valores, faq, depoimentos,
   instagram,
 
@@ -100,7 +100,7 @@ Uma rota `/inscricao` (futura) monta o modo `landing` com as mesmas seções rel
 
 ## Escopo desta primeira entrega
 
-1. Corrigir datas para Carnaval 2027 (12–16/02/2027).
+1. Corrigir datas para Carnaval 2027 (05–09/02/2027).
 2. Instalar recharts.
 3. Ampliar `retiro.ts` com os blocos novos (números **placeholder realistas** que você refina depois).
 4. Criar 10 rotas de seção + rota `/` como índice/capa.

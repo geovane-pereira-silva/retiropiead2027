@@ -1006,3 +1006,125 @@
     transition: none !important;
   }
 }
+
+/* ─── Inscrição familiar e destaques ──────────────────────────────────── */
+.lp-hint {
+  margin: 0;
+  color: var(--lp-mute);
+  font-size: 0.88rem;
+}
+.lp-org {
+  margin: 0.75rem 0 0;
+  color: var(--lp-mute);
+  font-size: 0.95rem;
+}
+.lp-destaque {
+  border-color: rgba(255, 176, 46, 0.3);
+}
+.lp-nota {
+  margin-top: 0.9rem !important;
+  font-size: 0.88rem;
+}
+.lp-chip {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 176, 46, 0.14);
+  color: var(--lp-amber);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lp-vazio {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  color: var(--lp-mute);
+  font-size: 0.92rem;
+}
+.lp-members {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.lp-member {
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--lp-line);
+  background: rgba(255, 255, 255, 0.03);
+}
+.lp-member-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.lp-member-head .lp-chip {
+  margin-left: 0;
+}
+.lp-icon-btn {
+  margin-left: auto;
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--lp-line);
+  background: transparent;
+  color: var(--lp-err);
+  cursor: pointer;
+}
+.lp-icon-btn:hover {
+  background: rgba(255, 123, 123, 0.12);
+}
+.lp-add {
+  width: 100%;
+}
+.lp-people {
+  list-style: none;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.lp-people li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--lp-line);
+}
+.lp-people small {
+  display: block;
+  color: var(--lp-mute);
+  font-size: 0.82rem;
+}
+.lp-people b {
+  font-family: var(--lp-head);
+  white-space: nowrap;
+}
+.lp-people.compact {
+  margin-top: 0.9rem;
+}
+.lp-price-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.lp-plus {
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--lp-amber);
+}
+.lp-price {
+  display: block;
+}

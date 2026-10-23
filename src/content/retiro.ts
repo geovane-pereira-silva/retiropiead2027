@@ -8,9 +8,9 @@ export const retiro = {
   nome: "Retiro de Carnaval",
   publicoAlvo: "Jovens · Famílias · Convidados",
 
-  dataInicio: "2027-02-12T18:00:00-03:00",
-  dataFim: "2027-02-16T14:00:00-03:00",
-  dataTexto: "12 a 16 de Fevereiro de 2027 · Carnaval",
+  dataInicio: "2027-02-05T18:00:00-03:00",
+  dataFim: "2027-02-09T14:00:00-03:00",
+  dataTexto: "5 a 9 de Fevereiro de 2027 · Carnaval",
   dias: 5,
 
   local: {
