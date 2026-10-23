@@ -23,7 +23,7 @@ import {
   type Erros,
   type FormValues,
 } from "../lib/inscricao";
-import { enviarInscricao } from "../server/inscricao.functions";
+import { enviarInscricao } from "../api/inscricao.functions";
 
 type Confirmacao = {
   nome: string;

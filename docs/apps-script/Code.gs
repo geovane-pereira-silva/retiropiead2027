@@ -1,5 +1,5 @@
 /**
- * REFERÊNCIA do doPost que casa com o que o site envia (src/server/sheets.server.ts).
+ * REFERÊNCIA do doPost que casa com o que o site envia (src/api/sheets.server.ts).
  * NÃO substitua o seu script sem comparar: se o seu já grava na planilha, basta garantir
  * que ele (1) leia JSON de e.postData.contents, (2) bloqueie CPF repetido e
  * (3) responda JSON { ok: true } ou { ok: false, code: "DUPLICATE" }.

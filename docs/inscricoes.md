@@ -17,7 +17,7 @@ Sem isso o formulário informa "inscrições temporariamente indisponíveis" e *
 JSON no corpo do POST (`text/plain`), com os campos de `CorpoPlanilha` em `src/lib/inscricao.ts`.
 Resposta esperada: `{ "ok": true }`, ou `{ "ok": false, "code": "DUPLICATE" }` para CPF repetido.
 Qualquer outra resposta (HTML de erro, timeout) é tratada como "não confirmado" — nunca como sucesso.
-Se o seu script usa outros nomes de campos, ajuste só `montarRequisicao` em `src/server/sheets.server.ts`.
+Se o seu script usa outros nomes de campos, ajuste só `montarRequisicao` em `src/api/sheets.server.ts`.
 Referência pronta: `docs/apps-script/Code.gs`. Teste real: `node scripts/testar-planilha.mjs`.
 
 ## Testes automáticos

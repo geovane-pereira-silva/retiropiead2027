@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { processarInscricao } from "../src/server/inscricao.server.ts";
+import { processarInscricao } from "../src/api/inscricao.server.ts";
 import { VALORES_VAZIOS, cpfValido, type FormValues } from "../src/lib/inscricao.ts";
 
 let servidor: http.Server;
