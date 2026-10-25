@@ -50,7 +50,7 @@ after(() => servidor.close());
 
 const valores = (cpf: string, extra: Partial<FormValues> = {}): FormValues => ({
   ...VALORES_VAZIOS,
-  responsavel: { nome: "Maria da Silva", dataNascimento: "1985-06-15", cpf },
+  responsavel: { nome: "Maria da Silva", dataNascimento: "1985-06-15", cpf, transporte: "onibus" },
   telefone: "(35) 99999-1234",
   whatsapp: "(35) 99999-1234",
   igreja: "Primeira Assembleia de Deus",
@@ -179,8 +179,8 @@ test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", a
     {
       values: valores("390.533.447-05", {
         integrantes: [
-          { nome: "Pedro da Silva", dataNascimento: "2019-08-01", cpf: "" },
-          { nome: "Ana da Silva", dataNascimento: "2024-09-15", cpf: "" },
+          { nome: "Pedro da Silva", dataNascimento: "2019-08-01", cpf: "", transporte: "carro" },
+          { nome: "Ana da Silva", dataNascimento: "2024-09-15", cpf: "", transporte: "onibus" },
         ],
       }),
       idempotencyKey: "chave-0011-kkkk",
@@ -191,7 +191,7 @@ test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", a
   if (fam.ok) {
     assert.equal(fam.participantes.length, 3);
     assert.equal(fam.total, 600);
-    assert.equal(fam.temValorADefinir, true);
+    assert.equal(fam.temValorADefinir, false);
   }
   assert.equal(recebidos.length, 1);
   assert.equal((recebidos[0].participantes as unknown[]).length, 3);

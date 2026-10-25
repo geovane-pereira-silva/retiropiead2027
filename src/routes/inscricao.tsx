@@ -27,14 +27,11 @@ function Inscricao() {
           <a href="/" className="lp-back">
             ← {evento.ministerio}
           </a>
-          <span className="lp-eyebrow" style={{ display: "flex", marginTop: "0.5rem" }}>
-            Inscrição da família
-          </span>
           <h1 className="lp-h2" style={{ marginBottom: "0.5rem" }}>
-            {evento.nome} {evento.edicao}
+            Inscrição da família
           </h1>
           <p className="lp-lead" style={{ marginBottom: 0 }}>
-            {evento.dataTexto} · {evento.local.nome}, {evento.local.cidade}/{evento.local.uf}.
+            {evento.dataTexto}, no {evento.local.nome}, em {evento.local.cidade}/{evento.local.uf}.
             Cadastre o responsável e os integrantes da família: o valor de cada pessoa e o total
             aparecem antes do envio.
           </p>

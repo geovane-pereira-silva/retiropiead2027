@@ -1,292 +1,198 @@
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  BedDouble,
-  Bus,
-  CalendarDays,
-  BookOpen,
-  ClipboardList,
-  Clock,
-  Flame,
-  HeartHandshake,
-  Home,
-  Moon,
-  MapPin,
-  Menu,
-  Music,
-  Plus,
-  Users,
-  Utensils,
-  Wallet,
-  X,
-} from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 import { evento } from "../content/evento";
-import { formatarReais } from "../lib/inscricao";
-import { Gallery } from "./Gallery";
+import { textoValor } from "../lib/inscricao";
+import { Gallery, temMidia } from "./Gallery";
 
 const NAV = [
-  { href: "#sobre", rotulo: "Sobre" },
   { href: "#local", rotulo: "Local" },
-  { href: "#informacoes", rotulo: "Informações" },
-  { href: "#programacao", rotulo: "Programação" },
+  { href: "#agenda", rotulo: "Dias" },
+  { href: "#hospedagem", rotulo: "Hospedagem" },
+  { href: "#valores", rotulo: "Valores" },
+  { href: "#transporte", rotulo: "Transporte" },
   { href: "#duvidas", rotulo: "Dúvidas" },
 ];
 
-const ICONE_SOBRE = [Flame, BookOpen, HeartHandshake, Users];
-const ICONE_ATIV = [Music, Flame, BookOpen, Users, Moon, HeartHandshake];
-const ICONE_INFO = {
-  hospedagem: BedDouble,
-  alimentacao: Utensils,
-  transporte: Bus,
-  orientacoes: ClipboardList,
-};
-
-function Cabecalho() {
-  const [aberto, setAberto] = useState(false);
-  return (
-    <header className="lp-nav">
-      <div className="lp-wrap">
-        <div className="lp-nav-in">
-          <a className="lp-brand" href="#topo" aria-label={`${evento.ministerio} — início`}>
-            <img
-              className="lp-brand-logo"
-              src="/logo-conexao-jovem.png"
-              alt=""
-              width="40"
-              height="50"
-            />
-            <span className="lp-brand-txt">
-              <b>{evento.ministerio}</b>
-              <span>
-                {evento.igreja} · {evento.igrejaCidade}
-              </span>
-            </span>
-          </a>
-          <nav className="lp-links" aria-label="Seções da página">
-            {NAV.map((n) => (
-              <a key={n.href} href={n.href}>
-                {n.rotulo}
-              </a>
-            ))}
-          </nav>
-          <Link to="/inscricao" className="lp-btn lp-btn-fire lp-nav-cta">
-            Inscreva-se
-          </Link>
-          <button
-            type="button"
-            className="lp-burger"
-            aria-label={aberto ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={aberto}
-            aria-controls="menu-mobile"
-            onClick={() => setAberto((v) => !v)}
-          >
-            {aberto ? <X size={22} /> : <Menu size={22} />}
-          </button>
-        </div>
-        {aberto && (
-          <nav id="menu-mobile" className="lp-drawer" aria-label="Menu">
-            {NAV.map((n) => (
-              <a key={n.href} href={n.href} onClick={() => setAberto(false)}>
-                {n.rotulo}
-              </a>
-            ))}
-            <Link to="/inscricao" className="lp-btn lp-btn-fire" onClick={() => setAberto(false)}>
-              Inscrever minha família <ArrowRight size={18} />
-            </Link>
-          </nav>
-        )}
-      </div>
-    </header>
-  );
+/**
+ * Curvas de nível da serra: arte original gerada por código (não é fotografia do local).
+ * Determinística, para a renderização no servidor e no navegador serem idênticas.
+ */
+function curvas(): string[] {
+  const linhas: string[] = [];
+  for (let i = 0; i < 15; i++) {
+    const base = 70 + i * 42;
+    let d = "";
+    for (let x = -20; x <= 1220; x += 20) {
+      const y =
+        base +
+        34 * Math.sin(x / 210 + i * 0.42) +
+        16 * Math.sin(x / 93 + i * 0.9) -
+        i * 3.2 * Math.cos(x / 420);
+      d += `${x === -20 ? "M" : "L"}${x} ${y.toFixed(1)} `;
+    }
+    linhas.push(d.trim());
+  }
+  return linhas;
 }
+const CURVAS = curvas();
 
-/** Arte abstrata original: rede de pontos conectados (tema "conexão"). */
-function Rede() {
-  const nos: Array<[number, number]> = [
-    [90, 140],
-    [300, 260],
-    [520, 120],
-    [760, 300],
-    [980, 160],
-    [1110, 430],
-    [880, 540],
-    [640, 430],
-    [400, 540],
-    [170, 450],
-  ];
-  const liga: Array<[number, number]> = [
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    [3, 4],
-    [4, 5],
-    [5, 6],
-    [6, 7],
-    [7, 8],
-    [8, 9],
-    [9, 0],
-    [1, 7],
-    [2, 7],
-    [3, 7],
-    [3, 6],
-    [1, 8],
-    [1, 9],
-    [4, 3],
-  ];
+function Relevo() {
   return (
     <svg
-      className="lp-net"
-      viewBox="0 0 1200 640"
-      preserveAspectRatio="xMidYMid slice"
+      className="lp-relevo"
+      viewBox="0 0 1200 720"
+      preserveAspectRatio="xMidYMax slice"
       aria-hidden="true"
       focusable="false"
     >
-      {liga.map(([a, b], i) => (
-        <line
+      {CURVAS.map((d, i) => (
+        <path
           key={i}
-          x1={nos[a][0]}
-          y1={nos[a][1]}
-          x2={nos[b][0]}
-          y2={nos[b][1]}
-          stroke="#62aaff"
-          strokeOpacity="0.28"
-          strokeWidth="1.2"
+          d={d}
+          pathLength={1}
+          style={{ animationDelay: `${i * 90}ms` }}
+          className={i % 5 === 2 ? "forte" : undefined}
         />
-      ))}
-      {nos.map(([x, y], i) => (
-        <g key={i}>
-          <circle
-            cx={x}
-            cy={y}
-            r={i % 3 === 0 ? 16 : 10}
-            fill={i % 3 === 0 ? "#ff5a1f" : "#ffb02e"}
-            fillOpacity="0.14"
-          />
-          <circle
-            cx={x}
-            cy={y}
-            r={i % 3 === 0 ? 5 : 3.5}
-            fill={i % 3 === 0 ? "#ff7a2a" : "#ffc766"}
-          />
-        </g>
       ))}
     </svg>
   );
 }
 
+function Marca({ compacta = false }: { compacta?: boolean }) {
+  return (
+    <a className="lp-marca" href="#topo" aria-label={`${evento.ministerio}: início da página`}>
+      <img src="/logo-conexao-jovem.png" alt="" width="40" height="50" />
+      {!compacta && (
+        <span>
+          <b>{evento.ministerio}</b>
+          <small>
+            {evento.igreja} de {evento.igrejaCidade}
+          </small>
+        </span>
+      )}
+    </a>
+  );
+}
+
+function Cabecalho() {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <header className="lp-top">
+      <div className="lp-wrap lp-top-in">
+        <Marca />
+        <nav className="lp-nav" aria-label="Seções da página">
+          {NAV.map((n) => (
+            <a key={n.href} href={n.href}>
+              {n.rotulo}
+            </a>
+          ))}
+        </nav>
+        <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-top-cta">
+          Inscrever minha família
+        </Link>
+        <button
+          type="button"
+          className="lp-menu-btn"
+          aria-expanded={aberto}
+          aria-controls="menu-mobile"
+          onClick={() => setAberto((v) => !v)}
+        >
+          {aberto ? "Fechar" : "Menu"}
+        </button>
+      </div>
+      {aberto && (
+        <nav id="menu-mobile" className="lp-menu-mobile" aria-label="Menu">
+          <div className="lp-wrap">
+            {NAV.map((n) => (
+              <a key={n.href} href={n.href} onClick={() => setAberto(false)}>
+                {n.rotulo}
+              </a>
+            ))}
+            <Link to="/inscricao" className="lp-btn lp-btn-brasa" onClick={() => setAberto(false)}>
+              Inscrever minha família
+            </Link>
+          </div>
+        </nav>
+      )}
+    </header>
+  );
+}
+
 function Inicio() {
+  const d = evento.dataCurta;
   return (
     <section className="lp-hero" id="topo" aria-labelledby="titulo">
-      <Rede />
-      <div className="lp-wrap">
-        <span className="lp-hero-badge lp-rise">
-          <Users size={15} aria-hidden="true" /> {evento.tipo}
-        </span>
-        <h1 className="lp-title lp-rise d1" id="titulo">
-          {evento.nome} <em>{evento.edicao}</em>
+      <Relevo />
+      <div className="lp-wrap lp-hero-in">
+        <h1 id="titulo" className="lp-nome">
+          {evento.nome} {evento.edicao}
         </h1>
-        {evento.tema && <p className="lp-tema lp-rise d1">{evento.tema}</p>}
-        <p className="lp-impact lp-rise d2">{evento.fraseImpacto}</p>
-        <p className="lp-org lp-rise d2">
-          {evento.ministerio} · {evento.igreja} de {evento.igrejaCidade}
+
+        <p className="lp-data" role="text" aria-label={evento.dataTexto}>
+          <span className="lp-data-dias" aria-hidden="true">
+            {d.de}–{d.ate}
+          </span>
+          <span className="lp-data-mes" aria-hidden="true">
+            de {d.mes}
+            <br />
+            de {d.ano}
+          </span>
         </p>
 
-        <ul className="lp-facts lp-rise d2">
-          <li className="lp-fact">
-            <CalendarDays size={22} aria-hidden="true" />
-            <span>
-              <small>Data</small>
-              <strong>{evento.dataTexto}</strong>
-              <small style={{ textTransform: "none", letterSpacing: 0 }}>
-                {evento.periodoNota}
-              </small>
-            </span>
-          </li>
-          <li className="lp-fact">
-            <MapPin size={22} aria-hidden="true" />
-            <span>
-              <small>Local</small>
-              <strong>
-                {evento.local.nome} · {evento.local.cidade}/{evento.local.uf}
-              </strong>
-            </span>
-          </li>
-          <li className="lp-fact">
-            <Home size={22} aria-hidden="true" />
-            <span>
-              <small>Hospedagem</small>
-              <strong>Quartos familiares</strong>
-            </span>
-          </li>
-          <li className="lp-fact">
-            <BookOpen size={22} aria-hidden="true" />
-            <span>
-              <small>Programação</small>
-              <strong>Cultos, oração e estudos bíblicos</strong>
-            </span>
-          </li>
-        </ul>
+        <p className="lp-mensagem">{evento.mensagemPrincipal}</p>
+        <p className="lp-apoio">
+          {evento.publico} da {evento.igreja} de {evento.igrejaCidade}, com organização da{" "}
+          {evento.ministerio}.
+        </p>
 
-        <div className="lp-cta-row lp-rise d3">
-          <Link to="/inscricao" className="lp-btn lp-btn-fire lp-btn-big">
-            Inscrever minha família <ArrowRight size={20} />
+        <div className="lp-hero-acoes">
+          <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-btn-grande">
+            Inscrever minha família
           </Link>
-          <a href="#local" className="lp-btn lp-btn-ghost lp-btn-big">
-            Conhecer o local
+          <a className="lp-link-claro" href="#valores">
+            Ver o que está incluído
           </a>
         </div>
+
+        <p className="lp-hero-local">
+          {evento.local.nome}, em {evento.local.cidade}/{evento.local.uf}
+        </p>
       </div>
     </section>
   );
 }
 
-function Titulo({
-  eyebrow,
-  titulo,
-  lead,
-  id,
-}: {
-  eyebrow: string;
-  titulo: string;
-  lead?: ReactNode;
-  id: string;
-}) {
+function Proposito() {
   return (
-    <>
-      <span className="lp-eyebrow">{eyebrow}</span>
-      <h2 className="lp-h2" id={id}>
-        {titulo}
-      </h2>
-      {lead && <p className="lp-lead">{lead}</p>}
-    </>
-  );
-}
-
-function Sobre() {
-  return (
-    <section className="lp-section" id="sobre" aria-labelledby="t-sobre">
-      <div className="lp-wrap">
-        <Titulo
-          id="t-sobre"
-          eyebrow="Sobre o retiro"
-          titulo="Um tempo para a família estar com Deus"
-          lead="O retiro é um tempo separado, organizado pela Conexão Jovem, para as famílias da igreja viverem a fé juntas: adoração, oração, Palavra de Deus, convivência e descanso."
-        />
-        <div className="lp-grid c4">
-          {evento.sobre.map((s, i) => {
-            const Icone = ICONE_SOBRE[i % ICONE_SOBRE.length];
-            return (
-              <article className="lp-card" key={s.titulo}>
-                <span className={`lp-ico${i % 2 ? " sky" : ""}`}>
-                  <Icone size={24} aria-hidden="true" />
-                </span>
-                <h3>{s.titulo}</h3>
-                <p>{s.texto}</p>
-              </article>
-            );
-          })}
+    <section className="lp-faixa lp-linho" id="proposito" aria-labelledby="t-proposito">
+      <div className="lp-wrap lp-duas">
+        <div>
+          <h2 id="t-proposito" className="lp-h2">
+            Um tempo separado para estar diante de Deus com a família
+          </h2>
+        </div>
+        <div className="lp-prosa">
+          <p>
+            O {evento.nome} {evento.edicao} reúne famílias, adultos e jovens da {evento.igreja} de{" "}
+            {evento.igrejaCidade} em Campos do Jordão. A rotina combina devocional, culto de louvor e
+            adoração e uma vigília pentecostal, com tempo para a convivência entre as famílias e para o
+            descanso.
+          </p>
+          <dl className="lp-pilares">
+            <div>
+              <dt>Buscar a Deus</dt>
+              <dd>Devocional pela manhã, culto de louvor e adoração à noite e uma vigília de oração.</dd>
+            </div>
+            <div>
+              <dt>Fortalecer a família</dt>
+              <dd>Dias inteiros juntos, longe da correria, com pais, filhos e irmãos na fé.</dd>
+            </div>
+            <div>
+              <dt>Viver a comunhão</dt>
+              <dd>Adultos e jovens com atividades próprias, e todos reunidos nos cultos.</dd>
+            </div>
+          </dl>
         </div>
       </div>
     </section>
@@ -295,44 +201,41 @@ function Sobre() {
 
 function Local() {
   return (
-    <section className="lp-section alt" id="local" aria-labelledby="t-local">
+    <section className="lp-faixa lp-mata" id="local" aria-labelledby="t-local">
       <div className="lp-wrap">
-        <Titulo
-          id="t-local"
-          eyebrow="Conheça o local"
-          titulo={`${evento.local.nome}, ${evento.local.cidade}/${evento.local.uf}`}
-          lead="A estrutura do retiro é pensada para a convivência das famílias e para as atividades cristãs. Detalhes ainda não confirmados serão divulgados pela organização."
-        />
-        <div className="lp-grid c3" style={{ marginBottom: "2.5rem" }}>
-          {evento.localDestaques.map((d, i) => (
-            <article className="lp-card lp-destaque" key={d.titulo}>
-              <span className={`lp-ico${i % 2 ? " sky" : ""}`}>
-                {i === 0 ? (
-                  <Home size={24} aria-hidden="true" />
-                ) : i === 1 ? (
-                  <BookOpen size={24} aria-hidden="true" />
-                ) : (
-                  <Users size={24} aria-hidden="true" />
-                )}
-              </span>
-              <h3>{d.titulo}</h3>
-              <p>{d.texto}</p>
-              <p className="lp-nota">
-                <span className="lp-badge pend">A confirmar</span> {d.nota}
-              </p>
-            </article>
-          ))}
+        <div className="lp-local-cab">
+          <h2 id="t-local" className="lp-h2">
+            {evento.local.nome}
+          </h2>
+          <p className="lp-lead">
+            Em {evento.local.cidade}/{evento.local.uf}. Um espaço pensado para cultos, convivência e
+            descanso.
+          </p>
         </div>
-        <Gallery />
+
+        <ul className="lp-estrutura">
+          {evento.estrutura.map((e) => (
+            <li key={e.titulo}>
+              <span className="lp-estrutura-num">{e.destaque}</span>
+              <span className="lp-estrutura-txt">
+                <strong>{e.titulo}</strong>
+                <span>{e.texto}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {temMidia ? (
+          <Gallery />
+        ) : (
+          <p className="lp-nota-fotos">
+            As fotografias reais do local serão publicadas aqui assim que a organização as enviar.
+          </p>
+        )}
         {evento.local.mapsUrl && (
-          <p style={{ marginTop: "1.5rem" }}>
-            <a
-              className="lp-btn lp-btn-ghost"
-              href={evento.local.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <MapPin size={18} aria-hidden="true" /> Ver no mapa
+          <p>
+            <a className="lp-link-claro" href={evento.local.mapsUrl} target="_blank" rel="noopener noreferrer">
+              Ver no mapa
             </a>
           </p>
         )}
@@ -341,130 +244,164 @@ function Local() {
   );
 }
 
-function Informacoes() {
+function Agenda() {
   return (
-    <section className="lp-section" id="informacoes" aria-labelledby="t-info">
+    <section className="lp-faixa lp-linho" id="agenda" aria-labelledby="t-agenda">
       <div className="lp-wrap">
-        <Titulo
-          id="t-info"
-          eyebrow="Informações importantes"
-          titulo="Tudo o que você precisa saber"
-          lead="O que já está definido aparece aqui. Os itens marcados como “A confirmar” serão divulgados pela organização."
-        />
-        <div className="lp-grid c3">
-          <article className="lp-card">
-            <span className="lp-ico">
-              <Wallet size={24} aria-hidden="true" />
-            </span>
-            <h3>
-              Valores <span className="lp-badge ok">Confirmado</span>
-            </h3>
-            <ul className="lp-prices">
-              {evento.faixas.map((f) => (
-                <li key={f.id}>
-                  <span>{f.rotulo}</span>
-                  {f.valor === null ? (
-                    <span className="tbd">{f.nota ?? "A definir"}</span>
-                  ) : (
-                    <b>{formatarReais(f.valor)}</b>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p style={{ marginTop: "0.75rem", fontSize: "0.9rem" }}>
-              Valor por pessoa, conforme a idade em 05/02/2027 (início do retiro). Os valores serão
-              confirmados pela organização para o formato familiar.
-            </p>
-          </article>
+        <h2 id="t-agenda" className="lp-h2 lp-h2-largo">
+          Como são os dias do retiro
+        </h2>
 
-          {evento.informacoes.map((c) => {
-            const Icone = ICONE_INFO[c.id];
-            return (
-              <article className="lp-card" key={c.id}>
-                <span className="lp-ico sky">
-                  <Icone size={24} aria-hidden="true" />
+        <ol className="lp-calendario" aria-label="Dias do retiro">
+          {evento.dias.map((dia) => (
+            <li key={dia.numero} className={dia.nota ? "marcado" : undefined}>
+              <span className="lp-cal-sem">{dia.rotulo}</span>
+              <span className="lp-cal-num">{dia.numero}</span>
+              <span className="lp-cal-nota">{dia.nota || " "}</span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="lp-rotina">
+          {evento.rotina.map((r) => (
+            <div className="lp-periodo" key={r.periodo}>
+              <h3>{r.periodo}</h3>
+              <ul>
+                {r.itens.map((i) => (
+                  <li key={i.titulo}>
+                    <strong>{i.titulo}</strong>
+                    <span>{i.texto}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <aside className="lp-vigilia" aria-label={evento.vigilia.titulo}>
+          <h3>{evento.vigilia.titulo}</h3>
+          <p>{evento.vigilia.texto}</p>
+          <p className="lp-vigilia-nota">{evento.vigilia.nota}</p>
+        </aside>
+
+        <p className="lp-rodape-secao">{evento.agendaNota}</p>
+      </div>
+    </section>
+  );
+}
+
+function Hospedagem() {
+  const h = evento.hospedagem;
+  return (
+    <section className="lp-hosp" id="hospedagem" aria-labelledby="t-hosp">
+      <div className="lp-hosp-topo lp-areia">
+        <div className="lp-wrap">
+          <h2 id="t-hosp" className="lp-h2">
+            Onde cada um dorme
+          </h2>
+        </div>
+      </div>
+      <div className="lp-hosp-grade">
+        <div className="lp-hosp-bloco lp-areia">
+          <div className="lp-wrap-meio">
+            <h3>{h.familias.titulo}</h3>
+            <p>{h.familias.texto}</p>
+          </div>
+        </div>
+        <div className="lp-hosp-bloco lp-musgo">
+          <div className="lp-wrap-meio">
+            <h3>{h.jovens.titulo}</h3>
+            <p>{h.jovens.texto}</p>
+          </div>
+        </div>
+      </div>
+      <p className="lp-hosp-nota lp-areia">
+        <span className="lp-wrap">{h.nota}</span>
+      </p>
+    </section>
+  );
+}
+
+function Valores() {
+  return (
+    <section className="lp-faixa lp-mata" id="valores" aria-labelledby="t-valores">
+      <div className="lp-wrap lp-duas lp-duas-valores">
+        <div>
+          <h2 id="t-valores" className="lp-h2">
+            O que está incluído no valor
+          </h2>
+          <ul className="lp-incluso">
+            {evento.incluso.map((i) => (
+              <li key={i.titulo}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M5 12.5l4.2 4.2L19 7" />
+                </svg>
+                <span>
+                  <strong>{i.titulo}</strong> {i.texto}
                 </span>
-                <h3>
-                  {c.titulo}
-                  <span className={`lp-badge ${c.status === "confirmado" ? "ok" : "pend"}`}>
-                    {c.status === "confirmado" ? "Confirmado" : "A confirmar"}
-                  </span>
-                </h3>
-                <p>{c.texto}</p>
-                {c.itens && (
-                  <ul className="lp-list">
-                    {c.itens.map((t) => (
-                      <li key={t}>{t}</li>
-                    ))}
-                  </ul>
-                )}
-              </article>
-            );
-          })}
+              </li>
+            ))}
+          </ul>
+          <p className="lp-carro">{evento.inclusoCarro}</p>
+        </div>
+
+        <div className="lp-tabela">
+          <h3>Valor por pessoa</h3>
+          <ul>
+            {evento.faixas.map((f) => (
+              <li key={f.id}>
+                <span>{f.rotulo}</span>
+                <b>{textoValor(f.valor)}</b>
+              </li>
+            ))}
+          </ul>
+          <p>A idade é contada em 5 de fevereiro de 2027, data de início do retiro.</p>
+          <p>
+            As orientações de pagamento serão divulgadas pela organização. O formulário registra o
+            cadastro e não confirma pagamento.
+          </p>
         </div>
       </div>
     </section>
   );
 }
 
-function Programacao() {
+function Transporte() {
+  const t = evento.transporte;
   return (
-    <section className="lp-section alt" id="programacao" aria-labelledby="t-prog">
-      <div className="lp-wrap">
-        <Titulo
-          id="t-prog"
-          eyebrow="Programação"
-          titulo="O que vamos viver juntos"
-          lead="Esta é a proposta geral do retiro. Horários, temas e ministradores ainda serão divulgados pela organização."
-        />
-        <div className="lp-grid c3">
-          {evento.atividades.map((a, i) => {
-            const Icone = ICONE_ATIV[i % ICONE_ATIV.length];
-            return (
-              <article className="lp-card" key={a.titulo}>
-                <span className={`lp-ico${i % 2 ? " sky" : ""}`}>
-                  <Icone size={24} aria-hidden="true" />
-                </span>
-                <h3>{a.titulo}</h3>
-                <p>{a.texto}</p>
-              </article>
-            );
-          })}
+    <section className="lp-faixa lp-linho" id="transporte" aria-labelledby="t-transp">
+      <div className="lp-wrap lp-duas">
+        <div>
+          <h2 id="t-transp" className="lp-h2">
+            Transporte e orientações
+          </h2>
+          <dl className="lp-viagem">
+            <div>
+              <dt>Ida</dt>
+              <dd>
+                <strong>{t.ida.dia}</strong>
+                <span>{t.ida.texto}</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Retorno</dt>
+              <dd>
+                <strong>{t.retorno.dia}</strong>
+                <span>{t.retorno.texto}</span>
+              </dd>
+            </div>
+          </dl>
+          <p className="lp-prosa-simples">{t.carroProprio}</p>
+          <p className="lp-prosa-simples lp-pendente">{t.pendente}</p>
         </div>
-
-        {evento.programacao.length === 0 ? (
-          <div className="lp-empty" style={{ marginTop: "2rem" }}>
-            <Clock size={28} aria-hidden="true" />
-            <strong>Horários a divulgar</strong>
-            <span>
-              O cronograma completo será publicado aqui quando for confirmado pela organização.
-            </span>
-          </div>
-        ) : (
-          <div className="lp-grid c3" style={{ marginTop: "2rem" }}>
-            {evento.programacao.map((d) => (
-              <article className="lp-day" key={d.titulo}>
-                <h3>{d.titulo}</h3>
-                {d.data && <small>{d.data}</small>}
-                <ul className="lp-slots">
-                  {d.itens.map((it, i) => (
-                    <li key={`${it.titulo}-${i}`}>
-                      <time>{it.hora ?? ""}</time>
-                      <span>
-                        <strong>{it.titulo}</strong>
-                        {it.descricao && (
-                          <span style={{ display: "block", color: "var(--lp-mute)" }}>
-                            {it.descricao}
-                          </span>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </article>
+        <div>
+          <h3 className="lp-h3">Para se inscrever</h3>
+          <ul className="lp-orient">
+            {evento.orientacoes.map((o) => (
+              <li key={o}>{o}</li>
             ))}
-          </div>
-        )}
+          </ul>
+        </div>
       </div>
     </section>
   );
@@ -472,20 +409,24 @@ function Programacao() {
 
 function Duvidas() {
   return (
-    <section className="lp-section" id="duvidas" aria-labelledby="t-faq">
-      <div className="lp-wrap">
-        <Titulo id="t-faq" eyebrow="Dúvidas frequentes" titulo="Respostas objetivas" />
+    <section className="lp-faixa lp-papel" id="duvidas" aria-labelledby="t-faq">
+      <div className="lp-wrap lp-duas lp-duas-faq">
+        <div>
+          <h2 id="t-faq" className="lp-h2">
+            Dúvidas frequentes
+          </h2>
+          <p className="lp-lead-escuro">
+            O que ainda não foi definido aparece como “será divulgado pela organização”.
+          </p>
+        </div>
         <div className="lp-faq">
           {evento.faq.map((q) => (
-            <details key={q.p}>
+            <details key={q.p} open={q.aberto ? true : undefined}>
               <summary>
-                <span>
-                  {q.p}
-                  {q.status === "a-confirmar" && <span className="lp-badge pend">A confirmar</span>}
-                </span>
-                <Plus size={20} aria-hidden="true" />
+                <span>{q.p}</span>
+                <i aria-hidden="true" />
               </summary>
-              <p>{q.r}</p>
+              <p className={q.pendente ? "lp-pendente" : undefined}>{q.r}</p>
             </details>
           ))}
         </div>
@@ -496,17 +437,15 @@ function Duvidas() {
 
 function ChamadaFinal() {
   return (
-    <section className="lp-final" aria-labelledby="t-final">
-      <div className="lp-wrap">
-        <h2 className="lp-h2" id="t-final">
-          Venha com a sua família ao {evento.nome} {evento.edicao}
-        </h2>
-        <p className="lp-lead">
-          Uma pessoa maior de idade inscreve toda a família em poucos minutos. O valor de cada
-          pessoa e o total aparecem antes do envio.
+    <section className="lp-final" id="inscrever" aria-labelledby="t-final">
+      <div className="lp-wrap lp-final-in">
+        <h2 id="t-final">Inscreva sua família</h2>
+        <p>
+          {evento.dataTexto}, {evento.local.cidade}/{evento.local.uf}. O formulário leva poucos minutos e
+          mostra o valor de cada pessoa antes do envio.
         </p>
-        <Link to="/inscricao" className="lp-btn lp-btn-fire lp-btn-big">
-          Inscrever minha família <ArrowRight size={20} />
+        <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-btn-grande">
+          Inscrever minha família
         </Link>
       </div>
     </section>
@@ -515,42 +454,84 @@ function ChamadaFinal() {
 
 export function Rodape() {
   const { whatsapp, instagram, email } = evento.contato;
+  const temContato = whatsapp || instagram || email;
   return (
     <footer className="lp-foot">
       <div className="lp-wrap lp-foot-in">
-        <span className="lp-foot-brand">
-          <img src="/logo-igreja.png" alt="" width="42" height="52" loading="lazy" />
-          <span>
-            {evento.ministerio} · {evento.igreja} · {evento.igrejaCidade}
-          </span>
-        </span>
-        <span>
-          <a href="/inscricao#regras">Regras</a> · <a href="/inscricao#privacidade">Privacidade</a>
-          {whatsapp && (
+        <div className="lp-foot-marcas">
+          <img src="/logo-conexao-jovem.png" alt={evento.ministerio} width="44" height="55" loading="lazy" />
+          <img src="/logo-igreja.png" alt={`${evento.igreja} de ${evento.igrejaCidade}`} width="44" height="54" loading="lazy" />
+        </div>
+        <p>
+          {evento.nome} {evento.edicao}. Organização da {evento.ministerio}, {evento.igreja} de{" "}
+          {evento.igrejaCidade}.
+        </p>
+        <p>
+          {temContato ? (
             <>
-              {" · "}
-              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">
-                WhatsApp
-              </a>
+              {whatsapp && (
+                <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">
+                  WhatsApp
+                </a>
+              )}{" "}
+              {instagram && (
+                <a href={instagram} target="_blank" rel="noopener noreferrer">
+                  Instagram
+                </a>
+              )}{" "}
+              {email && <a href={`mailto:${email}`}>{email}</a>}
             </>
+          ) : (
+            "Dúvidas: procure a liderança da Conexão Jovem. Os contatos oficiais serão divulgados aqui."
           )}
-          {instagram && (
-            <>
-              {" · "}
-              <a href={instagram} target="_blank" rel="noopener noreferrer">
-                Instagram
-              </a>
-            </>
-          )}
-          {email && (
-            <>
-              {" · "}
-              <a href={`mailto:${email}`}>{email}</a>
-            </>
-          )}
-        </span>
+        </p>
+        <p>
+          <a href="/inscricao#regras">Regras do retiro</a> <a href="/inscricao#privacidade">Privacidade</a>
+        </p>
       </div>
     </footer>
+  );
+}
+
+/** Barra de inscrição no celular: aparece depois do topo e some junto à chamada final. */
+function BarraMovel() {
+  const [visivel, setVisivel] = useState(false);
+  useEffect(() => {
+    const topo = document.getElementById("topo");
+    const final = document.getElementById("inscrever");
+    if (!topo || typeof IntersectionObserver === "undefined") return;
+    let topoVisivel = true;
+    let finalVisivel = false;
+    const atualizar = () => setVisivel(!topoVisivel && !finalVisivel);
+    const o1 = new IntersectionObserver(([e]) => {
+      topoVisivel = e.isIntersecting;
+      atualizar();
+    });
+    const o2 = new IntersectionObserver(([e]) => {
+      finalVisivel = e.isIntersecting;
+      atualizar();
+    });
+    o1.observe(topo);
+    if (final) o2.observe(final);
+    return () => {
+      o1.disconnect();
+      o2.disconnect();
+    };
+  }, []);
+  return (
+    <div className={`lp-barra${visivel ? " on" : ""}`} aria-hidden={!visivel}>
+      <span>
+        <b>
+          {evento.dataCurta.de}–{evento.dataCurta.ate} de {evento.dataCurta.mes}
+        </b>
+        <small>
+          {evento.local.cidade}/{evento.local.uf}
+        </small>
+      </span>
+      <Link to="/inscricao" className="lp-btn lp-btn-brasa" tabIndex={visivel ? 0 : -1}>
+        Inscrever
+      </Link>
+    </div>
   );
 }
 
@@ -560,14 +541,17 @@ export function Landing() {
       <Cabecalho />
       <main>
         <Inicio />
-        <Sobre />
+        <Proposito />
         <Local />
-        <Informacoes />
-        <Programacao />
+        <Agenda />
+        <Hospedagem />
+        <Valores />
+        <Transporte />
         <Duvidas />
         <ChamadaFinal />
       </main>
       <Rodape />
+      <BarraMovel />
     </div>
   );
 }

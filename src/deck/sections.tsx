@@ -49,7 +49,7 @@ function Resumo() {
   );
 }
 
-/* ═══════════════════════ 2. LOCAL — SANTA CLARA ═══════════════════════ */
+/* ═══════════════════════ 2. LOCAL — CAMPOS DO JORDÃO ═══════════════════════ */
 function Local() {
   return (
     <>
@@ -88,9 +88,9 @@ function Comparativo() {
   return (
     <>
       <div className="grid grid-3 gap-3 mb-6">
-        <Kpi label="Ganhos" value="9 critérios" hint="Onde Santa Clara supera" tone="positive" />
+        <Kpi label="Ganhos" value="9 critérios" hint="Onde Campos do Jordão supera" tone="positive" />
         <Kpi label="Trade-offs" value="3 critérios" hint="Distância e custo" tone="negative" />
-        <Kpi label="Recomendação" value="Santa Clara" hint="Melhor custo-benefício de longo prazo" tone="gold" />
+        <Kpi label="Recomendação" value="Campos do Jordão" hint="Melhor custo-benefício de longo prazo" tone="gold" />
       </div>
       <ComparisonTable />
     </>
@@ -340,7 +340,7 @@ function Conclusao() {
 export const sections: Section[] = [
   { slug: "resumo",       n: 1,  short: "Resumo",       kicker: "01 · Resumo Executivo",     title: "Retiro de Carnaval 2027", lead: `${retiro.dataTexto} · ${retiro.local.nome} — ${retiro.local.cidade}/${retiro.local.uf}`, Component: Resumo },
   { slug: "local",        n: 2,  short: "Local",        kicker: "02 · Novo Local",           title: `${retiro.local.nome}`, lead: "Uma estrutura à altura do próximo capítulo do ministério.", Component: Local },
-  { slug: "comparativo",  n: 3,  short: "Comparativo",  kicker: "03 · Comparativo",          title: "Local anterior vs. Santa Clara", lead: "Onde ganhamos e onde há trade-offs.", Component: Comparativo },
+  { slug: "comparativo",  n: 3,  short: "Comparativo",  kicker: "03 · Comparativo",          title: "Local anterior vs. Campos do Jordão", lead: "Onde ganhamos e onde há trade-offs.", Component: Comparativo },
   { slug: "financeiro",   n: 4,  short: "Financeiro",   kicker: "04 · Estudo Financeiro",    title: "Números do projeto", lead: "Ponto de equilíbrio, composição do ticket e projeções.", Component: Financeiro },
   { slug: "cenarios",     n: 5,  short: "Cenários",     kicker: "05 · Cenários",             title: "Conservador, provável e otimista", lead: "Impacto financeiro em cada faixa de participantes.", Component: Cenarios },
   { slug: "riscos",       n: 6,  short: "Riscos",       kicker: "06 · Gestão de Riscos",     title: "Matriz de riscos", lead: "Probabilidade × impacto — com plano de mitigação para cada item.", Component: Riscos },

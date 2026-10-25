@@ -4,6 +4,7 @@ import { evento } from "../content/evento";
 import {
   hojeSaoPaulo,
   montarCorpo,
+  rotuloTransporte,
   somenteDigitos,
   validar,
   type Erros,
@@ -28,6 +29,7 @@ export type ParticipanteConfirmado = {
   idade: number;
   faixa: string;
   valor: number | null;
+  transporte: string;
 };
 
 export type RespostaInscricao =
@@ -182,6 +184,7 @@ export async function processarInscricao(
           idade: p.idade,
           faixa: p.faixa.rotulo,
           valor: p.valor,
+          transporte: rotuloTransporte(p.transporte),
         })),
         total: resultado.total,
         temValorADefinir: resultado.temValorADefinir,

@@ -58,8 +58,8 @@ export default defineConfig({
           short_name: "Conexão Jovem",
           description: "Retiro Conexão Jovem 2027 — informações e inscrições.",
           display: "standalone",
-          background_color: "#090a12",
-          theme_color: "#090a12",
+          background_color: "#12302A",
+          theme_color: "#12302A",
           start_url: "/",
           icons: [
             { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

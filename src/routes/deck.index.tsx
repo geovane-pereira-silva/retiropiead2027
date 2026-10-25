@@ -11,7 +11,7 @@ export const Route = createFileRoute("/deck/")({
       { title: "Retiro de Carnaval 2027 — Apresentação Executiva" },
       {
         name: "description",
-        content: `Estudo executivo do Retiro de Carnaval 2027 no Sítio Santa Clara. ${retiro.dataTexto}.`,
+        content: `Estudo executivo do Retiro de Carnaval 2027 no Sítio de Retiro Espiritual Campos do Jordão. ${retiro.dataTexto}.`,
       },
       { property: "og:title", content: "Retiro de Carnaval 2027 — Apresentação Executiva" },
       {

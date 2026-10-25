@@ -22,7 +22,7 @@
 const NOME_ABA = "Inscrições";
 const COLUNAS = [
   "enviadoEm", "familiaId", "idempotencyKey", "ordem", "papel", "nome", "dataNascimento",
-  "idadeNaDataDoRetiro", "menorDeIdade", "faixa", "valorTexto", "valor", "cpf",
+  "idadeNaDataDoRetiro", "menorDeIdade", "faixa", "valorTexto", "valor", "cpf", "transporte",
   "responsavelNome", "telefone", "whatsapp", "email", "igreja", "cidade",
   "emergenciaNome", "emergenciaTelefone", "necessidades",
   "totalParticipantes", "totalTexto", "temValorADefinir",
@@ -81,7 +81,7 @@ function doPost(e) {
     const linhas = d.participantes.map(function (p) {
       const todos = Object.assign({}, d, p); // dados da família + dados do participante
       return COLUNAS.map(function (c) {
-        const v = c === "nome" ? p.nome : c === "papel" ? p.papel : todos[c];
+        const v = c === "nome" ? p.nome : c === "papel" ? p.papel : todos[c]; // transporte e demais vêm de `p`/`d`
         return v === undefined || v === null ? "" : v;
       });
     });

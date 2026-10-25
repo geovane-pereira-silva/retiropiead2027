@@ -14,7 +14,7 @@ export const retiro = {
   dias: 5,
 
   local: {
-    nome: "Sítio Santa Clara",
+    nome: "Sítio de Retiro Espiritual Campos do Jordão",
     cidade: "Campos do Jordão",
     uf: "SP",
     mapsUrl: "https://maps.google.com/?q=Campos+do+Jord%C3%A3o+SP",
@@ -28,7 +28,7 @@ export const retiro = {
     objetivo:
       "Realizar o Retiro de Carnaval 2027 em novo local, elevando o padrão de estrutura, comunhão e crescimento espiritual.",
     justificativa:
-      "O local anterior atingiu seu limite operacional. Santa Clara oferece mais estrutura, conforto e capacidade de expansão futura.",
+      "O local anterior atingiu seu limite operacional. O sítio de Campos do Jordão oferece mais estrutura, conforto e capacidade de expansão futura.",
     beneficios: [
       "Estrutura completa com dormitórios, refeitório e auditórios",
       "Capacidade para até 200 pessoas — permite crescimento",
@@ -56,7 +56,7 @@ export const retiro = {
   // ─── 3. Comparativo entre locais ────────────────────────────────────────
   comparativo: {
     anteriorNome: "Local anterior",
-    novoNome: "Sítio Santa Clara",
+    novoNome: "Sítio de Retiro Espiritual Campos do Jordão",
     criterios: [
       { criterio: "Capacidade (camas)",       anterior: "≈ 90",       novo: "140",              melhor: "novo" as const },
       { criterio: "Capacidade máxima",        anterior: "≈ 120",      novo: "200",              melhor: "novo" as const },
@@ -193,7 +193,7 @@ export const retiro = {
     },
     {
       titulo: "Expansão plurianual",
-      descricao: "Consolidar Santa Clara como sede oficial por 3 anos.",
+      descricao: "Consolidar Campos do Jordão como sede oficial por 3 anos.",
       vantagens: ["Contrato antecipado com melhor preço", "Curva de aprendizado", "Marca reconhecida"],
       desafios: ["Compromisso financeiro plurianual"],
       impacto: "Redução de custo unitário ao longo do tempo.",
@@ -225,13 +225,13 @@ export const retiro = {
       "Meta mínima: 90 inscritos até 60 dias antes",
     ],
     recomendacoes: [
-      "Aprovar o retiro no Sítio Santa Clara para 2027",
+      "Aprovar o retiro no Sítio de Retiro Espiritual Campos do Jordão para 2027",
       "Formar comitê organizador com áreas definidas",
       "Abrir inscrições com condição promocional inicial",
     ],
     proximosPassos: [
       { quando: "Ago/2026", oque: "Aprovação formal da liderança" },
-      { quando: "Set/2026", oque: "Assinatura do contrato com Santa Clara" },
+      { quando: "Set/2026", oque: "Assinatura do contrato com Campos do Jordão" },
       { quando: "Out/2026", oque: "Abertura das inscrições" },
       { quando: "Nov/2026", oque: "Contratação de transporte" },
       { quando: "Fev/2027", oque: "Realização do retiro" },

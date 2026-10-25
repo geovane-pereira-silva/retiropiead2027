@@ -7,13 +7,17 @@ import {
   PESSOA_VAZIA,
   VALORES_VAZIOS,
   formatarCpf,
+  TRANSPORTES,
   formatarReais,
   formatarTelefone,
   hojeSaoPaulo,
+  rotuloTransporte,
+  textoValor,
   validar,
   type Erros,
   type FormValues,
   type Pessoa,
+  type Transporte,
 } from "../lib/inscricao";
 import { enviarInscricao } from "../api/inscricao.functions";
 
@@ -31,7 +35,6 @@ const novaChave = (): string =>
 
 const dataBr = (iso: string): string => iso.split("-").reverse().join("/");
 const idDe = (chave: string): string => `f-${chave.replace(/\./g, "-")}`;
-const textoValor = (v: number | null): string => (v === null ? "A definir" : formatarReais(v));
 
 // ─── Campo acessível ─────────────────────────────────────────────────────────
 type EntradaProps = {
@@ -120,6 +123,48 @@ function abrirTermo(e: MouseEvent<HTMLAnchorElement>, id: "regras" | "privacidad
 }
 
 // ─── Confirmação ─────────────────────────────────────────────────────────────
+function EscolhaTransporte({
+  chave,
+  valor,
+  erro,
+  onChange,
+  onTodos,
+}: {
+  chave: string;
+  valor: Transporte;
+  erro?: string;
+  onChange: (v: Transporte) => void;
+  onTodos?: (t: Transporte) => void;
+}) {
+  return (
+    <fieldset className="lp-transp" id={idDe(`${chave}.transporte`)}>
+      <legend>Como vai ao retiro?</legend>
+      {TRANSPORTES.map((t) => (
+        <label className="lp-transp-op" key={t.id}>
+          <input
+            type="radio"
+            name={`transporte-${chave}`}
+            value={t.id}
+            checked={valor === t.id}
+            onChange={() => onChange(t.id)}
+          />
+          <span>{t.rotulo}</span>
+        </label>
+      ))}
+      {valor && onTodos && (
+        <button type="button" className="lp-transp-todos" onClick={() => onTodos(valor)}>
+          Usar “{rotuloTransporte(valor)}” para todos
+        </button>
+      )}
+      {erro && (
+        <p className="lp-err" role="alert">
+          {erro}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
 function TelaConfirmacao({ dados, onNova }: { dados: Confirmacao; onNova: () => void }) {
   return (
     <section className="lp-done" role="status" aria-live="polite" aria-labelledby="t-ok">
@@ -140,7 +185,7 @@ function TelaConfirmacao({ dados, onNova }: { dados: Confirmacao; onNova: () => 
             <span>
               <strong>{p.nome}</strong>
               <small>
-                {p.idade} anos · {p.faixa}
+                {p.idade} anos · {p.faixa} · {p.transporte}
               </small>
             </span>
             <b>{textoValor(p.valor)}</b>
@@ -169,7 +214,7 @@ function TelaConfirmacao({ dados, onNova }: { dados: Confirmacao; onNova: () => 
       </ol>
 
       <div className="lp-cta-row" style={{ marginTop: 0 }}>
-        <Link to="/" className="lp-btn lp-btn-fire">
+        <Link to="/" className="lp-btn lp-btn-brasa">
           Voltar ao início
         </Link>
         <button type="button" className="lp-btn lp-btn-ghost" onClick={onNova}>
@@ -222,6 +267,14 @@ export function RegistrationForm() {
     setValues((v) => ({ ...v, responsavel: { ...v.responsavel, [campo]: valor } }));
     limparErroServidor(`responsavel.${campo}`);
   };
+  const definirTransporteParaTodos = (t: Transporte) => {
+    setValues((v) => ({
+      ...v,
+      responsavel: { ...v.responsavel, transporte: t },
+      integrantes: v.integrantes.map((p) => ({ ...p, transporte: t })),
+    }));
+  };
+
   const setIntegrante = (i: number, campo: keyof Pessoa, valor: string) => {
     setValues((v) => ({
       ...v,
@@ -391,6 +444,15 @@ export function RegistrationForm() {
             )}
           </span>
         </label>
+        {values.responsavelParticipa && (
+          <EscolhaTransporte
+            chave="responsavel"
+            valor={values.responsavel.transporte}
+            erro={erro("responsavel.transporte")}
+            onChange={(v) => setResp("transporte", v)}
+            onTodos={definirTransporteParaTodos}
+          />
+        )}
       </fieldset>
 
       <fieldset className="lp-fs">
@@ -542,6 +604,13 @@ export function RegistrationForm() {
                     autoComplete="off"
                   />
                 </div>
+                <EscolhaTransporte
+                  chave={chave}
+                  valor={p.transporte}
+                  erro={erro(`${chave}.transporte`)}
+                  onChange={(v) => setIntegrante(i, "transporte", v)}
+                  onTodos={definirTransporteParaTodos}
+                />
               </li>
             );
           })}
@@ -600,7 +669,7 @@ export function RegistrationForm() {
         )}
         {calc.temValorADefinir && (
           <p className="lp-hint" style={{ margin: "0.5rem 0 0" }}>
-            Menores de 5 anos: valor a definir pela organização, sem cobrança automática.
+            Menores de 5 anos: gratuito.
           </p>
         )}
       </section>
@@ -703,7 +772,7 @@ export function RegistrationForm() {
         </div>
       )}
 
-      <button type="submit" className="lp-btn lp-btn-fire lp-btn-big lp-submit" disabled={enviando}>
+      <button type="submit" className="lp-btn lp-btn-brasa lp-btn-grande lp-submit" disabled={enviando}>
         {enviando ? (
           <>
             <Loader2 size={20} className="lp-spin" aria-hidden="true" /> Enviando…

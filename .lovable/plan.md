@@ -48,8 +48,8 @@ export const retiro = {
 ## As 10 seções (slides)
 
 1. **Resumo Executivo** — 4 KPIs (participantes-alvo, investimento total, ticket médio, ponto de equilíbrio) + 4 cards (Objetivo / Justificativa / Benefícios / Desafios).
-2. **Local — Santa Clara** — hero visual + info da estrutura, capacidade, diferenciais + mapa. Galeria de fotos e galeria de vídeos em **módulos independentes** (abas).
-3. **Comparativo de Locais** — tabela lado a lado (anterior × Santa Clara) por critério, com destaque visual do vencedor por linha.
+2. **Local — Campos do Jordão** — hero visual + info da estrutura, capacidade, diferenciais + mapa. Galeria de fotos e galeria de vídeos em **módulos independentes** (abas).
+3. **Comparativo de Locais** — tabela lado a lado (anterior × Campos do Jordão) por critério, com destaque visual do vencedor por linha.
 4. **Estudo Financeiro** — dashboard com: gráfico de pizza (composição do R$400), barras (custos por categoria), indicadores (ponto de equilíbrio, valor líquido/participante), linha (projeção por nº de participantes), comparativo com retiro anterior.
 5. **Cenários** — 3 cards grandes (Conservador / Provável / Otimista) com participantes, receita, custo, saldo, margem — visualmente comparáveis.
 6. **Gestão de Riscos** — matriz 5×5 (probabilidade × impacto) como **heatmap** colorido com bolhas por risco + tabela lateral com plano de mitigação.

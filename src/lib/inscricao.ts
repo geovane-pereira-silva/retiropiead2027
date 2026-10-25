@@ -13,12 +13,24 @@ export type Faixa = {
   nota?: string;
 };
 
+/** Como a pessoa vai ao retiro. "" = ainda não escolhido. */
+export type Transporte = "onibus" | "carro" | "";
+
+export const TRANSPORTES: Array<{ id: Exclude<Transporte, "">; rotulo: string }> = [
+  { id: "onibus", rotulo: "Ônibus da organização" },
+  { id: "carro", rotulo: "Carro próprio" },
+];
+
+export const rotuloTransporte = (t: Transporte): string =>
+  TRANSPORTES.find((x) => x.id === t)?.rotulo ?? "";
+
 export type Pessoa = {
   /** Identificador local (chave React). Ignorado pelo servidor. */
   uid?: string;
   nome: string;
   dataNascimento: string; // YYYY-MM-DD
   cpf: string;
+  transporte: Transporte;
 };
 
 export type FormValues = {
@@ -45,7 +57,7 @@ export type FormValues = {
 /** Chaves de erro: "telefone", "responsavel.cpf", "integrantes.0.nome", "integrantes"… */
 export type Erros = Record<string, string>;
 
-export const PESSOA_VAZIA: Pessoa = { nome: "", dataNascimento: "", cpf: "" };
+export const PESSOA_VAZIA: Pessoa = { nome: "", dataNascimento: "", cpf: "", transporte: "" };
 
 export const VALORES_VAZIOS: FormValues = {
   responsavel: { ...PESSOA_VAZIA },
@@ -94,6 +106,13 @@ export function formatarTelefone(s: string): string {
 
 export function formatarReais(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/** Texto do valor de uma pessoa: "A definir", "Gratuito" ou "R$ 200,00". */
+export function textoValor(valor: number | null): string {
+  if (valor === null) return "A definir";
+  if (valor === 0) return "Gratuito";
+  return formatarReais(valor);
 }
 
 // ─── Validadores ─────────────────────────────────────────────────────────────
@@ -196,6 +215,7 @@ export type Participante = {
   faixa: Faixa;
   /** null = valor a definir */
   valor: number | null;
+  transporte: Exclude<Transporte, "">;
   /** chave do formulário (para ligar o valor ao cartão correspondente) */
   chave: string;
 };
@@ -219,6 +239,7 @@ function avaliarPessoa(
   papel: Participante["papel"],
   ctx: ContextoValidacao,
   erros: Erros,
+  participa: boolean,
 ): Participante | null {
   if (!nomeValido(p.nome)) erros[`${chave}.nome`] = "Informe o nome completo (nome e sobrenome).";
 
@@ -249,6 +270,10 @@ function avaliarPessoa(
     erros[`${chave}.cpf`] = "CPF inválido. Confira os números.";
   }
 
+  if (participa && p.transporte !== "onibus" && p.transporte !== "carro") {
+    erros[`${chave}.transporte`] = "Escolha como esta pessoa vai ao retiro.";
+  }
+
   if (idade === null) return null;
   const faixa = faixaPorIdade(idade, ctx.faixas);
   if (!faixa) {
@@ -264,6 +289,7 @@ function avaliarPessoa(
     menorDeIdade: idade < 18,
     faixa,
     valor: faixa.valor,
+    transporte: p.transporte === "carro" ? "carro" : "onibus",
     chave,
   };
 }
@@ -273,7 +299,7 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
   const erros: Erros = {};
   const participantes: Participante[] = [];
 
-  const resp = avaliarPessoa(v.responsavel, "responsavel", "Responsável", ctx, erros);
+  const resp = avaliarPessoa(v.responsavel, "responsavel", "Responsável", ctx, erros, v.responsavelParticipa);
   if (resp && resp.menorDeIdade) {
     erros["responsavel.dataNascimento"] =
       "O responsável pela inscrição precisa ter 18 anos ou mais na data do retiro.";
@@ -301,7 +327,7 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
     erros.integrantes = `Máximo de ${ctx.maxParticipantes} pessoas por inscrição. Faça uma segunda inscrição para os demais.`;
   }
   v.integrantes.forEach((p, i) => {
-    const a = avaliarPessoa(p, `integrantes.${i}`, "Integrante", ctx, erros);
+    const a = avaliarPessoa(p, `integrantes.${i}`, "Integrante", ctx, erros, true);
     if (a) participantes.push(a);
   });
 
@@ -364,6 +390,7 @@ export type ParticipantePlanilha = {
   valor: number | null;
   valorTexto: string;
   cpf: string; // somente dígitos ("" se não informado)
+  transporte: "Ônibus da organização" | "Carro próprio";
 };
 
 export type CorpoPlanilha = {
@@ -430,8 +457,9 @@ export function montarCorpo(
       menorDeIdade: p.menorDeIdade ? "SIM" : "NÃO",
       faixa: p.faixa.rotulo,
       valor: p.valor,
-      valorTexto: p.valor === null ? "A definir" : formatarReais(p.valor),
+      valorTexto: textoValor(p.valor),
       cpf: p.cpf,
+      transporte: rotuloTransporte(p.transporte) as ParticipantePlanilha["transporte"],
     })),
   };
 }

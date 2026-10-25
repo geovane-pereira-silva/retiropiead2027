@@ -81,6 +81,10 @@ const listaVideos = Object.entries(videos).filter(
   ([, url]) => typeof url === "string" && url.trim() !== "",
 );
 
+/** true quando há ao menos uma foto ou vídeo cadastrado em media.json (senão a galeria nem aparece). */
+export const temMidia =
+  GRUPOS.some((g) => fotosDoGrupo(g.chaves).length > 0) || listaVideos.length > 0;
+
 export function Gallery() {
   const grupos = GRUPOS.map((g) => ({ ...g, itens: fotosDoGrupo(g.chaves) }));
   const primeiro = grupos.find((g) => g.itens.length > 0)?.id ?? grupos[0].id;

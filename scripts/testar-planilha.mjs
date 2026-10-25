@@ -30,8 +30,8 @@ const corpo = {
   statusPagamento: "NÃO CONFIRMADO",
   origem: "teste-manual",
   participantes: [
-    { ordem: 1, papel: "Responsável", nome: "TESTE Responsavel Pode Apagar", dataNascimento: "1985-01-01", idadeNaDataDoRetiro: 42, menorDeIdade: "NÃO", faixa: "A partir de 10 anos", valor: 400, valorTexto: "R$ 400,00", cpf: "52998224725" },
-    { ordem: 2, papel: "Integrante", nome: "TESTE Crianca Pode Apagar", dataNascimento: "2019-01-01", idadeNaDataDoRetiro: 8, menorDeIdade: "SIM", faixa: "De 5 a 9 anos", valor: 200, valorTexto: "R$ 200,00", cpf: "" },
+    { ordem: 1, papel: "Responsável", nome: "TESTE Responsavel Pode Apagar", dataNascimento: "1985-01-01", idadeNaDataDoRetiro: 42, menorDeIdade: "NÃO", faixa: "A partir de 10 anos", valor: 400, valorTexto: "R$ 400,00", cpf: "52998224725", transporte: "Ônibus da organização" },
+    { ordem: 2, papel: "Integrante", nome: "TESTE Crianca Pode Apagar", dataNascimento: "2019-01-01", idadeNaDataDoRetiro: 8, menorDeIdade: "SIM", faixa: "De 5 a 9 anos", valor: 200, valorTexto: "R$ 200,00", cpf: "", transporte: "Carro próprio" },
   ],
 };
 if (process.env.APPS_SCRIPT_TOKEN) corpo.token = process.env.APPS_SCRIPT_TOKEN;

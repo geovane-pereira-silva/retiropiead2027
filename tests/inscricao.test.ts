@@ -12,6 +12,7 @@ import {
   montarCorpo,
   normalizarTelefone,
   telefoneValido,
+  textoValor,
   validar,
   VALORES_VAZIOS,
   type FormValues,
@@ -26,10 +27,16 @@ const ctx = {
   maxParticipantes: evento.maxParticipantesPorInscricao,
 };
 
-const pessoa = (nome: string, dataNascimento: string, cpf = ""): Pessoa => ({
+const pessoa = (
+  nome: string,
+  dataNascimento: string,
+  cpf = "",
+  transporte: Pessoa["transporte"] = "onibus",
+): Pessoa => ({
   nome,
   dataNascimento,
   cpf,
+  transporte,
 });
 
 const base = (extra: Partial<FormValues> = {}): FormValues => ({
@@ -76,10 +83,10 @@ test("idade na data de início (limites de aniversário)", () => {
   assert.equal(calcularIdade("2023-02-30", ref), null); // data inexistente
 });
 
-test("faixas de valor: 4→a definir, 5→200, 9→200, 10→400, 60→400", () => {
+test("faixas de valor: 4→gratuito, 5→200, 9→200, 10→400, 60→400", () => {
   const v = (i: number) => faixaPorIdade(i, evento.faixas)?.valor;
-  assert.equal(v(0), null);
-  assert.equal(v(4), null);
+  assert.equal(v(0), 0);
+  assert.equal(v(4), 0);
   assert.equal(v(5), 200);
   assert.equal(v(9), 200);
   assert.equal(v(10), 400);
@@ -94,7 +101,7 @@ test("responsável sozinho: sem erros, R$ 400", () => {
   assert.equal(r.temValorADefinir, false);
 });
 
-test("família: casal + filho de 7 + bebê de 2 → 400+400+200 e valor a definir", () => {
+test("família: casal + filho de 7 + bebê de 2 → 400+400+200+gratuito", () => {
   const r = validar(
     base({
       integrantes: [
@@ -109,10 +116,10 @@ test("família: casal + filho de 7 + bebê de 2 → 400+400+200 e valor a defini
   assert.equal(r.participantes.length, 4);
   assert.deepEqual(
     r.participantes.map((p) => p.valor),
-    [400, 400, 200, null],
+    [400, 400, 200, 0],
   );
   assert.equal(r.total, 1000);
-  assert.equal(r.temValorADefinir, true);
+  assert.equal(r.temValorADefinir, false);
 });
 
 test("CPF de menor é opcional; de adulto é obrigatório", () => {
@@ -214,4 +221,41 @@ test("corpo da planilha: um participante por linha, CPF só dígitos, pagamento 
   assert.equal(c.participantes[1].cpf, "");
   assert.equal(c.participantes[1].menorDeIdade, "SIM");
   assert.equal(c.participantes[1].valor, 200);
+});
+
+test("transporte: obrigatório para quem participa; responsável que não participa dispensa", () => {
+  const semEscolha = validar(base({ responsavel: { ...base().responsavel, transporte: "" } }), ctx);
+  assert.ok(semEscolha.erros["responsavel.transporte"]);
+  const integranteSem = validar(base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01", "", "")] }), ctx);
+  assert.ok(integranteSem.erros["integrantes.0.transporte"]);
+  const naoParticipa = validar(
+    base({
+      responsavelParticipa: false,
+      responsavel: { ...base().responsavel, transporte: "" },
+      integrantes: [pessoa("Pedro da Silva", "2019-08-01")],
+    }),
+    ctx,
+  );
+  assert.deepEqual(naoParticipa.erros, {});
+});
+
+test("transporte: ônibus e carro próprio chegam à planilha com rótulo legível", () => {
+  const v = base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01", "", "carro")] });
+  const r = validar(v, ctx);
+  const c = montarCorpo(v, r, { idempotencyKey: "k2", familiaId: "F-2", enviadoEm: "2026-10-25T00:00:00Z", versaoTermos: "t" });
+  assert.equal(c.participantes[0].transporte, "Ônibus da organização");
+  assert.equal(c.participantes[1].transporte, "Carro próprio");
+});
+
+test("textoValor: gratuito, a definir e reais", () => {
+  assert.equal(textoValor(0), "Gratuito");
+  assert.equal(textoValor(null), "A definir");
+  assert.match(textoValor(200), /200,00/);
+});
+
+test("menor de 5 anos é gratuito e não gera 'valor a definir'", () => {
+  const r = validar(base({ integrantes: [pessoa("Ana da Silva", "2024-09-15")] }), ctx);
+  assert.equal(r.participantes[1].valor, 0);
+  assert.equal(r.temValorADefinir, false);
+  assert.equal(r.total, 400);
 });
