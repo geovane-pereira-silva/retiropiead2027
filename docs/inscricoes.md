@@ -27,3 +27,10 @@ Referência pronta: `docs/apps-script/Code.gs` (grava uma linha por participante
 `bun run build` executa antes `scripts/verificar-dependencias.mjs`, que bloqueia o build se
 `@tanstack/react-start` < 1.168.60 ou `@tanstack/start-server-core` < 1.169.39 estiverem instalados.
 Não use `DANGEROUSLY_DEPLOY_VULNERABLE_TANSTACK_START_XSS`.
+
+## Modo de ensaio (pré-visualização)
+
+O formulário tem 4 etapas (Responsável, Participantes, Transporte, Revisão). Em **Preview** da Vercel e no ambiente local
+o envio roda em *modo de ensaio*: o servidor valida de novo e recalcula os valores, mas **não chama o Apps Script, não grava
+na planilha e nunca mostra a tela de inscrição confirmada**. A página avisa isso em uma faixa. Só a produção da Vercel
+(`VERCEL_ENV=production`) grava de verdade. Variável `FORM_MODO_ENSAIO`: `1` força ensaio, `0` libera gravação fora da produção.

@@ -1,23 +1,11 @@
 {
+  "_leia-me": "Veja docs/midia.md. Coloque os arquivos em public/midia/ e liste aqui. Cada foto: { \"src\": \"/midia/arquivo.webp\", \"alt\": \"descrição objetiva\", \"largura\": 1600, \"altura\": 1067, \"foco\": \"50% 40%\" }. Grupo vazio = a seção simplesmente não mostra foto.",
   "fotos": {
-    "fachada": [],
-    "vista_aerea": [],
-    "salao_principal": [],
-    "auditorio": [],
-    "dormitorios": [],
+    "local": [],
+    "culto": [],
     "quartos": [],
-    "cozinha": [],
-    "refeitorio": [],
-    "area_externa": [],
-    "piscina": [],
-    "salas": [],
+    "adoracao": [],
     "convivencia": []
   },
-  "videos": {
-    "tour_geral": "",
-    "drone": "",
-    "salao": "",
-    "dormitorios": "",
-    "piscina": ""
-  }
+  "video": null
 }

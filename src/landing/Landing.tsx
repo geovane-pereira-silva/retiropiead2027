@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { evento } from "../content/evento";
 import { textoValor } from "../lib/inscricao";
-import { Gallery, temMidia } from "./Gallery";
+import { Cena, VideoLocal, temFotos } from "./Gallery";
 
 const NAV = [
   { href: "#local", rotulo: "Local" },
@@ -79,6 +79,9 @@ function Cabecalho() {
   const [aberto, setAberto] = useState(false);
   return (
     <header className="lp-top">
+      <a className="lp-skip" href="#conteudo">
+        Ir para o conteúdo
+      </a>
       <div className="lp-wrap lp-top-in">
         <Marca />
         <nav className="lp-nav" aria-label="Seções da página">
@@ -193,6 +196,7 @@ function Proposito() {
               <dd>Adultos e jovens com atividades próprias, e todos reunidos nos cultos.</dd>
             </div>
           </dl>
+          <Cena grupo="adoracao" max={2} />
         </div>
       </div>
     </section>
@@ -225,9 +229,10 @@ function Local() {
           ))}
         </ul>
 
-        {temMidia ? (
-          <Gallery />
-        ) : (
+        <Cena grupo="local" />
+        <Cena grupo="culto" max={2} />
+        <VideoLocal />
+        {!temFotos("local") && !temFotos("culto") && (
           <p className="lp-nota-fotos">
             As fotografias reais do local serão publicadas aqui assim que a organização as enviar.
           </p>
@@ -284,6 +289,7 @@ function Agenda() {
           <p className="lp-vigilia-nota">{evento.vigilia.nota}</p>
         </aside>
 
+        <Cena grupo="convivencia" max={2} />
         <p className="lp-rodape-secao">{evento.agendaNota}</p>
       </div>
     </section>
@@ -301,6 +307,11 @@ function Hospedagem() {
           </h2>
         </div>
       </div>
+      {temFotos("quartos") && (
+        <div className="lp-wrap lp-hosp-fotos">
+          <Cena grupo="quartos" />
+        </div>
+      )}
       <div className="lp-hosp-grade">
         <div className="lp-hosp-bloco lp-areia">
           <div className="lp-wrap-meio">
@@ -539,7 +550,7 @@ export function Landing() {
   return (
     <div className="lp">
       <Cabecalho />
-      <main>
+      <main id="conteudo">
         <Inicio />
         <Proposito />
         <Local />

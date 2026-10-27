@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft, Check, Loader2, Plus, Trash2 } from "lucide-react";
-import { useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
 import { evento } from "../content/evento";
 import {
@@ -19,19 +19,34 @@ import {
   type Pessoa,
   type Transporte,
 } from "../lib/inscricao";
-import { enviarInscricao } from "../api/inscricao.functions";
+import { enviarInscricao, modoFormulario } from "../api/inscricao.functions";
 
 type Confirmacao = Extract<Awaited<ReturnType<typeof enviarInscricao>>, { ok: true }>;
 type Estado =
   | { tipo: "livre" }
   | { tipo: "enviando" }
   | { tipo: "erro"; mensagem: string }
-  | { tipo: "sucesso"; dados: Confirmacao };
+  | { tipo: "sucesso"; dados: Confirmacao }
+  | { tipo: "ensaio"; dados: NonNullable<Extract<Awaited<ReturnType<typeof enviarInscricao>>, { ok: false }>["ensaio"]> };
 
 const novaChave = (): string =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+
+const ETAPAS = ["Responsável", "Participantes", "Transporte", "Revisão"] as const;
+
+/** Em qual etapa aparece o campo de cada erro. */
+function etapaDoErro(chave: string): number {
+  if (chave === "integrantes" || chave.startsWith("integrantes.")) {
+    return chave.endsWith(".transporte") ? 2 : 1;
+  }
+  if (chave.endsWith(".transporte")) return 2;
+  if (chave.startsWith("responsavel.")) return 0;
+  if (["telefone", "whatsapp", "email", "igreja", "cidade"].includes(chave)) return 0;
+  if (["emergenciaNome", "emergenciaTelefone", "necessidades"].includes(chave)) return 2;
+  return 3;
+}
 
 const dataBr = (iso: string): string => iso.split("-").reverse().join("/");
 const idDe = (chave: string): string => `f-${chave.replace(/\./g, "-")}`;
@@ -233,6 +248,9 @@ export function RegistrationForm() {
   const [mesmoWhats, setMesmoWhats] = useState(true);
   const [errosServidor, setErrosServidor] = useState<Erros>({});
   const [estado, setEstado] = useState<Estado>({ tipo: "livre" });
+  const [etapa, setEtapa] = useState(0);
+  const [tentouEtapa, setTentouEtapa] = useState<Record<number, boolean>>({});
+  const [ensaio, setEnsaio] = useState<boolean | null>(null);
   const [hoje] = useState<string>(() => hojeSaoPaulo());
   const chaveRef = useRef<string | null>(null);
   const enviandoRef = useRef(false);
@@ -247,6 +265,16 @@ export function RegistrationForm() {
     }),
     [hoje],
   );
+  useEffect(() => {
+    let vivo = true;
+    modoFormulario()
+      .then((r) => vivo && setEnsaio(r.ensaio))
+      .catch(() => vivo && setEnsaio(null));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
   const efetivos = (v: FormValues, igual: boolean): FormValues =>
     igual ? { ...v, whatsapp: v.telefone } : v;
   const calc = useMemo(() => validar(efetivos(values, mesmoWhats), ctx), [values, mesmoWhats, ctx]);
@@ -257,7 +285,25 @@ export function RegistrationForm() {
     );
   const tocar = (chave: string) => setTocados((t) => (t[chave] ? t : { ...t, [chave]: true }));
   const erro = (chave: string): string | undefined =>
-    tentou || tocados[chave] ? (calc.erros[chave] ?? errosServidor[chave]) : undefined;
+    tentou || tentouEtapa[etapaDoErro(chave)] || tocados[chave]
+      ? (calc.erros[chave] ?? errosServidor[chave])
+      : undefined;
+
+  const irParaEtapa = (n: number) => {
+    setEtapa(n);
+    setTimeout(() => {
+      document.getElementById("lp-topo-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 20);
+  };
+  const continuar = () => {
+    setTentouEtapa((t) => ({ ...t, [etapa]: true }));
+    const dessa = Object.keys(calc.erros).filter((k) => etapaDoErro(k) === etapa);
+    if (dessa.length > 0) {
+      focarPrimeiroErro({ [dessa[0]]: calc.erros[dessa[0]] });
+      return;
+    }
+    irParaEtapa(Math.min(etapa + 1, ETAPAS.length - 1));
+  };
 
   const setCampo = <K extends keyof FormValues>(campo: K, valor: FormValues[K]) => {
     setValues((v) => ({ ...v, [campo]: valor }));
@@ -303,8 +349,13 @@ export function RegistrationForm() {
   };
 
   const focarPrimeiroErro = (erros: Erros) => {
-    const primeiro = Object.keys(erros)[0];
+    const primeiro = Object.keys(erros).sort((a, b) => etapaDoErro(a) - etapaDoErro(b))[0];
     if (!primeiro) return;
+    if (etapaDoErro(primeiro) !== etapa) {
+      setEtapa(etapaDoErro(primeiro));
+      setTimeout(() => focarPrimeiroErro(erros), 60);
+      return;
+    }
     const alvo =
       document.getElementById(idDe(primeiro)) ?? document.getElementById("integrantes-titulo");
     alvo?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -314,6 +365,7 @@ export function RegistrationForm() {
   async function aoEnviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (enviandoRef.current) return; // trava contra clique duplo
+    if (etapa < ETAPAS.length - 1) return continuar();
     setTentou(true);
     const envio = efetivos(values, mesmoWhats);
     const r = validar(envio, ctx);
@@ -337,6 +389,12 @@ export function RegistrationForm() {
         setTocados({});
         setTentou(false);
         setMesmoWhats(true);
+        setEtapa(0);
+        setTentouEtapa({});
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (resp.codigo === "ENSAIO" && resp.ensaio) {
+        chaveRef.current = null;
+        setEstado({ tipo: "ensaio", dados: resp.ensaio });
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         if (resp.erros) {
@@ -365,6 +423,39 @@ export function RegistrationForm() {
     );
   }
 
+  if (estado.tipo === "ensaio") {
+    const d = estado.dados;
+    return (
+      <section className="lp-ensaio-tela" role="status" aria-live="polite" aria-labelledby="t-ensaio">
+        <p className="lp-ensaio-selo">Modo de ensaio</p>
+        <h2 id="t-ensaio">Dados validados. Nada foi gravado.</h2>
+        <p>
+          Esta é uma pré-visualização: o servidor conferiu os dados e recalculou os valores, mas{" "}
+          <strong>nenhuma inscrição foi registrada</strong> e não há protocolo nem vaga garantida.
+        </p>
+        <ul className="lp-people">
+          {d.participantes.map((p, i) => (
+            <li key={`${p.nome}-${i}`}>
+              <span>
+                <strong>{p.nome}</strong>
+                <small>
+                  {p.idade} anos · {p.faixa} · {p.transporte}
+                </small>
+              </span>
+              <b>{textoValor(p.valor)}</b>
+            </li>
+          ))}
+        </ul>
+        <p className="lp-ensaio-total">Total calculado pelo servidor: {formatarReais(d.total)}</p>
+        <div className="lp-cta-row" style={{ marginTop: 0 }}>
+          <button type="button" className="lp-btn lp-btn-brasa" onClick={() => setEstado({ tipo: "livre" })}>
+            Voltar ao formulário
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   if (estado.tipo === "sucesso") {
     return <TelaConfirmacao dados={estado.dados} onNova={() => setEstado({ tipo: "livre" })} />;
   }
@@ -375,7 +466,26 @@ export function RegistrationForm() {
   const podeAdicionar = values.integrantes.length < evento.maxParticipantesPorInscricao - 1;
 
   return (
-    <form className="lp-form" onSubmit={aoEnviar} noValidate aria-busy={enviando}>
+    <>
+    {ensaio && (
+      <p className="lp-ensaio-faixa" role="note">
+        <b>Pré-visualização em ensaio.</b> Você pode preencher e conferir tudo, mas o envio não grava dados
+        nem registra inscrição.
+      </p>
+    )}
+    <form
+      className="lp-form"
+      onSubmit={aoEnviar}
+      noValidate
+      aria-busy={enviando}
+      onKeyDown={(e) => {
+        // Enter num campo avança a etapa; nunca envia sem passar pela revisão.
+        if (e.key === "Enter" && etapa < ETAPAS.length - 1 && (e.target as HTMLElement).tagName === "INPUT") {
+          e.preventDefault();
+          continuar();
+        }
+      }}
+    >
       {/* Campo-isca: invisível para pessoas */}
       <div className="lp-honey" aria-hidden="true">
         <label>
@@ -389,404 +499,500 @@ export function RegistrationForm() {
           />
         </label>
       </div>
-
-      <fieldset className="lp-fs">
-        <legend>Responsável pela inscrição</legend>
-        <p className="hint">Uma pessoa maior de idade faz a inscrição de toda a família.</p>
-        <Entrada
-          chave="responsavel.nome"
-          rotulo="Nome completo"
-          valor={values.responsavel.nome}
-          onChange={(v) => setResp("nome", v)}
-          onBlur={() => tocar("responsavel.nome")}
-          erro={erro("responsavel.nome")}
-          autoComplete="name"
-          maxLength={100}
-        />
-        <div className="lp-row two" style={{ marginTop: "1rem" }}>
+      <div id="lp-topo-form" className="lp-progresso" role="group" aria-label={`Etapa ${etapa + 1} de ${ETAPAS.length}: ${ETAPAS[etapa]}`}>
+        <ol>
+          {ETAPAS.map((nome, n) => (
+            <li key={nome} className={n === etapa ? "atual" : n < etapa ? "feita" : undefined} aria-current={n === etapa ? "step" : undefined}>
+              <span>{n + 1}</span>
+              <b>{nome}</b>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="lp-etapa" hidden={etapa !== 0}>
+        <fieldset className="lp-fs">
+          <legend>Responsável pela inscrição</legend>
+          <p className="hint">Uma pessoa maior de idade faz a inscrição de toda a família.</p>
           <Entrada
-            chave="responsavel.dataNascimento"
-            rotulo="Data de nascimento"
-            valor={values.responsavel.dataNascimento}
-            onChange={(v) => setResp("dataNascimento", v)}
-            onBlur={() => tocar("responsavel.dataNascimento")}
-            erro={erro("responsavel.dataNascimento")}
-            tipo="date"
-            autoComplete="bday"
-            min="1900-01-01"
-            max={hoje}
+            chave="responsavel.nome"
+            rotulo="Nome completo"
+            valor={values.responsavel.nome}
+            onChange={(v) => setResp("nome", v)}
+            onBlur={() => tocar("responsavel.nome")}
+            erro={erro("responsavel.nome")}
+            autoComplete="name"
+            maxLength={100}
           />
-          <Entrada
-            chave="responsavel.cpf"
-            rotulo="CPF"
-            valor={values.responsavel.cpf}
-            onChange={(v) => setResp("cpf", formatarCpf(v))}
-            onBlur={() => tocar("responsavel.cpf")}
-            erro={erro("responsavel.cpf")}
-            modo="numeric"
-            placeholder="000.000.000-00"
-            maxLength={14}
-            autoComplete="off"
-          />
-        </div>
-        <label className="lp-check">
-          <input
-            type="checkbox"
-            checked={values.responsavelParticipa}
-            onChange={(e) => setCampo("responsavelParticipa", e.target.checked)}
-          />
-          <span>
-            Eu também vou participar do retiro
-            {values.responsavelParticipa && respCalc && (
-              <small className="lp-chip">
-                {respCalc.idade} anos · {textoValor(respCalc.valor)}
-              </small>
-            )}
-          </span>
-        </label>
-        {values.responsavelParticipa && (
-          <EscolhaTransporte
-            chave="responsavel"
-            valor={values.responsavel.transporte}
-            erro={erro("responsavel.transporte")}
-            onChange={(v) => setResp("transporte", v)}
-            onTodos={definirTransporteParaTodos}
-          />
-        )}
-      </fieldset>
-
-      <fieldset className="lp-fs">
-        <legend>Contato da família</legend>
-        <div className="lp-row two">
-          <Entrada
-            chave="telefone"
-            rotulo="Telefone"
-            valor={values.telefone}
-            onChange={(v) => setCampo("telefone", formatarTelefone(v))}
-            onBlur={() => tocar("telefone")}
-            erro={erro("telefone")}
-            tipo="tel"
-            modo="tel"
-            autoComplete="tel-national"
-            placeholder="(00) 00000-0000"
-            maxLength={15}
-          />
-          {!mesmoWhats && (
+          <div className="lp-row two" style={{ marginTop: "1rem" }}>
             <Entrada
-              chave="whatsapp"
-              rotulo="WhatsApp"
-              valor={values.whatsapp}
-              onChange={(v) => setCampo("whatsapp", formatarTelefone(v))}
-              onBlur={() => tocar("whatsapp")}
-              erro={erro("whatsapp")}
+              chave="responsavel.dataNascimento"
+              rotulo="Data de nascimento"
+              valor={values.responsavel.dataNascimento}
+              onChange={(v) => setResp("dataNascimento", v)}
+              onBlur={() => tocar("responsavel.dataNascimento")}
+              erro={erro("responsavel.dataNascimento")}
+              tipo="date"
+              autoComplete="bday"
+              min="1900-01-01"
+              max={hoje}
+            />
+            <Entrada
+              chave="responsavel.cpf"
+              rotulo="CPF"
+              valor={values.responsavel.cpf}
+              onChange={(v) => setResp("cpf", formatarCpf(v))}
+              onBlur={() => tocar("responsavel.cpf")}
+              erro={erro("responsavel.cpf")}
+              modo="numeric"
+              placeholder="000.000.000-00"
+              maxLength={14}
+              autoComplete="off"
+            />
+          </div>
+          <label className="lp-check">
+            <input
+              type="checkbox"
+              checked={values.responsavelParticipa}
+              onChange={(e) => setCampo("responsavelParticipa", e.target.checked)}
+            />
+            <span>
+              Eu também vou participar do retiro
+              {values.responsavelParticipa && respCalc && (
+                <small className="lp-chip">
+                  {respCalc.idade} anos · {textoValor(respCalc.valor)}
+                </small>
+              )}
+            </span>
+          </label>
+        </fieldset>
+
+        <fieldset className="lp-fs">
+          <legend>Contato da família</legend>
+          <div className="lp-row two">
+            <Entrada
+              chave="telefone"
+              rotulo="Telefone"
+              valor={values.telefone}
+              onChange={(v) => setCampo("telefone", formatarTelefone(v))}
+              onBlur={() => tocar("telefone")}
+              erro={erro("telefone")}
+              tipo="tel"
+              modo="tel"
+              autoComplete="tel-national"
+              placeholder="(00) 00000-0000"
+              maxLength={15}
+            />
+            {!mesmoWhats && (
+              <Entrada
+                chave="whatsapp"
+                rotulo="WhatsApp"
+                valor={values.whatsapp}
+                onChange={(v) => setCampo("whatsapp", formatarTelefone(v))}
+                onBlur={() => tocar("whatsapp")}
+                erro={erro("whatsapp")}
+                tipo="tel"
+                modo="tel"
+                placeholder="(00) 00000-0000"
+                maxLength={15}
+              />
+            )}
+          </div>
+          <label className="lp-check">
+            <input
+              type="checkbox"
+              checked={mesmoWhats}
+              onChange={(e) => setMesmoWhats(e.target.checked)}
+            />
+            <span>Este telefone também é o meu WhatsApp</span>
+          </label>
+          <div style={{ marginTop: "1rem" }}>
+            <Entrada
+              chave="email"
+              rotulo="E-mail"
+              opcional
+              valor={values.email}
+              onChange={(v) => setCampo("email", v)}
+              onBlur={() => tocar("email")}
+              erro={erro("email")}
+              tipo="email"
+              modo="email"
+              autoComplete="email"
+              maxLength={120}
+            />
+          </div>
+          <div className="lp-row two" style={{ marginTop: "1rem" }}>
+            <Entrada
+              chave="igreja"
+              rotulo="Igreja ou congregação"
+              valor={values.igreja}
+              onChange={(v) => setCampo("igreja", v)}
+              onBlur={() => tocar("igreja")}
+              erro={erro("igreja")}
+              maxLength={100}
+            />
+            <Entrada
+              chave="cidade"
+              rotulo="Cidade"
+              valor={values.cidade}
+              onChange={(v) => setCampo("cidade", v)}
+              onBlur={() => tocar("cidade")}
+              erro={erro("cidade")}
+              autoComplete="address-level2"
+              maxLength={80}
+            />
+          </div>
+        </fieldset>
+
+      <div className="lp-passos">
+        <span />
+        <button type="button" className="lp-btn lp-btn-brasa" onClick={continuar}>
+          Continuar
+        </button>
+      </div>
+      </div>
+      <div className="lp-etapa" hidden={etapa !== 1}>
+        <fieldset className="lp-fs">
+          <legend id="integrantes-titulo" tabIndex={-1}>
+            Integrantes da família
+          </legend>
+          <p className="hint">
+            Cadastre aqui cônjuge, filhos e demais pessoas da família que vão participar. O valor de
+            cada um é calculado pela idade em {dataBr(evento.inicioData)}.
+          </p>
+
+          {values.integrantes.length === 0 && (
+            <p className="lp-vazio">Nenhum integrante adicionado além do responsável.</p>
+          )}
+
+          <ul className="lp-members">
+            {values.integrantes.map((p, i) => {
+              const chave = `integrantes.${i}`;
+              const info = valorDe(chave);
+              const menor = info ? info.menorDeIdade : false;
+              return (
+                <li className="lp-member" key={p.uid ?? chave}>
+                  <div className="lp-member-head">
+                    <strong>Integrante {i + 1}</strong>
+                    {info && (
+                      <span className="lp-chip">
+                        {info.idade} anos · {textoValor(info.valor)}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="lp-icon-btn"
+                      onClick={() => remover(i)}
+                      aria-label={`Remover integrante ${i + 1}`}
+                    >
+                      <Trash2 size={18} aria-hidden="true" />
+                    </button>
+                  </div>
+                  <Entrada
+                    chave={`${chave}.nome`}
+                    rotulo="Nome completo"
+                    valor={p.nome}
+                    onChange={(v) => setIntegrante(i, "nome", v)}
+                    onBlur={() => tocar(`${chave}.nome`)}
+                    erro={erro(`${chave}.nome`)}
+                    maxLength={100}
+                  />
+                  <div className="lp-row two" style={{ marginTop: "1rem" }}>
+                    <Entrada
+                      chave={`${chave}.dataNascimento`}
+                      rotulo="Data de nascimento"
+                      valor={p.dataNascimento}
+                      onChange={(v) => setIntegrante(i, "dataNascimento", v)}
+                      onBlur={() => tocar(`${chave}.dataNascimento`)}
+                      erro={erro(`${chave}.dataNascimento`)}
+                      tipo="date"
+                      min="1900-01-01"
+                      max={hoje}
+                    />
+                    <Entrada
+                      chave={`${chave}.cpf`}
+                      rotulo="CPF"
+                      opcional={menor}
+                      valor={p.cpf}
+                      onChange={(v) => setIntegrante(i, "cpf", formatarCpf(v))}
+                      onBlur={() => tocar(`${chave}.cpf`)}
+                      erro={erro(`${chave}.cpf`)}
+                      dica={info ? undefined : "Obrigatório para maiores de 18 anos."}
+                      modo="numeric"
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      autoComplete="off"
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {erro("integrantes") && (
+            <p className="lp-err" role="alert">
+              {erro("integrantes")}
+            </p>
+          )}
+          <button
+            type="button"
+            className="lp-btn lp-btn-ghost lp-add"
+            onClick={adicionar}
+            disabled={!podeAdicionar}
+          >
+            <Plus size={18} aria-hidden="true" /> Adicionar integrante
+          </button>
+          {!podeAdicionar && (
+            <p className="lp-hint">
+              Limite de {evento.maxParticipantesPorInscricao} pessoas por inscrição. Para mais
+              pessoas, faça uma segunda inscrição.
+            </p>
+          )}
+        </fieldset>
+
+      <div className="lp-passos">
+        <button type="button" className="lp-btn lp-btn-ghost" onClick={() => irParaEtapa(0)}>
+          Voltar
+        </button>
+        <button type="button" className="lp-btn lp-btn-brasa" onClick={continuar}>
+          Continuar
+        </button>
+      </div>
+      </div>
+      <div className="lp-etapa" hidden={etapa !== 2}>
+        <fieldset className="lp-fs">
+          <legend>Como cada pessoa vai ao retiro</legend>
+          <p className="hint">
+            Ônibus da organização (ida na sexta, 5/02, e retorno na terça, 9/02) ou carro próprio. Quem vai de carro
+            continua com hospedagem e refeições e não usa o ônibus. Não há desconto para carro próprio.
+          </p>
+          {values.responsavelParticipa && (
+            <div className="lp-pessoa-transp">
+              <strong>{values.responsavel.nome.trim() || "Responsável"}</strong>
+              <EscolhaTransporte
+                chave="responsavel"
+                valor={values.responsavel.transporte}
+                erro={erro("responsavel.transporte")}
+                onChange={(v) => setResp("transporte", v)}
+                onTodos={definirTransporteParaTodos}
+              />
+            </div>
+          )}
+          {values.integrantes.map((p, i) => (
+            <div className="lp-pessoa-transp" key={p.uid ?? i}>
+              <strong>{p.nome.trim() || `Integrante ${i + 1}`}</strong>
+              <EscolhaTransporte
+                chave={`integrantes.${i}`}
+                valor={p.transporte}
+                erro={erro(`integrantes.${i}.transporte`)}
+                onChange={(v) => setIntegrante(i, "transporte", v)}
+                onTodos={definirTransporteParaTodos}
+              />
+            </div>
+          ))}
+          {!values.responsavelParticipa && values.integrantes.length === 0 && (
+            <p className="lp-vazio">Volte e cadastre ao menos um participante.</p>
+          )}
+        </fieldset>
+
+        <fieldset className="lp-fs">
+          <legend>Emergência e necessidades</legend>
+          <div className="lp-row two">
+            <Entrada
+              chave="emergenciaNome"
+              rotulo="Contato de emergência (nome)"
+              valor={values.emergenciaNome}
+              onChange={(v) => setCampo("emergenciaNome", v)}
+              onBlur={() => tocar("emergenciaNome")}
+              erro={erro("emergenciaNome")}
+              maxLength={100}
+            />
+            <Entrada
+              chave="emergenciaTelefone"
+              rotulo="Contato de emergência (telefone)"
+              valor={values.emergenciaTelefone}
+              onChange={(v) => setCampo("emergenciaTelefone", formatarTelefone(v))}
+              onBlur={() => tocar("emergenciaTelefone")}
+              erro={erro("emergenciaTelefone")}
               tipo="tel"
               modo="tel"
               placeholder="(00) 00000-0000"
               maxLength={15}
             />
-          )}
-        </div>
-        <label className="lp-check">
-          <input
-            type="checkbox"
-            checked={mesmoWhats}
-            onChange={(e) => setMesmoWhats(e.target.checked)}
-          />
-          <span>Este telefone também é o meu WhatsApp</span>
-        </label>
-        <div style={{ marginTop: "1rem" }}>
-          <Entrada
-            chave="email"
-            rotulo="E-mail"
-            opcional
-            valor={values.email}
-            onChange={(v) => setCampo("email", v)}
-            onBlur={() => tocar("email")}
-            erro={erro("email")}
-            tipo="email"
-            modo="email"
-            autoComplete="email"
-            maxLength={120}
-          />
-        </div>
-        <div className="lp-row two" style={{ marginTop: "1rem" }}>
-          <Entrada
-            chave="igreja"
-            rotulo="Igreja ou congregação"
-            valor={values.igreja}
-            onChange={(v) => setCampo("igreja", v)}
-            onBlur={() => tocar("igreja")}
-            erro={erro("igreja")}
-            maxLength={100}
-          />
-          <Entrada
-            chave="cidade"
-            rotulo="Cidade"
-            valor={values.cidade}
-            onChange={(v) => setCampo("cidade", v)}
-            onBlur={() => tocar("cidade")}
-            erro={erro("cidade")}
-            autoComplete="address-level2"
-            maxLength={80}
-          />
-        </div>
-      </fieldset>
-
-      <fieldset className="lp-fs">
-        <legend id="integrantes-titulo" tabIndex={-1}>
-          Integrantes da família
-        </legend>
-        <p className="hint">
-          Cadastre aqui cônjuge, filhos e demais pessoas da família que vão participar. O valor de
-          cada um é calculado pela idade em {dataBr(evento.inicioData)}.
-        </p>
-
-        {values.integrantes.length === 0 && (
-          <p className="lp-vazio">Nenhum integrante adicionado além do responsável.</p>
-        )}
-
-        <ul className="lp-members">
-          {values.integrantes.map((p, i) => {
-            const chave = `integrantes.${i}`;
-            const info = valorDe(chave);
-            const menor = info ? info.menorDeIdade : false;
-            return (
-              <li className="lp-member" key={p.uid ?? chave}>
-                <div className="lp-member-head">
-                  <strong>Integrante {i + 1}</strong>
-                  {info && (
-                    <span className="lp-chip">
-                      {info.idade} anos · {textoValor(info.valor)}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="lp-icon-btn"
-                    onClick={() => remover(i)}
-                    aria-label={`Remover integrante ${i + 1}`}
-                  >
-                    <Trash2 size={18} aria-hidden="true" />
-                  </button>
-                </div>
-                <Entrada
-                  chave={`${chave}.nome`}
-                  rotulo="Nome completo"
-                  valor={p.nome}
-                  onChange={(v) => setIntegrante(i, "nome", v)}
-                  onBlur={() => tocar(`${chave}.nome`)}
-                  erro={erro(`${chave}.nome`)}
-                  maxLength={100}
-                />
-                <div className="lp-row two" style={{ marginTop: "1rem" }}>
-                  <Entrada
-                    chave={`${chave}.dataNascimento`}
-                    rotulo="Data de nascimento"
-                    valor={p.dataNascimento}
-                    onChange={(v) => setIntegrante(i, "dataNascimento", v)}
-                    onBlur={() => tocar(`${chave}.dataNascimento`)}
-                    erro={erro(`${chave}.dataNascimento`)}
-                    tipo="date"
-                    min="1900-01-01"
-                    max={hoje}
-                  />
-                  <Entrada
-                    chave={`${chave}.cpf`}
-                    rotulo="CPF"
-                    opcional={menor}
-                    valor={p.cpf}
-                    onChange={(v) => setIntegrante(i, "cpf", formatarCpf(v))}
-                    onBlur={() => tocar(`${chave}.cpf`)}
-                    erro={erro(`${chave}.cpf`)}
-                    dica={info ? undefined : "Obrigatório para maiores de 18 anos."}
-                    modo="numeric"
-                    placeholder="000.000.000-00"
-                    maxLength={14}
-                    autoComplete="off"
-                  />
-                </div>
-                <EscolhaTransporte
-                  chave={chave}
-                  valor={p.transporte}
-                  erro={erro(`${chave}.transporte`)}
-                  onChange={(v) => setIntegrante(i, "transporte", v)}
-                  onTodos={definirTransporteParaTodos}
-                />
-              </li>
-            );
-          })}
-        </ul>
-
-        {erro("integrantes") && (
-          <p className="lp-err" role="alert">
-            {erro("integrantes")}
-          </p>
-        )}
-        <button
-          type="button"
-          className="lp-btn lp-btn-ghost lp-add"
-          onClick={adicionar}
-          disabled={!podeAdicionar}
-        >
-          <Plus size={18} aria-hidden="true" /> Adicionar integrante
-        </button>
-        {!podeAdicionar && (
-          <p className="lp-hint">
-            Limite de {evento.maxParticipantesPorInscricao} pessoas por inscrição. Para mais
-            pessoas, faça uma segunda inscrição.
-          </p>
-        )}
-      </fieldset>
-
-      <section className="lp-price" aria-live="polite" aria-label="Resumo dos valores">
-        <div className="lp-price-top">
-          <div>
-            <small>Valor total calculado</small>
-            <strong>
-              {calc.participantes.length === 0 ? "—" : formatarReais(calc.total)}
-              {calc.temValorADefinir && <span className="lp-plus"> + a definir</span>}
-            </strong>
           </div>
-          <p>
-            {calc.participantes.length === 0
-              ? "Informe as datas de nascimento para ver os valores."
-              : `${calc.participantes.length} ${calc.participantes.length === 1 ? "pessoa" : "pessoas"} · idade em ${dataBr(evento.inicioData)}. O cadastro não é pagamento confirmado.`}
-          </p>
-        </div>
-        {calc.participantes.length > 0 && (
+          <div style={{ marginTop: "1rem" }}>
+            <Entrada
+              chave="necessidades"
+              rotulo="Necessidades relevantes para hospedagem ou alimentação"
+              opcional
+              multilinha
+              valor={values.necessidades}
+              onChange={(v) => setCampo("necessidades", v)}
+              onBlur={() => tocar("necessidades")}
+              erro={erro("necessidades")}
+              maxLength={500}
+              placeholder="Ex.: restrição alimentar, mobilidade reduzida…"
+              dica={`${values.necessidades.length}/500 caracteres`}
+            />
+          </div>
+        </fieldset>
+
+      <div className="lp-passos">
+        <button type="button" className="lp-btn lp-btn-ghost" onClick={() => irParaEtapa(1)}>
+          Voltar
+        </button>
+        <button type="button" className="lp-btn lp-btn-brasa" onClick={continuar}>
+          Continuar
+        </button>
+      </div>
+      </div>
+      <div className="lp-etapa" hidden={etapa !== 3}>
+        <fieldset className="lp-fs">
+          <legend>Revise antes de enviar</legend>
+          <dl className="lp-revisao">
+            <div>
+              <dt>Responsável</dt>
+              <dd>
+                {values.responsavel.nome || "—"}
+                <small>
+                  {efetivos(values, mesmoWhats).telefone} {values.email && `· ${values.email}`}
+                </small>
+              </dd>
+            </div>
+            <div>
+              <dt>Igreja e cidade</dt>
+              <dd>
+                {values.igreja || "—"}, {values.cidade || "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>Contato de emergência</dt>
+              <dd>
+                {values.emergenciaNome || "—"}
+                <small>{values.emergenciaTelefone}</small>
+              </dd>
+            </div>
+          </dl>
           <ul className="lp-people compact">
             {calc.participantes.map((p) => (
               <li key={p.chave}>
                 <span>
-                  <strong>{p.nome || "Sem nome"}</strong>
+                  <strong>{p.nome}</strong>
                   <small>
-                    {p.idade} anos · {p.faixa.rotulo}
+                    {p.idade} anos · {rotuloTransporte(p.transporte)}
                   </small>
                 </span>
                 <b>{textoValor(p.valor)}</b>
               </li>
             ))}
           </ul>
-        )}
-        {calc.temValorADefinir && (
-          <p className="lp-hint" style={{ margin: "0.5rem 0 0" }}>
-            Menores de 5 anos: gratuito.
+          <p className="lp-hint" style={{ marginTop: "0.9rem" }}>
+            Incluído no valor: hospedagem, quatro refeições por dia e transporte de ônibus na ida e no retorno.
           </p>
-        )}
-      </section>
+          <div className="lp-passos lp-passos-links">
+            <button type="button" className="lp-link-btn" onClick={() => irParaEtapa(0)}>Corrigir responsável</button>
+            <button type="button" className="lp-link-btn" onClick={() => irParaEtapa(1)}>Corrigir participantes</button>
+            <button type="button" className="lp-link-btn" onClick={() => irParaEtapa(2)}>Corrigir transporte</button>
+          </div>
+        </fieldset>
 
-      <fieldset className="lp-fs">
-        <legend>Emergência e necessidades</legend>
-        <div className="lp-row two">
-          <Entrada
-            chave="emergenciaNome"
-            rotulo="Contato de emergência (nome)"
-            valor={values.emergenciaNome}
-            onChange={(v) => setCampo("emergenciaNome", v)}
-            onBlur={() => tocar("emergenciaNome")}
-            erro={erro("emergenciaNome")}
-            maxLength={100}
-          />
-          <Entrada
-            chave="emergenciaTelefone"
-            rotulo="Contato de emergência (telefone)"
-            valor={values.emergenciaTelefone}
-            onChange={(v) => setCampo("emergenciaTelefone", formatarTelefone(v))}
-            onBlur={() => tocar("emergenciaTelefone")}
-            erro={erro("emergenciaTelefone")}
-            tipo="tel"
-            modo="tel"
-            placeholder="(00) 00000-0000"
-            maxLength={15}
-          />
-        </div>
-        <div style={{ marginTop: "1rem" }}>
-          <Entrada
-            chave="necessidades"
-            rotulo="Necessidades relevantes para hospedagem ou alimentação"
-            opcional
-            multilinha
-            valor={values.necessidades}
-            onChange={(v) => setCampo("necessidades", v)}
-            onBlur={() => tocar("necessidades")}
-            erro={erro("necessidades")}
-            maxLength={500}
-            placeholder="Ex.: restrição alimentar, mobilidade reduzida…"
-            dica={`${values.necessidades.length}/500 caracteres`}
-          />
-        </div>
-      </fieldset>
+        <section className="lp-price" aria-live="polite" aria-label="Resumo dos valores">
+          <div className="lp-price-top">
+            <div>
+              <small>Valor total calculado</small>
+              <strong>
+                {calc.participantes.length === 0 ? "—" : formatarReais(calc.total)}
+                {calc.temValorADefinir && <span className="lp-plus"> + a definir</span>}
+              </strong>
+            </div>
+            <p>
+              {calc.participantes.length === 0
+                ? "Informe as datas de nascimento para ver os valores."
+                : `${calc.participantes.length} ${calc.participantes.length === 1 ? "pessoa" : "pessoas"} · idade em ${dataBr(evento.inicioData)}. O cadastro não é pagamento confirmado.`}
+            </p>
+          </div>
+                    {calc.temValorADefinir && (
+            <p className="lp-hint" style={{ margin: "0.5rem 0 0" }}>
+              Menores de 5 anos: gratuito.
+            </p>
+          )}
+        </section>
 
-      <fieldset className="lp-fs">
-        <legend>Aceites</legend>
-        <label className="lp-check" style={{ marginTop: 0 }}>
-          <input
-            id="f-aceiteRegras"
-            type="checkbox"
-            checked={values.aceiteRegras}
-            aria-invalid={erro("aceiteRegras") ? true : undefined}
-            onChange={(e) => setCampo("aceiteRegras", e.target.checked)}
-            onBlur={() => tocar("aceiteRegras")}
-          />
-          <span>
-            Li e aceito as{" "}
-            <a href="#regras" onClick={(e) => abrirTermo(e, "regras")}>
-              regras do retiro
-            </a>
-            .
-          </span>
-        </label>
-        {erro("aceiteRegras") && (
-          <p className="lp-err" role="alert">
-            {erro("aceiteRegras")}
-          </p>
-        )}
-        <label className="lp-check">
-          <input
-            id="f-aceitePrivacidade"
-            type="checkbox"
-            checked={values.aceitePrivacidade}
-            aria-invalid={erro("aceitePrivacidade") ? true : undefined}
-            onChange={(e) => setCampo("aceitePrivacidade", e.target.checked)}
-            onBlur={() => tocar("aceitePrivacidade")}
-          />
-          <span>
-            Estou ciente do{" "}
-            <a href="#privacidade" onClick={(e) => abrirTermo(e, "privacidade")}>
-              aviso de privacidade
-            </a>{" "}
-            e autorizo o tratamento dos dados de todos os integrantes cadastrados (inclusive
-            menores, como responsável legal) para a organização do retiro.
-          </span>
-        </label>
-        {erro("aceitePrivacidade") && (
-          <p className="lp-err" role="alert">
-            {erro("aceitePrivacidade")}
-          </p>
-        )}
-      </fieldset>
+        <fieldset className="lp-fs">
+          <legend>Aceites</legend>
+          <label className="lp-check" style={{ marginTop: 0 }}>
+            <input
+              id="f-aceiteRegras"
+              type="checkbox"
+              checked={values.aceiteRegras}
+              aria-invalid={erro("aceiteRegras") ? true : undefined}
+              onChange={(e) => setCampo("aceiteRegras", e.target.checked)}
+              onBlur={() => tocar("aceiteRegras")}
+            />
+            <span>
+              Li e aceito as{" "}
+              <a href="#regras" onClick={(e) => abrirTermo(e, "regras")}>
+                regras do retiro
+              </a>
+              .
+            </span>
+          </label>
+          {erro("aceiteRegras") && (
+            <p className="lp-err" role="alert">
+              {erro("aceiteRegras")}
+            </p>
+          )}
+          <label className="lp-check">
+            <input
+              id="f-aceitePrivacidade"
+              type="checkbox"
+              checked={values.aceitePrivacidade}
+              aria-invalid={erro("aceitePrivacidade") ? true : undefined}
+              onChange={(e) => setCampo("aceitePrivacidade", e.target.checked)}
+              onBlur={() => tocar("aceitePrivacidade")}
+            />
+            <span>
+              Estou ciente do{" "}
+              <a href="#privacidade" onClick={(e) => abrirTermo(e, "privacidade")}>
+                aviso de privacidade
+              </a>{" "}
+              e autorizo o tratamento dos dados de todos os integrantes cadastrados (inclusive
+              menores, como responsável legal) para a organização do retiro.
+            </span>
+          </label>
+          {erro("aceitePrivacidade") && (
+            <p className="lp-err" role="alert">
+              {erro("aceitePrivacidade")}
+            </p>
+          )}
+        </fieldset>
 
-      {estado.tipo === "erro" && (
-        <div className="lp-alert" role="alert">
-          <AlertTriangle size={20} aria-hidden="true" />
-          <p>{estado.mensagem}</p>
-        </div>
-      )}
-
-      <button type="submit" className="lp-btn lp-btn-brasa lp-btn-grande lp-submit" disabled={enviando}>
-        {enviando ? (
-          <>
-            <Loader2 size={20} className="lp-spin" aria-hidden="true" /> Enviando…
-          </>
-        ) : (
-          "Enviar inscrição da família"
+        {estado.tipo === "erro" && (
+          <div className="lp-alert" role="alert">
+            <AlertTriangle size={20} aria-hidden="true" />
+            <p>{estado.mensagem}</p>
+          </div>
         )}
-      </button>
-      <p className="lp-hint" style={{ textAlign: "center", margin: 0 }}>
-        O envio é apenas cadastro e não confirma pagamento.
-      </p>
+
+        <button type="submit" className="lp-btn lp-btn-brasa lp-btn-grande lp-submit" disabled={enviando}>
+          {enviando ? (
+            <>
+              <Loader2 size={20} className="lp-spin" aria-hidden="true" /> Enviando…
+            </>
+          ) : (
+            "Enviar inscrição da família"
+          )}
+        </button>
+        <p className="lp-hint" style={{ textAlign: "center", margin: 0 }}>
+          O envio é apenas cadastro e não confirma pagamento.
+        </p>
+        <button type="button" className="lp-btn lp-btn-ghost" onClick={() => irParaEtapa(2)}>
+          Voltar
+        </button>
+      </div>
       <Link to="/" className="lp-back" style={{ justifySelf: "center" }}>
         <ArrowLeft size={16} aria-hidden="true" /> Voltar à página do retiro
       </Link>
     </form>
+    </>
   );
 }

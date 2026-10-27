@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { processarInscricao } from "../src/api/inscricao.server.ts";
+import { ensaioAtivo, processarInscricao } from "../src/api/inscricao.server.ts";
 import { VALORES_VAZIOS, cpfValido, type FormValues } from "../src/lib/inscricao.ts";
 
 let servidor: http.Server;
@@ -203,4 +203,46 @@ test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", a
   assert.equal(semUrl.ok, false);
   if (!semUrl.ok) assert.equal(semUrl.codigo, "NAO_CONFIGURADO");
   assert.equal(recebidos.length, 0);
+});
+
+test("modo de ensaio: valida e recalcula, mas NÃO chama a planilha e NÃO confirma nada", async () => {
+  modo = "ok";
+  recebidos.length = 0;
+  const r = await processarInscricao(
+    { values: valores("390.533.447-05"), idempotencyKey: "chave-ensaio-001" },
+    { url, ensaio: true },
+  );
+  assert.equal(recebidos.length, 0, "ensaio não pode enviar nada ao script");
+  assert.equal(r.ok, false);
+  if (!r.ok) {
+    assert.equal(r.codigo, "ENSAIO");
+    assert.equal(r.ensaio?.total, 400);
+    assert.equal(r.ensaio?.participantes[0].transporte, "Ônibus da organização");
+  }
+});
+
+test("modo de ensaio funciona sem URL e repete sem acusar duplicidade", async () => {
+  recebidos.length = 0;
+  const entrada = { values: valores("123.456.789-09"), idempotencyKey: "chave-ensaio-002" };
+  const a = await processarInscricao(entrada, { ensaio: true });
+  const b = await processarInscricao(entrada, { ensaio: true });
+  assert.equal(!a.ok && a.codigo, "ENSAIO");
+  assert.equal(!b.ok && b.codigo, "ENSAIO");
+  assert.equal(recebidos.length, 0);
+});
+
+test("modo de ensaio continua apontando erros de validação", async () => {
+  const r = await processarInscricao(
+    { values: valores("000.000.000-00"), idempotencyKey: "chave-ensaio-003" },
+    { url, ensaio: true },
+  );
+  assert.equal(!r.ok && r.codigo, "VALIDACAO");
+});
+
+test("ensaioAtivo: só a produção da Vercel grava; FORM_MODO_ENSAIO=0 libera de propósito", () => {
+  assert.equal(ensaioAtivo({ VERCEL_ENV: "production" }), false);
+  assert.equal(ensaioAtivo({ VERCEL_ENV: "preview" }), true);
+  assert.equal(ensaioAtivo({}), true); // local ou ambiente desconhecido
+  assert.equal(ensaioAtivo({ VERCEL_ENV: "production", FORM_MODO_ENSAIO: "1" }), true);
+  assert.equal(ensaioAtivo({ VERCEL_ENV: "preview", FORM_MODO_ENSAIO: "0" }), false);
 });

@@ -21,6 +21,7 @@ export type CodigoErro =
   | "NAO_CONFIRMADO"
   | "RECUSADO"
   | "ENCERRADAS"
+  | "ENSAIO"
   | "SOLICITACAO_INVALIDA";
 
 export type ParticipanteConfirmado = {
@@ -41,14 +42,39 @@ export type RespostaInscricao =
       temValorADefinir: boolean;
       jaRegistrada?: boolean;
     }
-  | { ok: false; codigo: CodigoErro; mensagem: string; erros?: Erros };
+  | {
+      ok: false;
+      codigo: CodigoErro;
+      mensagem: string;
+      erros?: Erros;
+      /** Só no modo de ensaio: o que o servidor validou e recalculou. NADA foi gravado. */
+      ensaio?: {
+        responsavel: string;
+        participantes: ParticipanteConfirmado[];
+        total: number;
+        temValorADefinir: boolean;
+      };
+    };
 
-type Ambiente = { url?: string; token?: string };
+type Ambiente = { url?: string; token?: string; ensaio?: boolean };
+
+/**
+ * Modo de ensaio = o servidor valida e recalcula, mas NUNCA chama a planilha.
+ * À prova de falhas: só grava de verdade na produção da Vercel (VERCEL_ENV=production)
+ * ou quando FORM_MODO_ENSAIO=0 for definido de propósito. Qualquer outro caso é ensaio.
+ */
+export function ensaioAtivo(env: { FORM_MODO_ENSAIO?: string; VERCEL_ENV?: string }): boolean {
+  if (env.FORM_MODO_ENSAIO === "0") return false;
+  if (env.FORM_MODO_ENSAIO === "1") return true;
+  return env.VERCEL_ENV !== "production";
+}
 
 // Memória do processo (melhor esforço; o bloqueio definitivo por CPF é feito na planilha).
 const JANELA_MS = 10 * 60 * 1000;
 const recentes = new Map<string, { em: number; resposta: RespostaInscricao }>();
 const emAndamento = new Set<string>();
+
+const higienizarNome = (n: string): string => n.trim().replace(/\s+/g, " ");
 
 function limpar(agora: number) {
   for (const [k, v] of recentes) if (agora - v.em > JANELA_MS) recentes.delete(k);
@@ -81,7 +107,7 @@ export async function processarInscricao(
       mensagem: "As inscrições não estão abertas no momento.",
     };
   }
-  if (!ambiente.url) {
+  if (!ambiente.url && !ambiente.ensaio) {
     return {
       ok: false,
       codigo: "NAO_CONFIGURADO",
@@ -130,6 +156,36 @@ export async function processarInscricao(
     };
   }
 
+  // MODO DE ENSAIO: devolve o que foi validado e recalculado, sem gravar e sem confirmar nada.
+  if (ambiente.ensaio) {
+    return {
+      ok: false,
+      codigo: "ENSAIO",
+      mensagem: "Modo de ensaio: os dados foram validados, mas NADA foi gravado e nenhuma inscrição foi registrada.",
+      ensaio: {
+        responsavel: higienizarNome(v.responsavel.nome),
+        participantes: resultado.participantes.map((p) => ({
+          nome: p.nome,
+          papel: p.papel,
+          idade: p.idade,
+          faixa: p.faixa.rotulo,
+          valor: p.valor,
+          transporte: rotuloTransporte(p.transporte),
+        })),
+        total: resultado.total,
+        temValorADefinir: resultado.temValorADefinir,
+      },
+    };
+  }
+  if (!ambiente.url) {
+    return {
+      ok: false,
+      codigo: "NAO_CONFIGURADO",
+      mensagem: "As inscrições estão temporariamente indisponíveis. Tente novamente mais tarde.",
+    };
+  }
+  const urlPlanilha: string = ambiente.url;
+
   const agora = Date.now();
   limpar(agora);
   // CPFs desta inscrição (responsável sempre conta, mesmo sem participar).
@@ -169,7 +225,7 @@ export async function processarInscricao(
       enviadoEm: new Date(agora).toISOString(),
       versaoTermos: evento.versaoTermos,
     });
-    const r = await enviarParaPlanilha(ambiente.url, corpo as unknown as Record<string, unknown>, {
+    const r = await enviarParaPlanilha(urlPlanilha, corpo as unknown as Record<string, unknown>, {
       ...opcoes,
       token: ambiente.token,
     });
