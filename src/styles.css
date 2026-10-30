@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./landing/landing.css";
+@import "./landing/palavra.css";
 
 @theme {
   --color-bg: #08090c;
