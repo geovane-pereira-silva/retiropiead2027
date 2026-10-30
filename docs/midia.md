@@ -1,12 +1,20 @@
 # Fotos e vídeo do retiro
 
-Só entram fotos reais e autorizadas. Sem arquivo cadastrado, a seção não mostra imagem.
+Só entram fotos reais e autorizadas. O que ainda não foi cadastrado aparece na página como
+**espaço reservado identificado** (borda tracejada amarela com o nome do arquivo esperado) e some
+sozinho quando o arquivo é cadastrado.
 
-1. Copie os arquivos para `public/midia/` (ex.: `fachada.webp`, `quarto-a.webp`). Prefira WebP, até ~1600 px de largura.
-2. Cadastre em `src/content/media.json`, no grupo certo:
-   - `local` (fachada e visão geral), `culto` (ambientes de culto), `quartos`, `adoracao`, `convivencia` (gincana, recreação)
-   - cada foto: `{ "src": "/midia/fachada.webp", "alt": "descrição objetiva", "largura": 1600, "altura": 1067, "foco": "50% 30%" }`
+1. Copie os arquivos para `public/midia/`. Prefira nomes sem espaços e sem acentos (ex.: `frente-do-local-16x9.jpg`) e, se possível, WebP até ~1600 px de largura.
+2. Cadastre em `src/content/media.json`, no grupo certo. Cada foto:
+   `{ "src": "/midia/frente-do-local-16x9.jpg", "alt": "descrição objetiva", "largura": 1600, "altura": 900, "foco": "50% 30%" }`
+   - `hero` — primeira tela (`frente do local 16x9.jpg`; opcional `"srcMobile"` com versão vertical)
+   - `local` — `frente do local.jpg`; `culto` — `espalo de culto.jpg`
+   - `quartos` — `quarto.jpg`, `quarto a.jpg`, `quarto b.jpg` (nessa ordem)
+   - `adoracao` — `jovens adorando.jpg`, `jovens abraçados adorando.jpg`, `oração e adoração.jpg`, `oração pelo jovem.jpg`
+   - `convivencia` — `jovem feliz.jpg`, `jovem na gincana feliz.jpg`
    - `foco` evita cortar rostos nos recortes do celular.
-3. Vídeo (opcional): `"video": { "src": "/midia/tour.mp4", "poster": "/midia/tour-capa.webp", "titulo": "Tour pelo local" }`.
-   Ele só carrega quando a pessoa toca em reproduzir, sem som automático.
+3. Vídeo (segunda tela, ocupa a tela inteira ao rolar):
+   `"video": { "src": "/midia/retiro.mp4", "poster": "/midia/retiro-capa.jpg", "titulo": "Vídeo do retiro" }`.
+   Toca sem som, em laço, só enquanto está visível; não toca com economia de dados ou movimento reduzido.
+   Há botões para pausar e ativar o som. Use MP4 (H.264), até ~8 MB, idealmente 1080p vertical/horizontal curto.
 4. Use fotos de adoração e oração com respeito: não use imagens de momentos de vulnerabilidade como apelo de inscrição.

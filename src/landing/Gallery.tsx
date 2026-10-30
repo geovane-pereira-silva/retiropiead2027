@@ -1,8 +1,10 @@
 import media from "../content/media.json";
 
 /**
- * Fotos e vídeo reais do local. Nada é inventado: sem arquivo listado em
- * src/content/media.json, a seção não mostra imagem (e a página continua completa).
+ * Fotos e vídeo reais do retiro. Nada é inventado: o que está listado em
+ * src/content/media.json aparece; o que falta aparece como espaço reservado
+ * identificado (com o nome do arquivo esperado) e some sozinho quando o arquivo
+ * for cadastrado.
  */
 export type Foto = {
   src: string;
@@ -11,62 +13,97 @@ export type Foto = {
   altura?: number;
   /** object-position, ex.: "50% 30%" para não cortar rostos */
   foco?: string;
+  /** versão vertical (celular) opcional, usada na abertura */
+  srcMobile?: string;
 };
 export type VideoInfo = { src: string; poster?: string; titulo: string };
 
-type GrupoId = "local" | "culto" | "quartos" | "adoracao" | "convivencia";
+export type GrupoId = "hero" | "local" | "culto" | "quartos" | "adoracao" | "convivencia";
 
-const fotos = media.fotos as unknown as Record<GrupoId, Foto[]>;
-const video = (media as unknown as { video: VideoInfo | null }).video;
+/** Arquivos que a organização deve enviar, por grupo. */
+export const ESPERADAS: Record<GrupoId, { rotulo: string; arquivos: string[] }> = {
+  hero: { rotulo: "Fachada do sítio", arquivos: ["frente do local 16x9.jpg", "frente do local.jpg"] },
+  local: { rotulo: "O sítio", arquivos: ["frente do local.jpg"] },
+  culto: { rotulo: "Espaço de culto", arquivos: ["espalo de culto.jpg"] },
+  quartos: { rotulo: "Quartos", arquivos: ["quarto.jpg", "quarto a.jpg", "quarto b.jpg"] },
+  adoracao: {
+    rotulo: "Adoração e oração",
+    arquivos: ["jovens adorando.jpg", "jovens abraçados adorando.jpg", "oração e adoração.jpg", "oração pelo jovem.jpg"],
+  },
+  convivencia: { rotulo: "Convivência e gincanas", arquivos: ["jovem feliz.jpg", "jovem na gincana feliz.jpg"] },
+};
+
+const fotos = media.fotos as unknown as Partial<Record<GrupoId, Foto[]>>;
+export const videoInfo = (media as unknown as { video: VideoInfo | null }).video;
 
 export const fotosDe = (g: GrupoId): Foto[] =>
   (fotos[g] ?? []).filter((f) => f && typeof f.src === "string" && f.src && f.alt);
 export const temFotos = (g: GrupoId): boolean => fotosDe(g).length > 0;
-export const temMidia: boolean =
-  (["local", "culto", "quartos", "adoracao", "convivencia"] as GrupoId[]).some(temFotos) ||
-  !!video;
-export const temVideo = !!video?.src;
+export const temVideo = !!videoInfo?.src;
 
-function Imagem({ f, destaque }: { f: Foto; destaque?: boolean }) {
-  return (
+export function Imagem({ f, prioridade }: { f: Foto; prioridade?: boolean }) {
+  const img = (
     <img
       src={f.src}
       alt={f.alt}
       width={f.largura}
       height={f.altura}
-      loading={destaque ? "eager" : "lazy"}
-      fetchPriority={destaque ? "high" : undefined}
+      loading={prioridade ? "eager" : "lazy"}
+      fetchPriority={prioridade ? "high" : undefined}
       decoding="async"
       style={f.foco ? { objectPosition: f.foco } : undefined}
     />
   );
+  if (!f.srcMobile) return img;
+  return (
+    <picture>
+      <source media="(max-width: 47.99rem)" srcSet={f.srcMobile} />
+      {img}
+    </picture>
+  );
 }
 
-/** Composição fotográfica: 1 foto = destaque; 2 = lado a lado; 3+ = grade assimétrica. */
-export function Cena({ grupo, max = 3 }: { grupo: GrupoId; max?: number }) {
-  const itens = fotosDe(grupo).slice(0, max);
-  if (itens.length === 0) return null;
+/** Espaço reservado identificado: mostra qual arquivo real deve ser enviado. */
+export function Reserva({
+  grupo,
+  arquivo,
+  className = "",
+}: {
+  grupo: GrupoId;
+  arquivo?: string;
+  className?: string;
+}) {
+  const nomes = arquivo ? [arquivo] : ESPERADAS[grupo].arquivos;
   return (
-    <div className={`lp-cena n${itens.length}`}>
-      {itens.map((f) => (
-        <figure key={f.src}>
-          <Imagem f={f} destaque={false} />
-        </figure>
-      ))}
+    <div
+      className={`pv-reserva ${className}`}
+      role="img"
+      aria-label={`Espaço reservado: foto real pendente (${nomes.join(", ")})`}
+    >
+      <span className="pv-reserva-selo">
+        Foto real pendente
+        <small>{nomes.join(" · ")}</small>
+      </span>
     </div>
   );
 }
 
-/** Vídeo só carrega ao toque (preload="none"), sem som nem reprodução automática. */
-export function VideoLocal() {
-  if (!video?.src) return null;
-  return (
-    <figure className="lp-video-bloco">
-      <video controls preload="none" playsInline poster={video.poster} aria-label={video.titulo}>
-        <source src={video.src} />
-        Seu navegador não reproduz este vídeo.
-      </video>
-      <figcaption>{video.titulo}</figcaption>
-    </figure>
+/** Foto real do grupo (posição i) ou, se ainda não cadastrada, o espaço reservado. */
+export function Midia({
+  grupo,
+  i = 0,
+  prioridade,
+  className,
+}: {
+  grupo: GrupoId;
+  i?: number;
+  prioridade?: boolean;
+  className?: string;
+}) {
+  const f = fotosDe(grupo)[i];
+  return f ? (
+    <Imagem f={f} prioridade={prioridade} />
+  ) : (
+    <Reserva grupo={grupo} arquivo={ESPERADAS[grupo].arquivos[i]} className={className} />
   );
 }
