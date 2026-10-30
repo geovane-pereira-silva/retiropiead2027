@@ -1,9 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
+import { ScrollStory } from "../components/ScrollStory";
+import { useMovimento } from "../components/useMovimento";
 import { evento } from "../content/evento";
 import { textoValor } from "../lib/inscricao";
-import { Cena, VideoLocal, temFotos } from "./Gallery";
+import { Imagem, Midia, fotosDe, videoInfo } from "./Gallery";
 
 const NAV = [
   { href: "#local", rotulo: "Local" },
@@ -14,71 +17,31 @@ const NAV = [
   { href: "#duvidas", rotulo: "Dúvidas" },
 ];
 
-/**
- * Curvas de nível da serra: arte original gerada por código (não é fotografia do local).
- * Determinística, para a renderização no servidor e no navegador serem idênticas.
- */
-function curvas(): string[] {
-  const linhas: string[] = [];
-  for (let i = 0; i < 15; i++) {
-    const base = 70 + i * 42;
-    let d = "";
-    for (let x = -20; x <= 1220; x += 20) {
-      const y =
-        base +
-        34 * Math.sin(x / 210 + i * 0.42) +
-        16 * Math.sin(x / 93 + i * 0.9) -
-        i * 3.2 * Math.cos(x / 420);
-      d += `${x === -20 ? "M" : "L"}${x} ${y.toFixed(1)} `;
-    }
-    linhas.push(d.trim());
-  }
-  return linhas;
-}
-const CURVAS = curvas();
-
-function Relevo() {
-  return (
-    <svg
-      className="lp-relevo"
-      viewBox="0 0 1200 720"
-      preserveAspectRatio="xMidYMax slice"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {CURVAS.map((d, i) => (
-        <path
-          key={i}
-          d={d}
-          pathLength={1}
-          style={{ animationDelay: `${i * 90}ms` }}
-          className={i % 5 === 2 ? "forte" : undefined}
-        />
-      ))}
-    </svg>
-  );
-}
-
-function Marca({ compacta = false }: { compacta?: boolean }) {
+function Marca() {
   return (
     <a className="lp-marca" href="#topo" aria-label={`${evento.ministerio}: início da página`}>
       <img src="/logo-conexao-jovem.png" alt="" width="40" height="50" />
-      {!compacta && (
-        <span>
-          <b>{evento.ministerio}</b>
-          <small>
-            {evento.igreja} de {evento.igrejaCidade}
-          </small>
-        </span>
-      )}
+      <span>
+        <b>{evento.ministerio}</b>
+        <small>
+          {evento.igreja} de {evento.igrejaCidade}
+        </small>
+      </span>
     </a>
   );
 }
 
 function Cabecalho() {
   const [aberto, setAberto] = useState(false);
+  const [rolou, setRolou] = useState(false);
+  useEffect(() => {
+    const ler = () => setRolou(window.scrollY > 40);
+    ler();
+    window.addEventListener("scroll", ler, { passive: true });
+    return () => window.removeEventListener("scroll", ler);
+  }, []);
   return (
-    <header className="lp-top">
+    <header className={`lp-top${rolou || aberto ? " rolou" : ""}`}>
       <a className="lp-skip" href="#conteudo">
         Ir para o conteúdo
       </a>
@@ -122,124 +85,306 @@ function Cabecalho() {
   );
 }
 
-function Inicio() {
-  const d = evento.dataCurta;
+/** Palavra em letras que sobem em sequência (CSS puro; funciona sem JavaScript). */
+function Letras({ texto, base = 0 }: { texto: string; base?: number }) {
   return (
-    <section className="lp-hero" id="topo" aria-labelledby="titulo">
-      <Relevo />
-      <div className="lp-wrap lp-hero-in">
-        <h1 id="titulo" className="lp-nome">
-          {evento.nome} {evento.edicao}
+    <span className="pv-palavra" aria-hidden="true">
+      {Array.from(texto).map((l, i) => (
+        <span key={i} className="pv-letra" style={{ ["--i" as string]: base + i }}>
+          {l}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/* ── 1. Abertura: fotografia do sítio ─────────────────────────────────── */
+function Abertura() {
+  const ref = useRef<HTMLElement>(null);
+  const { reduzir } = useMovimento();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const fotoY = useTransform(scrollYProgress, [0, 1], ["0%", "16%"]);
+  const fotoZoom = useTransform(scrollYProgress, [0, 1], [1.08, 1]);
+  const linhaA = useTransform(scrollYProgress, [0, 1], ["0vw", "-12vw"]);
+  const linhaB = useTransform(scrollYProgress, [0, 1], ["0vw", "12vw"]);
+  const dataY = useTransform(scrollYProgress, [0, 1], ["0%", "-30%"]);
+  const palavras = evento.nome.split(" ");
+  const d = evento.dataCurta;
+  const foto = fotosDe("hero")[0] ?? fotosDe("local")[0];
+  let acc = 0;
+
+  return (
+    <section ref={ref} className="pv-abertura" id="topo" aria-labelledby="titulo">
+      <motion.div className="pv-abertura-foto" style={reduzir ? undefined : { y: fotoY, scale: fotoZoom }}>
+        {foto ? <Imagem f={foto} prioridade /> : <Midia grupo="hero" />}
+      </motion.div>
+      <div className="pv-abertura-veu" aria-hidden="true" />
+
+      <div className="pv-wrap pv-abertura-in">
+        <h1 id="titulo" className="pv-nome">
+          <span className="pv-sr">
+            {evento.nome} {evento.edicao}
+          </span>
+          {palavras.map((p, i) => {
+            const base = acc;
+            acc += p.length + 1;
+            return (
+              <motion.span
+                key={p}
+                className="pv-nome-linha"
+                style={reduzir ? undefined : { x: i % 2 === 0 ? linhaA : linhaB }}
+              >
+                <Letras texto={p} base={base} />
+              </motion.span>
+            );
+          })}
+          <span className="pv-nome-linha pv-nome-ano">
+            <Letras texto={evento.edicao} base={acc} />
+          </span>
         </h1>
 
-        <p className="lp-data" role="text" aria-label={evento.dataTexto}>
-          <span className="lp-data-dias" aria-hidden="true">
-            {d.de}–{d.ate}
-          </span>
-          <span className="lp-data-mes" aria-hidden="true">
+        <motion.div className="pv-data" style={reduzir ? undefined : { y: dataY }}>
+          <p className="pv-data-num">
+            <span className="pv-sr">{evento.dataTexto}</span>
+            <span aria-hidden="true">
+              {d.de}–{d.ate}
+            </span>
+          </p>
+          <p className="pv-data-txt" aria-hidden="true">
             de {d.mes}
             <br />
             de {d.ano}
-          </span>
-        </p>
+          </p>
+        </motion.div>
 
-        <p className="lp-mensagem">{evento.mensagemPrincipal}</p>
-        <p className="lp-apoio">
-          {evento.publico} da {evento.igreja} de {evento.igrejaCidade}, com organização da{" "}
-          {evento.ministerio}.
-        </p>
-
-        <div className="lp-hero-acoes">
-          <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-btn-grande">
-            Inscrever minha família
-          </Link>
-          <a className="lp-link-claro" href="#valores">
-            Ver o que está incluído
-          </a>
+        <div className="pv-abertura-rodape">
+          <p className="pv-abertura-local">
+            {evento.local.nome}
+            <br />
+            {evento.local.cidade}/{evento.local.uf}
+          </p>
+          <div className="pv-abertura-acoes">
+            <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-btn-grande">
+              Inscrever minha família
+            </Link>
+            <a className="pv-link" href="#valores">
+              Ver o que está incluído
+            </a>
+          </div>
         </div>
-
-        <p className="lp-hero-local">
-          {evento.local.nome}, em {evento.local.cidade}/{evento.local.uf}
-        </p>
       </div>
     </section>
   );
 }
 
-function Proposito() {
+/* ── 2. Vídeo em tela cheia (expande com a rolagem) ───────────────────── */
+function VideoCinema() {
+  const ref = useRef<HTMLElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
+  const { reduzir } = useMovimento();
+  const [som, setSom] = useState(false);
+  const [tocando, setTocando] = useState(false);
+  const temVideo = !!videoInfo?.src;
+
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start start"] });
+  const v = useTransform(scrollYProgress, [0, 1], [11, 0]);
+  const h = useTransform(scrollYProgress, [0, 1], [7, 0]);
+  const r = useTransform(scrollYProgress, [0, 1], [28, 0]);
+  const zoom = useTransform(scrollYProgress, [0, 1], [1.18, 1]);
+  const recorte = useMotionTemplate`inset(${v}svh ${h}vw round ${r}px)`;
+
+  // Reprodução automática sem som, só enquanto visível e sem economia de dados.
+  useEffect(() => {
+    const el = video.current;
+    if (!el || !temVideo) return;
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (reduzir || conn?.saveData) return;
+    const o = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && e.intersectionRatio > 0.35) {
+          el.play().then(
+            () => setTocando(true),
+            () => setTocando(false),
+          );
+        } else {
+          el.pause();
+          setTocando(false);
+        }
+      },
+      { threshold: [0, 0.35, 0.6] },
+    );
+    o.observe(el);
+    return () => o.disconnect();
+  }, [temVideo, reduzir]);
+
+  const alternarSom = () => {
+    const el = video.current;
+    if (!el) return;
+    el.muted = !el.muted;
+    setSom(!el.muted);
+    if (!el.muted && el.paused) el.play().then(() => setTocando(true), () => undefined);
+  };
+  const alternarPlay = () => {
+    const el = video.current;
+    if (!el) return;
+    if (el.paused) el.play().then(() => setTocando(true), () => undefined);
+    else {
+      el.pause();
+      setTocando(false);
+    }
+  };
+
   return (
-    <section className="lp-faixa lp-linho" id="proposito" aria-labelledby="t-proposito">
-      <div className="lp-wrap lp-duas">
-        <div>
-          <h2 id="t-proposito" className="lp-h2">
+    <section ref={ref} className="pv-video" id="video" aria-label="Vídeo do retiro">
+      <div className="pv-video-palco">
+        <motion.div className="pv-video-quadro" style={reduzir ? undefined : { clipPath: recorte }}>
+          {temVideo ? (
+            <motion.div className="pv-video-midia" style={reduzir ? undefined : { scale: zoom }}>
+              <video
+                ref={video}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                poster={videoInfo?.poster}
+                aria-label={videoInfo?.titulo}
+              >
+                <source src={videoInfo?.src} />
+              </video>
+            </motion.div>
+          ) : (
+            <div className="pv-reserva pv-reserva-video" role="img" aria-label="Espaço reservado: vídeo real pendente">
+              <span className="pv-reserva-selo">
+                Vídeo real pendente
+                <small>Envie o vídeo do retiro (MP4) para ocupar esta tela</small>
+              </span>
+            </div>
+          )}
+        </motion.div>
+
+        {temVideo && (
+          <div className="pv-video-controles">
+            <button type="button" onClick={alternarPlay} aria-pressed={tocando}>
+              {tocando ? "Pausar vídeo" : "Reproduzir vídeo"}
+            </button>
+            <button type="button" onClick={alternarSom} aria-pressed={som}>
+              {som ? "Desativar som" : "Ativar som"}
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ── Cartão interativo: abre ao toque, ao teclado e ao passar o mouse ── */
+function Cartao({
+  variante,
+  titulo,
+  destaque,
+  children,
+  padrao = false,
+  imagem,
+}: {
+  variante: string;
+  titulo: ReactNode;
+  destaque?: ReactNode;
+  children: ReactNode;
+  padrao?: boolean;
+  imagem?: ReactNode;
+}) {
+  const [aberto, setAberto] = useState(padrao);
+  const id = useId();
+  return (
+    <div
+      className={`pv-cartao pv-cartao-${variante}${aberto ? " aberto" : ""}`}
+      onPointerEnter={(e) => e.pointerType === "mouse" && setAberto(true)}
+    >
+      {imagem && <div className="pv-cartao-img">{imagem}</div>}
+      <button type="button" className="pv-cartao-topo" aria-expanded={aberto} aria-controls={id} onClick={() => setAberto((v) => !v)}>
+        {destaque && <span className="pv-cartao-destaque">{destaque}</span>}
+        <span className="pv-cartao-titulo">{titulo}</span>
+        <i aria-hidden="true" />
+      </button>
+      <div id={id} className="pv-cartao-corpo">
+        <div>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 4. Proposta ──────────────────────────────────────────────────────── */
+function Proposta() {
+  return (
+    <section className="pv-proposta" id="proposito" aria-labelledby="t-proposito">
+      <div className="pv-wrap pv-proposta-grade">
+        <div className="pv-proposta-texto">
+          <h2 id="t-proposito" className="pv-titulo">
             Um tempo separado para estar diante de Deus com a família
           </h2>
-        </div>
-        <div className="lp-prosa">
-          <p>
+          <p className="pv-lead">
             O {evento.nome} {evento.edicao} reúne famílias, adultos e jovens da {evento.igreja} de{" "}
             {evento.igrejaCidade} em Campos do Jordão. A rotina combina devocional, culto de louvor e
             adoração e uma vigília pentecostal, com tempo para a convivência entre as famílias e para o
             descanso.
           </p>
-          <dl className="lp-pilares">
-            <div>
-              <dt>Buscar a Deus</dt>
-              <dd>Devocional pela manhã, culto de louvor e adoração à noite e uma vigília de oração.</dd>
-            </div>
-            <div>
-              <dt>Fortalecer a família</dt>
-              <dd>Dias inteiros juntos, longe da correria, com pais, filhos e irmãos na fé.</dd>
-            </div>
-            <div>
-              <dt>Viver a comunhão</dt>
-              <dd>Adultos e jovens com atividades próprias, e todos reunidos nos cultos.</dd>
-            </div>
-          </dl>
-          <Cena grupo="adoracao" max={2} />
+        </div>
+        <div className="pv-proposta-fotos">
+          <figure className="pv-foto pv-foto-a" data-rev>
+            <Midia grupo="adoracao" i={0} />
+          </figure>
+          <figure className="pv-foto pv-foto-b" data-rev>
+            <Midia grupo="adoracao" i={1} />
+          </figure>
+        </div>
+        <div className="pv-pilares">
+          <Cartao variante="pilar" titulo="Buscar a Deus" padrao>
+            Devocional pela manhã, culto de louvor e adoração à noite e uma vigília de oração.
+          </Cartao>
+          <Cartao variante="pilar" titulo="Fortalecer a família">
+            Dias inteiros juntos, longe da correria, com pais, filhos e irmãos na fé.
+          </Cartao>
+          <Cartao variante="pilar" titulo="Viver a comunhão">
+            Adultos e jovens com atividades próprias, e todos reunidos nos cultos.
+          </Cartao>
         </div>
       </div>
     </section>
   );
 }
 
+/* ── 5. Local ─────────────────────────────────────────────────────────── */
 function Local() {
   return (
-    <section className="lp-faixa lp-mata" id="local" aria-labelledby="t-local">
-      <div className="lp-wrap">
-        <div className="lp-local-cab">
-          <h2 id="t-local" className="lp-h2">
-            {evento.local.nome}
-          </h2>
-          <p className="lp-lead">
-            Em {evento.local.cidade}/{evento.local.uf}. Um espaço pensado para cultos, convivência e
-            descanso.
-          </p>
+    <section className="pv-local" id="local" aria-labelledby="t-local">
+      <div className="pv-wrap">
+        <h2 id="t-local" className="pv-titulo pv-titulo-claro">
+          {evento.local.nome}
+        </h2>
+        <p className="pv-lead pv-lead-claro">
+          Em {evento.local.cidade}/{evento.local.uf}. Um espaço pensado para cultos, convivência e descanso.
+        </p>
+
+        <div className="pv-local-fotos">
+          <figure className="pv-foto pv-foto-fachada" data-rev>
+            <Midia grupo="local" i={0} />
+          </figure>
+          <figure className="pv-foto pv-foto-culto" data-rev>
+            <Midia grupo="culto" i={0} />
+          </figure>
         </div>
 
-        <ul className="lp-estrutura">
+        <div className="pv-estrutura">
           {evento.estrutura.map((e) => (
-            <li key={e.titulo}>
-              <span className="lp-estrutura-num">{e.destaque}</span>
-              <span className="lp-estrutura-txt">
-                <strong>{e.titulo}</strong>
-                <span>{e.texto}</span>
-              </span>
-            </li>
+            <Cartao key={e.titulo} variante="estrutura" destaque={e.destaque} titulo={e.titulo}>
+              {e.texto}
+            </Cartao>
           ))}
-        </ul>
+        </div>
 
-        <Cena grupo="local" />
-        <Cena grupo="culto" max={2} />
-        <VideoLocal />
-        {!temFotos("local") && !temFotos("culto") && (
-          <p className="lp-nota-fotos">
-            As fotografias reais do local serão publicadas aqui assim que a organização as enviar.
-          </p>
-        )}
         {evento.local.mapsUrl && (
           <p>
-            <a className="lp-link-claro" href={evento.local.mapsUrl} target="_blank" rel="noopener noreferrer">
+            <a className="pv-link" href={evento.local.mapsUrl} target="_blank" rel="noopener noreferrer">
               Ver no mapa
             </a>
           </p>
@@ -249,99 +394,127 @@ function Local() {
   );
 }
 
+/* ── 6. Hospedagem ────────────────────────────────────────────────────── */
+function Hospedagem() {
+  const h = evento.hospedagem;
+  return (
+    <section className="pv-hosp" id="hospedagem" aria-labelledby="t-hosp">
+      <div className="pv-wrap">
+        <h2 id="t-hosp" className="pv-titulo">
+          Onde cada um dorme
+        </h2>
+        <div className="pv-quartos">
+          {[0, 1, 2].map((i) => (
+            <figure key={i} className={`pv-foto pv-quarto pv-quarto-${i}`} data-rev>
+              <Midia grupo="quartos" i={i} />
+            </figure>
+          ))}
+        </div>
+        <div className="pv-hosp-blocos">
+          <article className="pv-hosp-bloco">
+            <h3>{h.familias.titulo}</h3>
+            <p>{h.familias.texto}</p>
+          </article>
+          <article className="pv-hosp-bloco pv-hosp-jovens">
+            <h3>{h.jovens.titulo}</h3>
+            <p>{h.jovens.texto}</p>
+          </article>
+        </div>
+        <p className="pv-nota">{h.nota}</p>
+      </div>
+    </section>
+  );
+}
+
+/* ── 7. Programação ───────────────────────────────────────────────────── */
+const FOTO_PERIODO: Record<number, { grupo: "adoracao" | "convivencia"; i: number }> = {
+  0: { grupo: "adoracao", i: 2 },
+  1: { grupo: "convivencia", i: 1 },
+  2: { grupo: "adoracao", i: 0 },
+};
+
+function Vigilia() {
+  const ref = useRef<HTMLElement>(null);
+  const { reduzir } = useMovimento();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start 30%"] });
+  const fundo = useTransform(scrollYProgress, [0, 1], ["#f7f6f1", "#0a1a15"]);
+  const cor = useTransform(scrollYProgress, [0, 1], ["#0e2a21", "#f7f6f1"]);
+  return (
+    <motion.aside
+      ref={ref}
+      className="pv-vigilia"
+      aria-label={evento.vigilia.titulo}
+      style={reduzir ? undefined : { backgroundColor: fundo, color: cor }}
+    >
+      <div className="pv-wrap pv-vigilia-in">
+        <h3 className="pv-titulo">{evento.vigilia.titulo}</h3>
+        <div>
+          <p className="pv-lead">{evento.vigilia.texto}</p>
+          <p className="pv-nota">{evento.vigilia.nota}</p>
+        </div>
+      </div>
+    </motion.aside>
+  );
+}
+
 function Agenda() {
   return (
-    <section className="lp-faixa lp-linho" id="agenda" aria-labelledby="t-agenda">
-      <div className="lp-wrap">
-        <h2 id="t-agenda" className="lp-h2 lp-h2-largo">
+    <section className="pv-agenda" id="agenda" aria-labelledby="t-agenda">
+      <div className="pv-wrap">
+        <h2 id="t-agenda" className="pv-titulo">
           Como são os dias do retiro
         </h2>
 
-        <ol className="lp-calendario" aria-label="Dias do retiro">
+        <ol className="pv-dias" aria-label="Dias do retiro">
           {evento.dias.map((dia) => (
             <li key={dia.numero} className={dia.nota ? "marcado" : undefined}>
-              <span className="lp-cal-sem">{dia.rotulo}</span>
-              <span className="lp-cal-num">{dia.numero}</span>
-              <span className="lp-cal-nota">{dia.nota || " "}</span>
+              <span className="pv-dia-num">{dia.numero}</span>
+              <span className="pv-dia-sem">{dia.rotulo}</span>
+              {dia.nota && <span className="pv-dia-nota">{dia.nota}</span>}
             </li>
           ))}
         </ol>
 
-        <div className="lp-rotina">
-          {evento.rotina.map((r) => (
-            <div className="lp-periodo" key={r.periodo}>
-              <h3>{r.periodo}</h3>
-              <ul>
-                {r.itens.map((i) => (
-                  <li key={i.titulo}>
-                    <strong>{i.titulo}</strong>
-                    <span>{i.texto}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="pv-rotina">
+          {evento.rotina.map((r, idx) => {
+            const f = FOTO_PERIODO[idx % 3];
+            return (
+              <Cartao
+                key={r.periodo}
+                variante="rotina"
+                titulo={r.periodo}
+                padrao={idx === 0}
+                imagem={<Midia grupo={f.grupo} i={f.i} />}
+              >
+                <ul>
+                  {r.itens.map((i) => (
+                    <li key={i.titulo}>
+                      <strong>{i.titulo}</strong>
+                      <span>{i.texto}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Cartao>
+            );
+          })}
         </div>
-
-        <aside className="lp-vigilia" aria-label={evento.vigilia.titulo}>
-          <h3>{evento.vigilia.titulo}</h3>
-          <p>{evento.vigilia.texto}</p>
-          <p className="lp-vigilia-nota">{evento.vigilia.nota}</p>
-        </aside>
-
-        <Cena grupo="convivencia" max={2} />
-        <p className="lp-rodape-secao">{evento.agendaNota}</p>
+        <p className="pv-nota">{evento.agendaNota}</p>
       </div>
+      <Vigilia />
     </section>
   );
 }
 
-function Hospedagem() {
-  const h = evento.hospedagem;
-  return (
-    <section className="lp-hosp" id="hospedagem" aria-labelledby="t-hosp">
-      <div className="lp-hosp-topo lp-areia">
-        <div className="lp-wrap">
-          <h2 id="t-hosp" className="lp-h2">
-            Onde cada um dorme
-          </h2>
-        </div>
-      </div>
-      {temFotos("quartos") && (
-        <div className="lp-wrap lp-hosp-fotos">
-          <Cena grupo="quartos" />
-        </div>
-      )}
-      <div className="lp-hosp-grade">
-        <div className="lp-hosp-bloco lp-areia">
-          <div className="lp-wrap-meio">
-            <h3>{h.familias.titulo}</h3>
-            <p>{h.familias.texto}</p>
-          </div>
-        </div>
-        <div className="lp-hosp-bloco lp-musgo">
-          <div className="lp-wrap-meio">
-            <h3>{h.jovens.titulo}</h3>
-            <p>{h.jovens.texto}</p>
-          </div>
-        </div>
-      </div>
-      <p className="lp-hosp-nota lp-areia">
-        <span className="lp-wrap">{h.nota}</span>
-      </p>
-    </section>
-  );
-}
-
+/* ── 8. Valores ───────────────────────────────────────────────────────── */
 function Valores() {
   return (
-    <section className="lp-faixa lp-mata" id="valores" aria-labelledby="t-valores">
-      <div className="lp-wrap lp-duas lp-duas-valores">
+    <section className="pv-valores" id="valores" aria-labelledby="t-valores">
+      <div className="pv-wrap pv-valores-grade">
         <div>
-          <h2 id="t-valores" className="lp-h2">
+          <h2 id="t-valores" className="pv-titulo">
             O que está incluído no valor
           </h2>
-          <ul className="lp-incluso">
+          <ul className="pv-incluso">
             {evento.incluso.map((i) => (
               <li key={i.titulo}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -353,10 +526,10 @@ function Valores() {
               </li>
             ))}
           </ul>
-          <p className="lp-carro">{evento.inclusoCarro}</p>
+          <p className="pv-nota-forte">{evento.inclusoCarro}</p>
         </div>
 
-        <div className="lp-tabela">
+        <div className="pv-precos">
           <h3>Valor por pessoa</h3>
           <ul>
             {evento.faixas.map((f) => (
@@ -368,9 +541,12 @@ function Valores() {
           </ul>
           <p>A idade é contada em 5 de fevereiro de 2027, data de início do retiro.</p>
           <p>
-            As orientações de pagamento serão divulgadas pela organização. O formulário registra o
-            cadastro e não confirma pagamento.
+            As orientações de pagamento serão divulgadas pela organização. O formulário registra o cadastro
+            e não confirma pagamento.
           </p>
+          <Link to="/inscricao" className="lp-btn lp-btn-grande pv-btn-tinta">
+            Inscrever minha família
+          </Link>
         </div>
       </div>
     </section>
@@ -380,13 +556,13 @@ function Valores() {
 function Transporte() {
   const t = evento.transporte;
   return (
-    <section className="lp-faixa lp-linho" id="transporte" aria-labelledby="t-transp">
-      <div className="lp-wrap lp-duas">
+    <section className="pv-transp" id="transporte" aria-labelledby="t-transp">
+      <div className="pv-wrap pv-transp-grade">
         <div>
-          <h2 id="t-transp" className="lp-h2">
+          <h2 id="t-transp" className="pv-titulo">
             Transporte e orientações
           </h2>
-          <dl className="lp-viagem">
+          <dl className="pv-viagem">
             <div>
               <dt>Ida</dt>
               <dd>
@@ -402,16 +578,16 @@ function Transporte() {
               </dd>
             </div>
           </dl>
-          <p className="lp-prosa-simples">{t.carroProprio}</p>
-          <p className="lp-prosa-simples lp-pendente">{t.pendente}</p>
+          <p>{t.carroProprio}</p>
+          <p className="lp-pendente">{t.pendente}</p>
         </div>
         <div>
-          <h3 className="lp-h3">Para se inscrever</h3>
-          <ul className="lp-orient">
+          <h3 className="pv-h3">Para se inscrever</h3>
+          <ol className="pv-orient">
             {evento.orientacoes.map((o) => (
               <li key={o}>{o}</li>
             ))}
-          </ul>
+          </ol>
         </div>
       </div>
     </section>
@@ -420,17 +596,15 @@ function Transporte() {
 
 function Duvidas() {
   return (
-    <section className="lp-faixa lp-papel" id="duvidas" aria-labelledby="t-faq">
-      <div className="lp-wrap lp-duas lp-duas-faq">
+    <section className="pv-duvidas" id="duvidas" aria-labelledby="t-faq">
+      <div className="pv-wrap pv-duvidas-grade">
         <div>
-          <h2 id="t-faq" className="lp-h2">
+          <h2 id="t-faq" className="pv-titulo">
             Dúvidas frequentes
           </h2>
-          <p className="lp-lead-escuro">
-            O que ainda não foi definido aparece como “será divulgado pela organização”.
-          </p>
+          <p className="pv-lead">O que ainda não foi definido aparece como “será divulgado pela organização”.</p>
         </div>
-        <div className="lp-faq">
+        <div className="pv-faq">
           {evento.faq.map((q) => (
             <details key={q.p} open={q.aberto ? true : undefined}>
               <summary>
@@ -448,14 +622,14 @@ function Duvidas() {
 
 function ChamadaFinal() {
   return (
-    <section className="lp-final" id="inscrever" aria-labelledby="t-final">
-      <div className="lp-wrap lp-final-in">
+    <section className="pv-final" id="inscrever" aria-labelledby="t-final">
+      <div className="pv-wrap pv-final-in">
         <h2 id="t-final">Inscreva sua família</h2>
         <p>
           {evento.dataTexto}, {evento.local.cidade}/{evento.local.uf}. O formulário leva poucos minutos e
           mostra o valor de cada pessoa antes do envio.
         </p>
-        <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-btn-grande">
+        <Link to="/inscricao" className="lp-btn lp-btn-grande pv-btn-tinta">
           Inscrever minha família
         </Link>
       </div>
@@ -547,15 +721,39 @@ function BarraMovel() {
 }
 
 export function Landing() {
+  const raiz = useRef<HTMLDivElement>(null);
+
+  // Revelação das fotos ao entrar na tela. Sem JavaScript, tudo já aparece.
+  useEffect(() => {
+    const el = raiz.current;
+    if (!el) return;
+    el.classList.add("js");
+    if (typeof IntersectionObserver === "undefined") return;
+    const o = new IntersectionObserver(
+      (es) =>
+        es.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("on");
+            o.unobserve(e.target);
+          }
+        }),
+      { threshold: 0.15 },
+    );
+    el.querySelectorAll("[data-rev]").forEach((n) => o.observe(n));
+    return () => o.disconnect();
+  }, []);
+
   return (
-    <div className="lp">
+    <div className="lp pv" ref={raiz}>
       <Cabecalho />
       <main id="conteudo">
-        <Inicio />
-        <Proposito />
+        <Abertura />
+        <VideoCinema />
+        <ScrollStory />
+        <Proposta />
         <Local />
-        <Agenda />
         <Hospedagem />
+        <Agenda />
         <Valores />
         <Transporte />
         <Duvidas />
