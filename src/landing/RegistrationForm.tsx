@@ -39,7 +39,7 @@ const novaChave = (): string =>
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 
-const ETAPAS = ["Responsável", "Participantes", "Transporte", "Revisão"] as const;
+const ETAPAS = ["Cadastro", "Participante", "Transporte", "Revisão"] as const;
 
 /** Em qual etapa aparece o campo de cada erro. */
 function etapaDoErro(chave: string): number {

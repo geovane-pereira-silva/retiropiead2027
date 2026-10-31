@@ -8,10 +8,10 @@ import { Termos } from "../landing/Termos";
 export const Route = createFileRoute("/inscricao")({
   head: () => ({
     meta: [
-      { title: `Inscrição — ${evento.nome} ${evento.edicao}` },
+      { title: `Cadastro — ${evento.nome} ${evento.edicao}` },
       {
         name: "description",
-        content: `Inscrição da família no ${evento.nome} ${evento.edicao} (${evento.dataTexto}). O valor de cada pessoa é calculado antes do envio.`,
+        content: `Cadastro individual para o ${evento.nome} ${evento.edicao} (${evento.dataTexto}). Para menor de idade, pai, mãe ou responsável legal faz o cadastro.`,
       },
       { name: "robots", content: "noindex" },
     ],
@@ -28,12 +28,13 @@ function Inscricao() {
             ← {evento.ministerio}
           </a>
           <h1 className="lp-h2" style={{ marginBottom: "0.5rem" }}>
-            Inscrição da família
+            Cadastro individual
           </h1>
           <p className="lp-lead" style={{ marginBottom: 0 }}>
             {evento.dataTexto}, no {evento.local.nome}, em {evento.local.cidade}/{evento.local.uf}.
-            Cadastre o responsável e os integrantes da família: o valor de cada pessoa e o total
-            aparecem antes do envio.
+            Faça um cadastro por pessoa, inclusive para menores de idade. Para menor, pai, mãe ou
+            responsável legal informa seu nome e celular cadastrado. O valor é calculado antes do
+            envio.
           </p>
         </div>
       </header>
