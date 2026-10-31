@@ -263,6 +263,16 @@ export async function processarInscricao(
       enviadoEm: new Date(agora).toISOString(),
       versaoTermos: evento.versaoTermos,
     });
+    // Até a atualização do Apps Script ativo, a coluna antiga de necessidades
+    // preserva a preferência de quarto em vez de descartar o campo novo.
+    if (corpo.familiaresQuarto) {
+      corpo.necessidades = [
+        corpo.necessidades,
+        `Familiares para organização do quarto: ${corpo.familiaresQuarto}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
     const r = await enviarParaPlanilha(urlPlanilha, corpo as unknown as Record<string, unknown>, {
       ...opcoes,
       token: ambiente.token,

@@ -92,12 +92,15 @@ test("Apps Script cria a coluna para os familiares e grava os nomes informados",
   const resposta = script.enviar({
     idempotencyKey: "quarto-familiar-001",
     familiaresQuarto: "Janaina Silva Furtado",
+    necessidades:
+      "Restrição alimentar\nFamiliares para organização do quarto: Janaina Silva Furtado",
     participantes: [{ nome: "Maria da Silva", papel: "Participante", cpf: "52998224725" }],
   });
   assert.deepEqual(resposta, { ok: true, linhas: 1 });
   const indice = script.linhas[0].indexOf("familiaresQuarto");
   assert.ok(indice >= 0, "cabeçalho familiar foi acrescentado");
   assert.equal(script.linhas[1][indice], "Janaina Silva Furtado");
+  assert.equal(script.linhas[1][script.linhas[0].indexOf("necessidades")], "Restrição alimentar");
 });
 
 test("Apps Script acrescenta a nova coluna sem recriar a aba de inscrições existente", () => {
@@ -141,6 +144,7 @@ test("Apps Script acrescenta a nova coluna sem recriar a aba de inscrições exi
   const resposta = script.enviar({
     idempotencyKey: "quarto-familiar-002",
     familiaresQuarto: "José da Silva",
+    necessidades: "Familiares para organização do quarto: José da Silva",
     participantes: [{ nome: "Maria da Silva", papel: "Participante", cpf: "52998224725" }],
   });
 

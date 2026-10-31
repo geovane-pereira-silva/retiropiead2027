@@ -140,7 +140,10 @@ test("sucesso: grava corpo correto e devolve nome, faixa e valor", async () => {
   modo = "ok";
   recebidos.length = 0;
   const r = await processarInscricao(
-    { values: valores("529.982.247-25"), idempotencyKey: "chave-0001-aaaa" },
+    {
+      values: valores("529.982.247-25", { familiaresQuarto: "Janaina Silva Furtado" }),
+      idempotencyKey: "chave-0001-aaaa",
+    },
     { url, token: "segredo" },
   );
   assert.equal(r.ok, true);
@@ -154,6 +157,11 @@ test("sucesso: grava corpo correto e devolve nome, faixa e valor", async () => {
   assert.equal(recebidos[0].token, "segredo");
   assert.equal(recebidos[0].statusPagamento, "NÃO CONFIRMADO");
   assert.equal(recebidos[0].totalValor, 400);
+  assert.equal(recebidos[0].familiaresQuarto, "Janaina Silva Furtado");
+  assert.match(
+    String(recebidos[0].necessidades),
+    /Familiares para organização do quarto: Janaina Silva Furtado/,
+  );
 });
 
 test("mesmo envio repetido (duplo clique) não grava duas vezes", async () => {

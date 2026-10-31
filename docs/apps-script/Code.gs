@@ -102,6 +102,17 @@ function garantirColunaFamiliaresQuarto(aba) {
   aba.getRange(1, novaColuna).setFontWeight("bold");
 }
 
+function necessidadesSemFamiliares(texto, familiaresQuarto) {
+  const marcador = `Familiares para organização do quarto: ${String(familiaresQuarto || "")}`;
+  return String(texto || "")
+    .split("\n")
+    .filter(function (linha) {
+      return linha !== marcador;
+    })
+    .join("\n")
+    .trim();
+}
+
 function doPost(e) {
   const trava = LockService.getScriptLock();
   try {
@@ -146,7 +157,14 @@ function doPost(e) {
     const linhas = d.participantes.map(function (p) {
       const todos = Object.assign({}, d, p); // dados da família + dados do participante
       return COLUNAS.map(function (c) {
-        const v = c === "nome" ? p.nome : c === "papel" ? p.papel : todos[c]; // transporte e demais vêm de `p`/`d`
+        const v =
+          c === "nome"
+            ? p.nome
+            : c === "papel"
+              ? p.papel
+              : c === "necessidades"
+                ? necessidadesSemFamiliares(todos[c], d.familiaresQuarto)
+                : todos[c]; // transporte e demais vêm de `p`/`d`
         return v === undefined || v === null ? "" : v;
       });
     });
