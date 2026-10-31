@@ -13,7 +13,7 @@ export type { EntradaInscricao, RespostaInscricao };
  *                      Sem ela: só a produção da Vercel grava; Preview e local fazem ensaio.
  */
 export const enviarInscricao = createServerFn({ method: "POST" })
-  .inputValidator((data: EntradaInscricao) => data)
+  .validator((data: EntradaInscricao) => data)
   .handler(async ({ data }): Promise<RespostaInscricao> => {
     const { processarInscricao, ensaioAtivo } = await import("./inscricao.server");
     return processarInscricao(data, {
