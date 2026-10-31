@@ -4,10 +4,12 @@ import { evento } from "../content/evento";
 import {
   hojeSaoPaulo,
   formatarReais,
+  descricaoCamisa,
   higienizarCelula,
   montarCorpo,
   normalizarTelefone,
   rotuloTransporte,
+  PRECO_CAMISA_AVULSA,
   somenteDigitos,
   validarDadosVisitante,
   validar,
@@ -69,6 +71,8 @@ export type RespostaCadastroVisitante =
       dia: string;
       periodo: string;
       valor: number;
+      camisa: string;
+      valorCamisa: number;
       jaRegistrada?: boolean;
     }
   | {
@@ -76,7 +80,14 @@ export type RespostaCadastroVisitante =
       codigo: CodigoErro;
       mensagem: string;
       erros?: Erros;
-      ensaio?: { nome: string; dia: string; periodo: string; valor: number };
+      ensaio?: {
+        nome: string;
+        dia: string;
+        periodo: string;
+        valor: number;
+        camisa: string;
+        valorCamisa: number;
+      };
     };
 
 type Ambiente = { url?: string; token?: string; ensaio?: boolean };
@@ -185,7 +196,8 @@ export async function processarInscricao(
     return {
       ok: false,
       codigo: "ENSAIO",
-      mensagem: "Modo de ensaio: os dados foram validados, mas NADA foi gravado e nenhuma inscrição foi registrada.",
+      mensagem:
+        "Modo de ensaio: os dados foram validados, mas NADA foi gravado e nenhuma inscrição foi registrada.",
       ensaio: {
         responsavel: higienizarNome(v.responsavel.nome),
         participantes: resultado.participantes.map((p) => ({
@@ -334,17 +346,26 @@ export async function processarCadastroVisitante(
     chave.length < 8 ||
     chave.length > 80
   )
-    return { ok: false, codigo: "SOLICITACAO_INVALIDA", mensagem: "Recarregue a página e tente novamente." };
+    return {
+      ok: false,
+      codigo: "SOLICITACAO_INVALIDA",
+      mensagem: "Recarregue a página e tente novamente.",
+    };
 
-  const erros = validarDadosVisitante(v, evento.visitantes.dias.map((d) => d.data));
+  const erros = validarDadosVisitante(
+    v,
+    evento.visitantes.dias.map((d) => d.data),
+  );
   if (Object.keys(erros).length)
     return { ok: false, codigo: "VALIDACAO", mensagem: "Revise os campos destacados.", erros };
 
   const dia = evento.visitantes.dias.find((d) => d.data === v.dia)!;
   const periodo = v.periodo === "dia-todo" ? "Dia todo" : "Somente à noite";
-  const valor = v.periodo === "dia-todo"
-    ? evento.visitantes.valorDiaTodo
-    : evento.visitantes.valorSomenteNoite;
+  const valor =
+    v.periodo === "dia-todo" ? evento.visitantes.valorDiaTodo : evento.visitantes.valorSomenteNoite;
+  const camisa = descricaoCamisa(v.camisaModelo, v.camisaTamanho, v.camisaMedida);
+  const valorCamisa = camisa ? PRECO_CAMISA_AVULSA : 0;
+  const total = valor + valorCamisa;
   const nome = v.nome.trim().replace(/\s+/g, " ");
 
   if (ambiente.ensaio)
@@ -352,17 +373,26 @@ export async function processarCadastroVisitante(
       ok: false,
       codigo: "ENSAIO",
       mensagem: "Modo de ensaio: os dados foram validados, mas nada foi gravado.",
-      ensaio: { nome, dia: dia.rotulo, periodo, valor },
+      ensaio: { nome, dia: dia.rotulo, periodo, valor: total, camisa, valorCamisa },
     };
   if (!ambiente.url)
-    return { ok: false, codigo: "NAO_CONFIGURADO", mensagem: "O cadastro está temporariamente indisponível." };
+    return {
+      ok: false,
+      codigo: "NAO_CONFIGURADO",
+      mensagem: "O cadastro está temporariamente indisponível.",
+    };
 
   const agora = Date.now();
-  for (const [k, item] of visitantesRecentes) if (agora - item.em > JANELA_MS) visitantesRecentes.delete(k);
+  for (const [k, item] of visitantesRecentes)
+    if (agora - item.em > JANELA_MS) visitantesRecentes.delete(k);
   const anterior = visitantesRecentes.get(chave);
   if (anterior?.resposta.ok) return { ...anterior.resposta, jaRegistrada: true };
   if (emAndamento.has(chave))
-    return { ok: false, codigo: "DUPLICADO", mensagem: "Seu cadastro está sendo enviado. Aguarde." };
+    return {
+      ok: false,
+      codigo: "DUPLICADO",
+      mensagem: "Seu cadastro está sendo enviado. Aguarde.",
+    };
 
   emAndamento.add(chave);
   try {
@@ -382,8 +412,8 @@ export async function processarCadastroVisitante(
       emergenciaTelefone: "",
       necessidades: "",
       totalParticipantes: 1,
-      totalValor: valor,
-      totalTexto: formatarReais(valor),
+      totalValor: total,
+      totalTexto: formatarReais(total),
       temValorADefinir: "NÃO" as const,
       aceiteRegras: "N/A — visitante" as const,
       aceitePrivacidade: "SIM" as const,
@@ -398,9 +428,11 @@ export async function processarCadastroVisitante(
           dataNascimento: "",
           idadeNaDataDoRetiro: "" as const,
           menorDeIdade: "" as const,
-          faixa: `Visitante — ${periodo.toLocaleLowerCase("pt-BR")}`,
-          valor,
-          valorTexto: formatarReais(valor),
+          faixa: `Visitante — ${periodo.toLocaleLowerCase("pt-BR")}${camisa ? `; Camisa ${higienizarCelula(camisa)}` : ""}`,
+          valor: total,
+          valorTexto: camisa
+            ? `${formatarReais(valor)} (day use) + camisa ${formatarReais(valorCamisa)}`
+            : formatarReais(valor),
           cpf: "",
           transporte: `Sem ônibus — ${dia.rotulo} — ${periodo}`,
         },
@@ -412,14 +444,26 @@ export async function processarCadastroVisitante(
       { ...opcoes, token: ambiente.token },
     );
     if (resultadoEnvio.status === "ok") {
-      const resposta: RespostaCadastroVisitante = { ok: true, nome, dia: dia.rotulo, periodo, valor };
+      const resposta: RespostaCadastroVisitante = {
+        ok: true,
+        nome,
+        dia: dia.rotulo,
+        periodo,
+        valor: total,
+        camisa,
+        valorCamisa,
+      };
       visitantesRecentes.set(chave, { em: agora, resposta });
       return resposta;
     }
     if (resultadoEnvio.status === "duplicado")
       return { ok: false, codigo: "DUPLICADO", mensagem: "Este cadastro já foi recebido." };
     if (resultadoEnvio.status === "recusado")
-      return { ok: false, codigo: "RECUSADO", mensagem: "Não foi possível registrar agora. Tente novamente." };
+      return {
+        ok: false,
+        codigo: "RECUSADO",
+        mensagem: "Não foi possível registrar agora. Tente novamente.",
+      };
     return {
       ok: false,
       codigo: "NAO_CONFIRMADO",

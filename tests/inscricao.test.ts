@@ -14,6 +14,8 @@ import {
   higienizarCelula,
   montarCorpo,
   normalizarTelefone,
+  PRECO_CAMISA_AVULSA,
+  TAMANHOS_CAMISA,
   telefoneValido,
   textoValor,
   validarDadosVisitante,
@@ -38,12 +40,23 @@ test("visitante escolhe dia e período e não precisa escolher transporte", () =
     telefone: "(35) 99999-1234",
     dia: "2027-02-07",
     periodo: "dia-todo" as const,
+    camisaModelo: "",
+    camisaTamanho: "",
+    camisaMedida: "",
     aceitePrivacidade: true,
     website: "",
   };
   assert.deepEqual(validarDadosVisitante(base, dias), {});
   assert.equal(evento.visitantes.valorDiaTodo, 100);
   assert.equal(evento.visitantes.valorSomenteNoite, 60);
+  assert.deepEqual(
+    validarDadosVisitante({ ...base, camisaModelo: "babylook", camisaTamanho: "M" }, dias),
+    {},
+  );
+  assert.ok(
+    validarDadosVisitante({ ...base, camisaModelo: "babylook", camisaTamanho: "14" }, dias)
+      .camisaTamanho,
+  );
   assert.ok(validarDadosVisitante({ ...base, dia: "2027-02-10" }, dias).dia);
   assert.ok(validarDadosVisitante({ ...base, periodo: "" }, dias).periodo);
 });
@@ -58,6 +71,10 @@ const pessoa = (
   dataNascimento,
   cpf,
   transporte,
+  camisaModelo: "normal",
+  camisaTamanho: "M",
+  camisaMedida: "",
+  camisaAvulsa: "",
 });
 
 const base = (extra: Partial<FormValues> = {}): FormValues => ({
@@ -143,33 +160,126 @@ test("faixas de valor: 4→gratuito, 5→200, 9→200, 10→400, 60→400", () =
 });
 
 test("condições nominais de preço: meia entrada e cortesia", () => {
-  const half = validar(base({ responsavel: pessoa("Geovane Pereira", "1985-06-15", "529.982.247-25") }), ctx);
+  const half = validar(
+    base({ responsavel: pessoa("Geovane Pereira", "1985-06-15", "529.982.247-25") }),
+    ctx,
+  );
   assert.equal(half.total, 200);
   assert.equal(half.participantes[0].condicaoPreco, "meia-entrada");
   assert.match(half.participantes[0].faixa.rotulo, /Meia entrada/);
-  const halfPayload = montarCorpo(base({ responsavel: pessoa("Geovane Pereira", "1985-06-15", "529.982.247-25") }), half, {
-    idempotencyKey: "half-price-key",
-    familiaId: "family-half",
-    enviadoEm: "2026-10-31T12:00:00.000Z",
-    versaoTermos: evento.versaoTermos,
-  });
+  const halfPayload = montarCorpo(
+    base({ responsavel: pessoa("Geovane Pereira", "1985-06-15", "529.982.247-25") }),
+    half,
+    {
+      idempotencyKey: "half-price-key",
+      familiaId: "family-half",
+      enviadoEm: "2026-10-31T12:00:00.000Z",
+      versaoTermos: evento.versaoTermos,
+    },
+  );
   assert.equal(halfPayload.participantes[0].valor, 200);
-  assert.equal(halfPayload.participantes[0].valorTexto, "Meia entrada — R$ 200,00");
+  assert.equal(
+    halfPayload.participantes[0].valorTexto,
+    "Meia entrada — R$ 200,00 (camisa incluída)",
+  );
 
-  const free = validar(base({ responsavel: pessoa("Simone Pereira", "1985-06-15", "529.982.247-25") }), ctx);
+  const free = validar(
+    base({ responsavel: pessoa("Simone Pereira", "1985-06-15", "529.982.247-25") }),
+    ctx,
+  );
   assert.equal(free.total, 0);
   assert.equal(free.participantes[0].condicaoPreco, "cortesia");
-  const freePayload = montarCorpo(base({ responsavel: pessoa("Simone Pereira", "1985-06-15", "529.982.247-25") }), free, {
-    idempotencyKey: "free-price-key",
-    familiaId: "family-free",
-    enviadoEm: "2026-10-31T12:00:00.000Z",
-    versaoTermos: evento.versaoTermos,
-  });
+  const freePayload = montarCorpo(
+    base({ responsavel: pessoa("Simone Pereira", "1985-06-15", "529.982.247-25") }),
+    free,
+    {
+      idempotencyKey: "free-price-key",
+      familiaId: "family-free",
+      enviadoEm: "2026-10-31T12:00:00.000Z",
+      versaoTermos: evento.versaoTermos,
+    },
+  );
   assert.equal(freePayload.participantes[0].valorTexto, "Não pagante — Gratuito");
   assert.equal(condicaoPrecoPorNome("Lucilene Ferreira da Silva"), "meia-entrada");
   assert.equal(condicaoPrecoPorNome("Lucilene"), "cortesia");
   assert.equal(condicaoPrecoPorNome("Janaina Souza"), "meia-entrada");
   assert.equal(condicaoPrecoPorNome("Pessoa Convidada"), null);
+});
+
+test("modelos de camisa e tamanhos disponíveis", () => {
+  assert.deepEqual(TAMANHOS_CAMISA.normal, ["P", "M", "G", "GG", "XG", "Medida especial"]);
+  assert.deepEqual(TAMANHOS_CAMISA.babylook, ["P", "M", "G", "GG", "XG"]);
+  assert.deepEqual(TAMANHOS_CAMISA.infantil, ["6", "8", "10", "12", "14"]);
+
+  const bom = validar(
+    base({
+      responsavel: {
+        ...pessoa("Maria da Silva", "1985-06-15", "529.982.247-25"),
+        camisaModelo: "normal",
+        camisaTamanho: "Medida especial",
+        camisaMedida: "largura 62 cm",
+      },
+    }),
+    ctx,
+  );
+  assert.equal(bom.erros["responsavel.camisaMedida"], undefined);
+  const semMedida = validar(
+    base({
+      responsavel: {
+        ...pessoa("Maria da Silva", "1985-06-15", "529.982.247-25"),
+        camisaModelo: "normal",
+        camisaTamanho: "Medida especial",
+        camisaMedida: "",
+      },
+    }),
+    ctx,
+  );
+  assert.ok(semMedida.erros["responsavel.camisaMedida"]);
+  const tipoTamanhoInvalido = validar(
+    base({
+      responsavel: {
+        ...pessoa("Maria da Silva", "1985-06-15", "529.982.247-25"),
+        camisaModelo: "babylook",
+        camisaTamanho: "14",
+      },
+    }),
+    ctx,
+  );
+  assert.ok(tipoTamanhoInvalido.erros["responsavel.camisaTamanho"]);
+});
+
+test("criança não pagante pode encomendar camisa avulsa por R$ 50,00", () => {
+  const dados = base({
+    responsavelParticipa: false,
+    responsavelParentesco: "mae",
+    responsavel: {
+      ...pessoa("Maria da Silva", "1985-06-15", "529.982.247-25"),
+      dataNascimento: "",
+      cpf: "",
+      transporte: "",
+    },
+    integrantes: [
+      {
+        ...pessoa("Pedro da Silva", "2023-01-15"),
+        camisaModelo: "",
+        camisaTamanho: "",
+        camisaAvulsa: "Infantil 4",
+      },
+    ],
+  });
+  const r = validar(dados, ctx);
+  assert.deepEqual(r.erros, {});
+  assert.equal(r.participantes[0].valorBase, 0);
+  assert.equal(r.participantes[0].valorCamisa, PRECO_CAMISA_AVULSA);
+  assert.equal(r.total, PRECO_CAMISA_AVULSA);
+  const corpo = montarCorpo(dados, r, {
+    idempotencyKey: "shirt-child-key",
+    familiaId: "family-shirt",
+    enviadoEm: "2026-10-31T12:00:00.000Z",
+    versaoTermos: evento.versaoTermos,
+  });
+  assert.match(corpo.participantes[0].faixa, /Camisa avulsa: Infantil 4/);
+  assert.equal(corpo.participantes[0].valorTexto, "Gratuito + camisa avulsa R$ 50,00");
 });
 
 test("contato de emergência aceita apenas um nome, sem relaxar nome de participante", () => {

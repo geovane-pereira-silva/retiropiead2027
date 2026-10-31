@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowLeft, Check, Loader2, Plus, Trash2 } from "lucide-r
 import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
 import { evento } from "../content/evento";
+import { CamisaCampos } from "./CamisaCampos";
 import {
   PESSOA_VAZIA,
   VALORES_VAZIOS,
@@ -143,7 +144,7 @@ function Entrada(p: EntradaProps) {
         <input
           id={id}
           name={p.chave}
-          type={dataDigitada ? "text" : p.tipo ?? "text"}
+          type={dataDigitada ? "text" : (p.tipo ?? "text")}
           inputMode={dataDigitada ? "numeric" : p.modo}
           autoComplete={p.autoComplete}
           value={dataDigitada ? dataCampo(p.valor) : p.valor}
@@ -647,6 +648,41 @@ export function RegistrationForm() {
                 />
               </div>
             )}
+            {values.responsavelParticipa && (
+              <div style={{ marginTop: "1.25rem" }}>
+                <CamisaCampos
+                  chave="responsavel"
+                  modelo={values.responsavel.camisaModelo}
+                  tamanho={values.responsavel.camisaTamanho}
+                  medida={values.responsavel.camisaMedida}
+                  tamanhoAvulso={values.responsavel.camisaAvulsa}
+                  modoAvulso={
+                    !!respCalc &&
+                    respCalc.idade < 18 &&
+                    (respCalc.valorBase === 0 || respCalc.condicaoPreco === "cortesia")
+                  }
+                  onModelo={(v) => {
+                    setResp("camisaModelo", v);
+                    setResp("camisaTamanho", "");
+                    setResp("camisaMedida", "");
+                  }}
+                  onTamanho={(v) => setResp("camisaTamanho", v)}
+                  onMedida={(v) => setResp("camisaMedida", v)}
+                  onTamanhoAvulso={(v) => setResp("camisaAvulsa", v)}
+                  erroModelo={erro("responsavel.camisaModelo")}
+                  erroTamanho={erro("responsavel.camisaTamanho")}
+                  erroMedida={erro("responsavel.camisaMedida")}
+                  erroAvulso={erro("responsavel.camisaAvulsa")}
+                  onBlur={(campo) =>
+                    tocar(
+                      campo === "avulso"
+                        ? "responsavel.camisaAvulsa"
+                        : `responsavel.camisa${campo[0].toUpperCase()}${campo.slice(1)}`,
+                    )
+                  }
+                />
+              </div>
+            )}
             <label className="lp-check">
               <input
                 type="checkbox"
@@ -901,9 +937,7 @@ export function RegistrationForm() {
             <p className="hint">Informe quem vai ao retiro. A idade define o valor.</p>
 
             {values.integrantes.length === 0 && !values.responsavelParticipa && (
-              <p className="lp-vazio">
-                Inclua os dados da criança ou adolescente.
-              </p>
+              <p className="lp-vazio">Inclua os dados da criança ou adolescente.</p>
             )}
 
             <ul className="lp-members">
@@ -911,6 +945,10 @@ export function RegistrationForm() {
                 const chave = `integrantes.${i}`;
                 const info = valorDe(chave);
                 const menor = info ? info.menorDeIdade : false;
+                const camisaAvulsa =
+                  !!info &&
+                  info.idade < 18 &&
+                  (info.valorBase === 0 || info.condicaoPreco === "cortesia");
                 return (
                   <li className="lp-member" key={p.uid ?? chave}>
                     <div className="lp-member-head">
@@ -964,6 +1002,35 @@ export function RegistrationForm() {
                         placeholder="000.000.000-00"
                         maxLength={14}
                         autoComplete="off"
+                      />
+                    </div>
+                    <div style={{ marginTop: "1.25rem" }}>
+                      <CamisaCampos
+                        chave={chave}
+                        modelo={p.camisaModelo}
+                        tamanho={p.camisaTamanho}
+                        medida={p.camisaMedida}
+                        tamanhoAvulso={p.camisaAvulsa}
+                        modoAvulso={camisaAvulsa}
+                        onModelo={(v) => {
+                          setIntegrante(i, "camisaModelo", v);
+                          setIntegrante(i, "camisaTamanho", "");
+                          setIntegrante(i, "camisaMedida", "");
+                        }}
+                        onTamanho={(v) => setIntegrante(i, "camisaTamanho", v)}
+                        onMedida={(v) => setIntegrante(i, "camisaMedida", v)}
+                        onTamanhoAvulso={(v) => setIntegrante(i, "camisaAvulsa", v)}
+                        erroModelo={erro(`${chave}.camisaModelo`)}
+                        erroTamanho={erro(`${chave}.camisaTamanho`)}
+                        erroMedida={erro(`${chave}.camisaMedida`)}
+                        erroAvulso={erro(`${chave}.camisaAvulsa`)}
+                        onBlur={(campo) =>
+                          tocar(
+                            campo === "avulso"
+                              ? `${chave}.camisaAvulsa`
+                              : `${chave}.camisa${campo[0].toUpperCase()}${campo.slice(1)}`,
+                          )
+                        }
                       />
                     </div>
                   </li>
@@ -1089,7 +1156,11 @@ export function RegistrationForm() {
               <p id="f-temNecessidades" className="lp-field-label">
                 Há algo importante sobre hospedagem, alimentação ou mobilidade?
               </p>
-              <div className="lp-origem-opcoes" role="radiogroup" aria-labelledby="f-temNecessidades">
+              <div
+                className="lp-origem-opcoes"
+                role="radiogroup"
+                aria-labelledby="f-temNecessidades"
+              >
                 <label className="lp-origem-opcao">
                   <input
                     type="radio"
@@ -1160,9 +1231,7 @@ export function RegistrationForm() {
               </div>
               <div>
                 <dt>Igreja de origem</dt>
-                <dd>
-                  {igrejaParaCadastro(values) || "—"}
-                </dd>
+                <dd>{igrejaParaCadastro(values) || "—"}</dd>
               </div>
               <div>
                 <dt>Contato de emergência</dt>

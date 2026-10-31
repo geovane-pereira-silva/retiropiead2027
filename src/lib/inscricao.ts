@@ -15,6 +15,47 @@ export type Faixa = {
 
 /** Como a pessoa vai ao retiro. "" = ainda não escolhido. */
 export type Transporte = "onibus" | "carro" | "";
+export type ModeloCamisa = "normal" | "babylook" | "infantil" | "";
+export const PRECO_CAMISA_AVULSA = 50;
+export const TAMANHOS_CAMISA: Record<Exclude<ModeloCamisa, "">, string[]> = {
+  normal: ["P", "M", "G", "GG", "XG", "Medida especial"],
+  babylook: ["P", "M", "G", "GG", "XG"],
+  infantil: ["6", "8", "10", "12", "14"],
+};
+
+export function descricaoCamisa(modelo: ModeloCamisa, tamanho: string, medida: string): string {
+  if (!modelo || !tamanho) return "";
+  const nomeModelo =
+    modelo === "babylook" ? "Babylook" : modelo === "infantil" ? "Infantil" : "Normal";
+  return tamanho === "Medida especial"
+    ? `${nomeModelo} — medida especial: ${textoParaCampo(medida)}`
+    : `${nomeModelo} ${tamanho}`;
+}
+
+const textoParaCampo = (valor: string): string => (valor ?? "").trim().replace(/\s+/g, " ");
+
+function validarCamisa(
+  modelo: ModeloCamisa,
+  tamanho: string,
+  medida: string,
+  obrigatoria: boolean,
+): Erros {
+  const erros: Erros = {};
+  if (!modelo && !tamanho && !medida && !obrigatoria) return erros;
+  if (modelo !== "normal" && modelo !== "babylook" && modelo !== "infantil") {
+    erros.camisaModelo = "Escolha o modelo da camisa.";
+    return erros;
+  }
+  if (!TAMANHOS_CAMISA[modelo].includes(tamanho)) {
+    erros.camisaTamanho = "Escolha um tamanho disponível para este modelo.";
+    return erros;
+  }
+  if (tamanho === "Medida especial" && !textoParaCampo(medida))
+    erros.camisaMedida = "Informe a medida especial da camisa.";
+  if (textoParaCampo(medida).length > 100)
+    erros.camisaMedida = "Use no máximo 100 caracteres para a medida especial.";
+  return erros;
+}
 
 export const TRANSPORTES: Array<{ id: Exclude<Transporte, "">; rotulo: string }> = [
   { id: "onibus", rotulo: "Ônibus da organização" },
@@ -32,6 +73,11 @@ export type Pessoa = {
   dataNascimento: string;
   cpf: string;
   transporte: Transporte;
+  camisaModelo: ModeloCamisa;
+  camisaTamanho: string;
+  camisaMedida: string;
+  /** Para menores sem camisa inclusa: tamanho livre; o preenchimento encomenda por R$ 50. */
+  camisaAvulsa: string;
 };
 
 export type FormValues = {
@@ -64,7 +110,16 @@ export type FormValues = {
 /** Chaves de erro: "telefone", "responsavel.cpf", "integrantes.0.nome", "integrantes"… */
 export type Erros = Record<string, string>;
 
-export const PESSOA_VAZIA: Pessoa = { nome: "", dataNascimento: "", cpf: "", transporte: "" };
+export const PESSOA_VAZIA: Pessoa = {
+  nome: "",
+  dataNascimento: "",
+  cpf: "",
+  transporte: "",
+  camisaModelo: "",
+  camisaTamanho: "",
+  camisaMedida: "",
+  camisaAvulsa: "",
+};
 
 export const VALORES_VAZIOS: FormValues = {
   responsavel: { ...PESSOA_VAZIA },
@@ -172,6 +227,9 @@ export type DadosVisitante = {
   telefone: string;
   dia: string;
   periodo: PeriodoVisitante | "";
+  camisaModelo: ModeloCamisa;
+  camisaTamanho: string;
+  camisaMedida: string;
   aceitePrivacidade: boolean;
   website: string;
 };
@@ -184,6 +242,7 @@ export function validarDadosVisitante(v: DadosVisitante, diasPermitidos: string[
   if (!diasPermitidos.includes(v.dia)) erros.dia = "Escolha o dia da visita.";
   if (v.periodo !== "dia-todo" && v.periodo !== "somente-noite")
     erros.periodo = "Escolha dia todo ou somente à noite.";
+  Object.assign(erros, validarCamisa(v.camisaModelo, v.camisaTamanho, v.camisaMedida, false));
   if (!v.aceitePrivacidade) erros.aceitePrivacidade = "Confirme a ciência do aviso de privacidade.";
   if (v.website.trim()) erros.website = "Não foi possível processar o cadastro.";
   return erros;
@@ -316,6 +375,9 @@ export type Participante = {
   menorDeIdade: boolean;
   faixa: Faixa;
   condicaoPreco: CondicaoPreco;
+  camisa: string;
+  valorCamisa: number;
+  valorBase: number | null;
   /** null = valor a definir */
   valor: number | null;
   transporte: Exclude<Transporte, "">;
@@ -391,17 +453,43 @@ function avaliarPessoa(
     return null;
   }
   const condicaoPreco = faixa.valor === 0 ? null : condicaoPrecoPorNome(p.nome);
-  const valor =
+  const valorBase =
     condicaoPreco === "cortesia"
       ? 0
       : condicaoPreco === "meia-entrada" && faixa.valor !== null
         ? Math.round(faixa.valor / 2)
         : faixa.valor;
-  const rotuloPreco = condicaoPreco === "cortesia"
-    ? "Cortesia"
-    : condicaoPreco === "meia-entrada"
-      ? "Meia entrada"
-      : null;
+  const camisaExtraAvulsa = idade < 18 && valorBase === 0;
+  let camisa = "";
+  let valorCamisa = 0;
+  if (participa && camisaExtraAvulsa) {
+    const pedido = textoParaCampo(p.camisaAvulsa);
+    if (pedido.length > 100) {
+      erros[`${chave}.camisaAvulsa`] = "Use no máximo 100 caracteres para o tamanho da camisa.";
+    } else if (pedido) {
+      camisa = `Camisa avulsa: ${pedido}`;
+      valorCamisa = PRECO_CAMISA_AVULSA;
+    }
+  } else if (participa) {
+    const errosCamisa = validarCamisa(p.camisaModelo, p.camisaTamanho, p.camisaMedida, true);
+    for (const [campo, mensagem] of Object.entries(errosCamisa))
+      erros[`${chave}.${campo}`] = mensagem;
+    camisa = descricaoCamisa(p.camisaModelo, p.camisaTamanho, p.camisaMedida);
+  }
+  const valor = valorBase === null ? null : valorBase + valorCamisa;
+  const rotuloPreco =
+    condicaoPreco === "cortesia"
+      ? "Cortesia"
+      : condicaoPreco === "meia-entrada"
+        ? "Meia entrada"
+        : null;
+  const faixaRotulo = [
+    rotuloPreco,
+    faixa.rotulo,
+    camisa && `${camisa}${valorCamisa ? ` — ${formatarReais(valorCamisa)}` : " (incluída)"}`,
+  ]
+    .filter(Boolean)
+    .join(" — ");
   return {
     papel,
     nome: texto(p.nome),
@@ -409,8 +497,11 @@ function avaliarPessoa(
     cpf: cpfDigitos,
     idade,
     menorDeIdade: idade < 18,
-    faixa: rotuloPreco ? { ...faixa, rotulo: `${rotuloPreco} — ${faixa.rotulo}` } : faixa,
+    faixa: faixaRotulo ? { ...faixa, rotulo: faixaRotulo } : faixa,
     condicaoPreco,
+    camisa,
+    valorCamisa,
+    valorBase,
     valor,
     transporte: p.transporte === "carro" ? "carro" : "onibus",
     chave,
@@ -607,11 +698,15 @@ export function montarCorpo(
       faixa: p.faixa.rotulo,
       valor: p.valor,
       valorTexto:
-        p.condicaoPreco === "meia-entrada"
-          ? `Meia entrada — ${textoValor(p.valor)}`
-          : p.condicaoPreco === "cortesia"
-            ? "Não pagante — Gratuito"
-            : textoValor(p.valor),
+        p.valorCamisa > 0
+          ? `Gratuito + camisa avulsa ${formatarReais(p.valorCamisa)}`
+          : p.condicaoPreco === "meia-entrada"
+            ? `Meia entrada — ${textoValor(p.valor)} (camisa incluída)`
+            : p.condicaoPreco === "cortesia"
+              ? "Não pagante — Gratuito"
+              : p.valorBase === 0
+                ? "Gratuito"
+                : `${textoValor(p.valor)} (camisa incluída)`,
       cpf: p.cpf,
       transporte: rotuloTransporte(p.transporte) as ParticipantePlanilha["transporte"],
     })),

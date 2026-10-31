@@ -20,6 +20,7 @@ Sem isso o formulário informa "inscrições temporariamente indisponíveis" e *
 
 JSON no corpo do POST (`text/plain`): dados de contato e origem da igreja + uma pessoa na lista `participantes` (ver `CorpoPlanilha` em `src/lib/inscricao.ts`). Para menores, o participante é informado pelo pai/mãe/responsável; para adultos, a própria pessoa faz o cadastro. O campo de igreja transporta a congregação local ou o nome da igreja convidada e suas lideranças sem alterar as colunas já usadas pelo Apps Script.
 No cadastro de visitantes, a lista contém uma linha com papel `Visitante`; o dia e o período ficam descritos nos campos existentes `transporte` e `faixa`, e o valor calculado pelo servidor vai para `valor`. Não é oferecida opção de ônibus nem são adicionadas colunas à planilha.
+Os tamanhos de camisa são gravados junto da faixa do participante, sem exigir novas colunas ou uma alteração no Apps Script. A camisa já está incluída no valor da inscrição do retiro; para criança não pagante, o campo livre de camisa avulsa acrescenta R$ 50,00. No cadastro de visitante, a camisa é opcional por R$ 50,00 além do day use.
 Resposta esperada: `{ "ok": true }`, ou `{ "ok": false, "code": "DUPLICATE" }` para CPF repetido.
 Qualquer outra resposta (HTML de erro, timeout) é tratada como "não confirmado" — nunca como sucesso.
 Se o seu script usa outros nomes de campos, ajuste só `montarRequisicao` em `src/api/sheets.server.ts`.

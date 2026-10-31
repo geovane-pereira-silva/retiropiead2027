@@ -6,8 +6,18 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { ensaioAtivo, processarInscricao } from "../src/api/inscricao.server.ts";
-import { VALORES_VAZIOS, cpfValido, type FormValues } from "../src/lib/inscricao.ts";
+import {
+  ensaioAtivo,
+  processarCadastroVisitante,
+  processarInscricao,
+} from "../src/api/inscricao.server.ts";
+import {
+  VALORES_VAZIOS,
+  cpfValido,
+  type DadosVisitante,
+  type FormValues,
+} from "../src/lib/inscricao.ts";
+import { evento } from "../src/content/evento.ts";
 
 let servidor: http.Server;
 let url = "";
@@ -50,7 +60,16 @@ after(() => servidor.close());
 
 const valores = (cpf: string, extra: Partial<FormValues> = {}): FormValues => ({
   ...VALORES_VAZIOS,
-  responsavel: { nome: "Maria da Silva", dataNascimento: "1985-06-15", cpf, transporte: "onibus" },
+  responsavel: {
+    nome: "Maria da Silva",
+    dataNascimento: "1985-06-15",
+    cpf,
+    transporte: "onibus",
+    camisaModelo: "normal",
+    camisaTamanho: "M",
+    camisaMedida: "",
+    camisaAvulsa: "",
+  },
   telefone: "(35) 99999-1234",
   whatsapp: "(35) 99999-1234",
   igreja: "Primeira Assembleia de Deus",
@@ -62,6 +81,38 @@ const valores = (cpf: string, extra: Partial<FormValues> = {}): FormValues => ({
   aceiteRegras: true,
   aceitePrivacidade: true,
   ...extra,
+});
+
+test("visitante encomenda camisa e totaliza day use mais R$ 50 na mesma linha da planilha", async () => {
+  modo = "ok";
+  recebidos.length = 0;
+  const values: DadosVisitante = {
+    nome: "Ana da Silva",
+    telefone: "(35) 99999-1234",
+    dia: "2027-02-07",
+    periodo: "dia-todo",
+    camisaModelo: "babylook",
+    camisaTamanho: "M",
+    camisaMedida: "",
+    aceitePrivacidade: true,
+    website: "",
+  };
+  const r = await processarCadastroVisitante(
+    { values, idempotencyKey: "visitante-camisa-001" },
+    { url, token: "segredo" },
+  );
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.valor, evento.visitantes.valorDiaTodo + 50);
+    assert.equal(r.valorCamisa, 50);
+    assert.equal(r.camisa, "Babylook M");
+  }
+  assert.equal(recebidos.length, 1);
+  assert.equal(recebidos[0].totalValor, evento.visitantes.valorDiaTodo + 50);
+  const participante = (recebidos[0].participantes as Record<string, unknown>[])[0];
+  assert.equal(participante.valor, evento.visitantes.valorDiaTodo + 50);
+  assert.match(String(participante.faixa), /Camisa Babylook M/);
+  assert.match(String(participante.valorTexto), /day use.*camisa/i);
 });
 
 for (const c of [
@@ -184,7 +235,16 @@ test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", a
         responsavelParentesco: "mae",
         responsavel: { nome: "Maria da Silva", dataNascimento: "", cpf: "", transporte: "" },
         integrantes: [
-          { nome: "Pedro da Silva", dataNascimento: "2019-08-01", cpf: "", transporte: "carro" },
+          {
+            nome: "Pedro da Silva",
+            dataNascimento: "2019-08-01",
+            cpf: "",
+            transporte: "carro",
+            camisaModelo: "infantil",
+            camisaTamanho: "8",
+            camisaMedida: "",
+            camisaAvulsa: "",
+          },
         ],
       }),
       idempotencyKey: "chave-0011-kkkk",

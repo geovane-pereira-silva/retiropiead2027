@@ -90,7 +90,10 @@ test("vídeo: mantém o quadro inteiro no celular e oferece tela cheia", () => {
   assert.match(componente, /requestFullscreen\(\)/);
   assert.match(componente, /webkitEnterFullscreen/);
   assert.match(componente, /reduzir \|\| telaEstreita \? undefined/);
-  assert.match(estilos, /@media \(max-width: 47\.99rem\)[\s\S]*?\.pv-video-midia video\s*\{\s*object-fit: contain;/);
+  assert.match(
+    estilos,
+    /@media \(max-width: 47\.99rem\)[\s\S]*?\.pv-video-midia video\s*\{\s*object-fit: contain;/,
+  );
 });
 
 test("fotos: imagens que não aparecem nas outras seções são exibidas na galeria final", () => {
@@ -165,7 +168,10 @@ test("rotina inicia fechada e sinaliza que a primeira faixa pode ser aberta", ()
   const landing = readFileSync("src/landing/Landing.tsx", "utf8");
   const estilos = readFileSync("src/landing/palavra.css", "utf8");
   assert.match(landing, /padrao=\{false\}/);
-  assert.match(estilos, /pv-cartao-rotina:first-child:not\(\.aberto\)[\s\S]*?animation: pv-sinal-toque/);
+  assert.match(
+    estilos,
+    /pv-cartao-rotina:first-child:not\(\.aberto\)[\s\S]*?animation: pv-sinal-toque/,
+  );
 });
 
 test("formulário usa data digitada e seleção de igreja visível", () => {
@@ -195,6 +201,21 @@ test("seção e formulário visitante mostram day use, datas e ausência de ôni
   assert.match(form, /evento\.visitantes\.dias\.map/);
   assert.match(form, /evento\.visitantes\.valorDiaTodo/);
   assert.match(form, /evento\.visitantes\.valorSomenteNoite/);
+});
+
+test("cadastros oferecem modelos e tamanhos de camisa e cobram avulsa para criança grátis", () => {
+  const camisa = readFileSync("src/landing/CamisaCampos.tsx", "utf8");
+  const participante = readFileSync("src/landing/RegistrationForm.tsx", "utf8");
+  const visitante = readFileSync("src/landing/VisitorForm.tsx", "utf8");
+  const regras = readFileSync("src/lib/inscricao.ts", "utf8");
+  assert.match(camisa, /Normal/);
+  assert.match(camisa, /Babylook/);
+  assert.match(camisa, /Infantil/);
+  assert.match(regras, /\["P", "M", "G", "GG", "XG", "Medida especial"\]/);
+  assert.match(regras, /\["6", "8", "10", "12", "14"\]/);
+  assert.match(participante, /CamisaCampos/);
+  assert.match(visitante, /CamisaCampos/);
+  assert.match(camisa, /R\$ 50,00/);
 });
 
 test("tema Dunamis: Atos 1:8 e referências complementares presentes", async () => {
