@@ -42,6 +42,8 @@ export const evento = {
   // ─── Local (oficial) ─────────────────────────────────────────────────────
   local: {
     nome: "Sítio de Retiro Espiritual Campos do Jordão",
+    /** Forma de exibição: a cidade aparece uma única vez. */
+    chamada: "Sítio de retiro em Campos do Jordão",
     cidade: "Campos do Jordão",
     uf: "SP",
     /** Link do mapa: só preencher com o endereço confirmado pela organização. */
@@ -176,7 +178,7 @@ export const evento = {
     },
     {
       p: "Quando e onde acontece?",
-      r: "De sexta-feira, 5 de fevereiro, a terça-feira, 9 de fevereiro de 2027, no Sítio de Retiro Espiritual Campos do Jordão, em Campos do Jordão/SP, a aproximadamente 15 minutos do centro da cidade. O período coincide com o Carnaval.",
+      r: "De sexta-feira, 5 de fevereiro, a terça-feira, 9 de fevereiro de 2027, no sítio de retiro em Campos do Jordão/SP, a aproximadamente 15 minutos do centro da cidade. O período coincide com o Carnaval.",
     },
     {
       p: "Como funciona a inscrição da família?",

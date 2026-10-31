@@ -31,7 +31,7 @@ function Inscricao() {
             Inscrição da família
           </h1>
           <p className="lp-lead" style={{ marginBottom: 0 }}>
-            {evento.dataTexto}, no {evento.local.nome}, em {evento.local.cidade}/{evento.local.uf}.
+            {evento.dataTexto}, no sítio de retiro em {evento.local.cidade}/{evento.local.uf}.
             Cadastre o responsável e os integrantes da família: o valor de cada pessoa e o total
             aparecem antes do envio.
           </p>

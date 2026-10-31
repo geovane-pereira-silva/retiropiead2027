@@ -168,9 +168,7 @@ function Abertura() {
 
         <div className="pv-abertura-rodape">
           <p className="pv-abertura-local">
-            {evento.local.nome}
-            <br />
-            {evento.local.cidade}/{evento.local.uf}
+            {evento.local.chamada}/{evento.local.uf}
           </p>
           <div className="pv-abertura-acoes">
             <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-btn-grande">
@@ -406,10 +404,10 @@ function Local() {
     <section className="pv-local" id="local" aria-labelledby="t-local">
       <div className="pv-wrap">
         <h2 id="t-local" className="pv-titulo pv-titulo-claro">
-          {evento.local.nome}
+          {evento.local.chamada}
         </h2>
         <p className="pv-lead pv-lead-claro">
-          Em {evento.local.cidade}/{evento.local.uf}. Um espaço pensado para cultos, convivência e descanso.
+          Um espaço pensado para cultos, convivência e descanso.
         </p>
 
         <div className="pv-local-fotos">
