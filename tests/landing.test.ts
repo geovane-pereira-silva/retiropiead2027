@@ -61,6 +61,17 @@ test("docs/midia.md lista todos os arquivos pendentes", () => {
   }
 });
 
+test("prévia social usa arte Dunamis atualizada para fugir do cache da thumbnail antiga", () => {
+  const root = readFileSync("src/routes/__root.tsx", "utf8");
+  const thumbnail = "public/og-dunamis-2027.jpg";
+  assert.ok(existsSync(thumbnail), "arte nova para a prévia social não existe");
+  assert.ok(statSync(thumbnail).size < 500_000, "thumbnail social está pesada");
+  assert.match(root, /og:image[\s\S]*og-dunamis-2027\.jpg/);
+  assert.match(root, /twitter:image[\s\S]*og-dunamis-2027\.jpg/);
+  assert.match(root, /og:image:width[\s\S]*1200/);
+  assert.match(root, /og:image:height[\s\S]*630/);
+});
+
 test("fotos: todas as 16 imagens reais estão cadastradas", () => {
   const total = Object.values(media.fotos).reduce((n, fotos) => n + fotos.length, 0);
   assert.equal(total, 16);

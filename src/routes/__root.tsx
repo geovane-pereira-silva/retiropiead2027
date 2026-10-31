@@ -87,15 +87,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:site_name", content: "Retiro Conexão Jovem" },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "https://retiro2027.igrejaassembleia.org/og-image.jpg" },
+      {
+        property: "og:image",
+        content: "https://retiro2027.igrejaassembleia.org/og-dunamis-2027.jpg",
+      },
+      { property: "og:image:type", content: "image/jpeg" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       {
         property: "og:image:alt",
-        content: "Retiro Conexão Jovem 2027 — 5 a 9 de fevereiro de 2027",
+        content: "DUNAMIS — Recebereis poder. Retiro Conexão Jovem, 5 a 9 de fevereiro de 2027.",
       },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: "https://retiro2027.igrejaassembleia.org/og-image.jpg" },
+      {
+        name: "twitter:image",
+        content: "https://retiro2027.igrejaassembleia.org/og-dunamis-2027.jpg",
+      },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
