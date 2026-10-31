@@ -375,7 +375,7 @@
 /* ─── 2. Vídeo em tela cheia ──────────────────────────────────────────── */
 .pv-video {
   position: relative;
-  height: 190svh;
+  height: 105svh;
   background: var(--pv-noite);
 }
 .pv-video-palco {
@@ -463,6 +463,14 @@
   }
 }
 @media (max-width: 47.99rem) {
+  .pv-video {
+    height: 100svh;
+  }
+  .pv-video-palco {
+    position: relative;
+    top: auto;
+    height: 100%;
+  }
   .pv-video-midia video {
     object-fit: contain;
     background: #000;

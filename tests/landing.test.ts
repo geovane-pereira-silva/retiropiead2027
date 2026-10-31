@@ -140,6 +140,15 @@ test("ScrollStory: sequência de Atos 1:8 termina nos confins e não mistura out
   assert.ok(palavras.includes("confins"));
 });
 
+test("vídeo não prende a rolagem no celular e ocupa apenas uma tela", () => {
+  const estilos = readFileSync("src/landing/palavra.css", "utf8");
+  assert.match(estilos, /\.pv-video\s*\{\s*position:\s*relative;\s*height:\s*105svh;/);
+  assert.match(
+    estilos,
+    /@media \(max-width: 47\.99rem\)[\s\S]*?\.pv-video\s*\{\s*height:\s*100svh;\s*\}[\s\S]*?\.pv-video-palco\s*\{\s*position:\s*relative;/,
+  );
+});
+
 test("tema Dunamis: Atos 1:8 e referências complementares presentes", async () => {
   const { tema } = await import("../src/content/tema.ts");
   assert.equal(tema.nome, "Dunamis");
