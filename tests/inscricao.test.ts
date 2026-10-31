@@ -426,6 +426,7 @@ test("planilha: injeção de fórmula é neutralizada", () => {
 
 test("corpo da planilha: um participante por linha, CPF só dígitos, pagamento não confirmado", () => {
   const v = base({
+    familiaresQuarto: "Janaina Silva Furtado",
     responsavelParticipa: false,
     responsavelParentesco: "mae",
     responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
@@ -444,6 +445,13 @@ test("corpo da planilha: um participante por linha, CPF só dígitos, pagamento 
   assert.equal(c.participantes[0].cpf, "");
   assert.equal(c.participantes[0].menorDeIdade, "SIM");
   assert.equal(c.participantes[0].valor, 200);
+  assert.equal(c.familiaresQuarto, "Janaina Silva Furtado");
+});
+
+test("nomes de familiares para organizar os quartos são opcionais e limitados", () => {
+  assert.deepEqual(validar(base(), ctx).erros.familiaresQuarto, undefined);
+  const excesso = validar(base({ familiaresQuarto: "x".repeat(301) }), ctx);
+  assert.match(excesso.erros.familiaresQuarto, /300 caracteres/);
 });
 
 test("transporte: obrigatório para quem participa; responsável que não participa dispensa", () => {

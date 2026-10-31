@@ -72,6 +72,13 @@ test("prévia social usa arte Dunamis atualizada para fugir do cache da thumbnai
   assert.match(root, /og:image:height[\s\S]*630/);
 });
 
+test("formulário permite informar familiares para organização dos quartos", () => {
+  const form = readFileSync("src/landing/RegistrationForm.tsx", "utf8");
+  assert.match(form, /Vai com outro familiar\?/);
+  assert.match(form, /organizar os quartos/);
+  assert.match(form, /familiaresQuarto/);
+});
+
 test("fotos: todas as 16 imagens reais estão cadastradas", () => {
   const total = Object.values(media.fotos).reduce((n, fotos) => n + fotos.length, 0);
   assert.equal(total, 16);

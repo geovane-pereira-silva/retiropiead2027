@@ -3,10 +3,11 @@ import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-function criarAppsScript() {
-  const linhas: unknown[][] = [];
+function criarAppsScript(iniciais: unknown[][] = []) {
+  const linhas: unknown[][] = iniciais.map((linha) => [...linha]);
   const aba = {
     getLastRow: () => linhas.length,
+    getLastColumn: () => Math.max(0, ...linhas.map((linha) => linha.length)),
     getMaxRows: () => 1000,
     setFrozenRows: () => undefined,
     appendRow: (linha: unknown[]) => linhas.push(linha),
@@ -17,6 +18,10 @@ function criarAppsScript() {
         ]),
       setNumberFormat: () => undefined,
       setFontWeight: () => undefined,
+      setValue: (valor: unknown) => {
+        linhas[linha - 1] ??= [];
+        linhas[linha - 1][coluna - 1] = valor;
+      },
       setValues: (valores: unknown[][]) => {
         valores.forEach((valor, i) => {
           linhas[linha - 1 + i] = valor;
@@ -80,4 +85,67 @@ test("Apps Script bloqueia CPF repetido no mesmo envio", () => {
   });
   assert.deepEqual(resposta, { ok: false, code: "DUPLICATE" });
   assert.equal(script.linhas.length, 1); // apenas o cabeçalho
+});
+
+test("Apps Script cria a coluna para os familiares e grava os nomes informados", () => {
+  const script = criarAppsScript();
+  const resposta = script.enviar({
+    idempotencyKey: "quarto-familiar-001",
+    familiaresQuarto: "Janaina Silva Furtado",
+    participantes: [{ nome: "Maria da Silva", papel: "Participante", cpf: "52998224725" }],
+  });
+  assert.deepEqual(resposta, { ok: true, linhas: 1 });
+  const indice = script.linhas[0].indexOf("familiaresQuarto");
+  assert.ok(indice >= 0, "cabeçalho familiar foi acrescentado");
+  assert.equal(script.linhas[1][indice], "Janaina Silva Furtado");
+});
+
+test("Apps Script acrescenta a nova coluna sem recriar a aba de inscrições existente", () => {
+  const cabecalhoAntigo = [
+    "enviadoEm",
+    "familiaId",
+    "idempotencyKey",
+    "ordem",
+    "papel",
+    "nome",
+    "dataNascimento",
+    "idadeNaDataDoRetiro",
+    "menorDeIdade",
+    "faixa",
+    "valorTexto",
+    "valor",
+    "cpf",
+    "transporte",
+    "responsavelNome",
+    "telefone",
+    "whatsapp",
+    "email",
+    "igreja",
+    "cidade",
+    "emergenciaNome",
+    "emergenciaTelefone",
+    "necessidades",
+    "totalParticipantes",
+    "totalTexto",
+    "temValorADefinir",
+    "aceiteRegras",
+    "aceitePrivacidade",
+    "versaoTermos",
+    "statusPagamento",
+    "origem",
+  ];
+  const linhaAntiga = Array(cabecalhoAntigo.length).fill("");
+  linhaAntiga[cabecalhoAntigo.indexOf("nome")] = "Inscrição já existente";
+  const script = criarAppsScript([cabecalhoAntigo, linhaAntiga]);
+
+  const resposta = script.enviar({
+    idempotencyKey: "quarto-familiar-002",
+    familiaresQuarto: "José da Silva",
+    participantes: [{ nome: "Maria da Silva", papel: "Participante", cpf: "52998224725" }],
+  });
+
+  assert.deepEqual(resposta, { ok: true, linhas: 1 });
+  assert.equal(script.linhas[1][cabecalhoAntigo.indexOf("nome")], "Inscrição já existente");
+  const indice = script.linhas[0].indexOf("familiaresQuarto");
+  assert.equal(script.linhas[2][indice], "José da Silva");
 });

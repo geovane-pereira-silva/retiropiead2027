@@ -65,7 +65,8 @@ function etapaDoErro(chave: string): number {
     ].includes(chave)
   )
     return 0;
-  if (["emergenciaNome", "emergenciaTelefone", "necessidades"].includes(chave)) return 2;
+  if (["emergenciaNome", "emergenciaTelefone", "familiaresQuarto", "necessidades"].includes(chave))
+    return 2;
   return 3;
 }
 
@@ -1131,7 +1132,20 @@ export function RegistrationForm() {
           </fieldset>
 
           <fieldset className="lp-fs">
-            <legend>Emergência e necessidades</legend>
+            <legend>Quarto, emergência e necessidades</legend>
+            <Entrada
+              chave="familiaresQuarto"
+              rotulo="Vai com outro familiar?"
+              opcional
+              multilinha
+              valor={values.familiaresQuarto}
+              onChange={(v) => setCampo("familiaresQuarto", v)}
+              onBlur={() => tocar("familiaresQuarto")}
+              erro={erro("familiaresQuarto")}
+              maxLength={300}
+              placeholder="Nome completo do familiar (ou dos familiares)"
+              dica="Informe quem também vai ao retiro para ajudarmos a organizar os quartos. Se forem várias pessoas, coloque um nome por linha."
+            />
             <p className="lp-aviso-emergencia" role="note">
               <strong>Atenção: o contato de emergência não pode participar do retiro.</strong>
               Informe uma pessoa de confiança que não esteja inscrita nem vá ao evento.

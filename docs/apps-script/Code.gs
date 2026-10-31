@@ -21,17 +21,52 @@
  */
 const NOME_ABA = "Inscrições";
 const COLUNAS = [
-  "enviadoEm", "familiaId", "idempotencyKey", "ordem", "papel", "nome", "dataNascimento",
-  "idadeNaDataDoRetiro", "menorDeIdade", "faixa", "valorTexto", "valor", "cpf", "transporte",
-  "responsavelNome", "telefone", "whatsapp", "email", "igreja", "cidade",
-  "emergenciaNome", "emergenciaTelefone", "necessidades",
-  "totalParticipantes", "totalTexto", "temValorADefinir",
-  "aceiteRegras", "aceitePrivacidade", "versaoTermos", "statusPagamento", "origem",
+  "enviadoEm",
+  "familiaId",
+  "idempotencyKey",
+  "ordem",
+  "papel",
+  "nome",
+  "dataNascimento",
+  "idadeNaDataDoRetiro",
+  "menorDeIdade",
+  "faixa",
+  "valorTexto",
+  "valor",
+  "cpf",
+  "transporte",
+  "responsavelNome",
+  "telefone",
+  "whatsapp",
+  "email",
+  "igreja",
+  "cidade",
+  "emergenciaNome",
+  "emergenciaTelefone",
+  "necessidades",
+  "totalParticipantes",
+  "totalTexto",
+  "temValorADefinir",
+  "aceiteRegras",
+  "aceitePrivacidade",
+  "versaoTermos",
+  "statusPagamento",
+  "origem",
+  "familiaresQuarto",
 ];
-const COLUNAS_TEXTO = ["cpf", "telefone", "whatsapp", "emergenciaTelefone", "dataNascimento", "idempotencyKey"];
+const COLUNAS_TEXTO = [
+  "cpf",
+  "telefone",
+  "whatsapp",
+  "emergenciaTelefone",
+  "dataNascimento",
+  "idempotencyKey",
+];
 
 function saida(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(
+    ContentService.MimeType.JSON,
+  );
 }
 
 function doGet() {
@@ -42,13 +77,29 @@ function lerColuna(aba, nomeColuna) {
   const ultima = aba.getLastRow();
   if (ultima < 2) return [];
   const idx = COLUNAS.indexOf(nomeColuna) + 1;
-  return aba.getRange(2, idx, ultima - 1, 1).getDisplayValues().map(function (l) { return String(l[0]); });
+  return aba
+    .getRange(2, idx, ultima - 1, 1)
+    .getDisplayValues()
+    .map(function (l) {
+      return String(l[0]);
+    });
 }
 
 function normalizarCpf(valor) {
   var digitos = String(valor == null ? "" : valor).replace(/\D/g, "");
   // Assegura comparação correta para CPFs antigos que perderam o zero inicial.
   return digitos.length >= 10 && digitos.length <= 11 ? digitos.padStart(11, "0") : "";
+}
+
+function garantirColunaFamiliaresQuarto(aba) {
+  const ultimaColuna = aba.getLastColumn();
+  if (ultimaColuna === 0) return;
+  const cabecalho = aba.getRange(1, 1, 1, ultimaColuna).getDisplayValues()[0];
+  if (cabecalho.indexOf("familiaresQuarto") !== -1) return;
+  const novaColuna = ultimaColuna + 1;
+  aba.getRange(1, novaColuna).setValue("familiaresQuarto");
+  aba.getRange(1, novaColuna, aba.getMaxRows(), 1).setNumberFormat("@");
+  aba.getRange(1, novaColuna).setFontWeight("bold");
 }
 
 function doPost(e) {
@@ -59,7 +110,8 @@ function doPost(e) {
 
     const token = PropertiesService.getScriptProperties().getProperty("TOKEN");
     if (token && d.token !== token) return saida({ ok: false, code: "UNAUTHORIZED" });
-    if (!d.participantes || !d.participantes.length) return saida({ ok: false, code: "ERROR", message: "sem participantes" });
+    if (!d.participantes || !d.participantes.length)
+      return saida({ ok: false, code: "ERROR", message: "sem participantes" });
 
     const planilha = SpreadsheetApp.getActiveSpreadsheet(); // script vinculado à planilha
     const aba = planilha.getSheetByName(NOME_ABA) || planilha.insertSheet(NOME_ABA);
@@ -71,6 +123,7 @@ function doPost(e) {
         aba.getRange(1, COLUNAS.indexOf(c) + 1, aba.getMaxRows(), 1).setNumberFormat("@");
       });
     }
+    garantirColunaFamiliaresQuarto(aba);
 
     // Reenvio do mesmo formulário (ex.: resposta perdida): já está gravado → sucesso.
     if (lerColuna(aba, "idempotencyKey").indexOf(String(d.idempotencyKey)) !== -1) {

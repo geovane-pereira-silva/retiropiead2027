@@ -100,6 +100,8 @@ export type FormValues = {
   integrantes: Pessoa[];
   emergenciaNome: string;
   emergenciaTelefone: string;
+  /** Familiares com quem a pessoa gostaria de dividir o quarto; lista livre e opcional. */
+  familiaresQuarto: string;
   necessidades: string;
   aceiteRegras: boolean;
   aceitePrivacidade: boolean;
@@ -138,6 +140,7 @@ export const VALORES_VAZIOS: FormValues = {
   integrantes: [],
   emergenciaNome: "",
   emergenciaTelefone: "",
+  familiaresQuarto: "",
   necessidades: "",
   aceiteRegras: false,
   aceitePrivacidade: false,
@@ -595,6 +598,8 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
   else if (!telefoneValido(v.emergenciaTelefone))
     erros.emergenciaTelefone = "Telefone inválido. Use DDD + número.";
 
+  if ((v.familiaresQuarto ?? "").length > 300)
+    erros.familiaresQuarto = "Use no máximo 300 caracteres para os nomes dos familiares.";
   if (v.necessidades.length > 500) erros.necessidades = "Use no máximo 500 caracteres.";
 
   if (!v.aceiteRegras) erros.aceiteRegras = "É necessário aceitar as regras do retiro.";
@@ -645,6 +650,7 @@ export type CorpoPlanilha = {
   cidade: string;
   emergenciaNome: string;
   emergenciaTelefone: string;
+  familiaresQuarto: string;
   necessidades: string;
   totalParticipantes: number;
   totalValor: number;
@@ -677,6 +683,7 @@ export function montarCorpo(
     cidade: higienizarCelula(v.cidade),
     emergenciaNome: higienizarCelula(v.emergenciaNome),
     emergenciaTelefone: normalizarTelefone(v.emergenciaTelefone),
+    familiaresQuarto: higienizarCelula(v.familiaresQuarto),
     necessidades: higienizarCelula(v.necessidades),
     totalParticipantes: r.participantes.length,
     totalValor: r.total,
