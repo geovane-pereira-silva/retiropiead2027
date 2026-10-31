@@ -1128,7 +1128,10 @@ export function RegistrationForm() {
 
           <fieldset className="lp-fs">
             <legend>Emergência e necessidades</legend>
-            <p className="hint">O contato de emergência deve ser alguém que não irá ao retiro.</p>
+            <p className="lp-aviso-emergencia" role="note">
+              <strong>Atenção: o contato de emergência não pode participar do retiro.</strong>
+              Informe uma pessoa de confiança que não esteja inscrita nem vá ao evento.
+            </p>
             <div className="lp-row two">
               <Entrada
                 chave="emergenciaNome"

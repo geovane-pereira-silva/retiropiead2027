@@ -1168,6 +1168,23 @@
   color: var(--lp-mute);
   font-size: 0.9rem;
 }
+.lp-aviso-emergencia {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 2px solid #b45309;
+  border-left-width: 0.45rem;
+  border-radius: 0.75rem;
+  background: #fff7ed;
+  color: #7c2d12;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.lp-aviso-emergencia strong {
+  color: #7c2d12;
+  font-weight: 800;
+}
 .lp-row {
   display: grid;
   gap: 1rem;

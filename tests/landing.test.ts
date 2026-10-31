@@ -179,7 +179,7 @@ test("formulário usa data digitada e seleção de igreja visível", () => {
   assert.match(form, /type=\{dataDigitada \? "text"/);
   assert.match(form, /placeholder=\{p\.placeholder \?\? \(dataDigitada \? "DD\/MM\/AAAA"/);
   assert.match(form, /role="radiogroup"[\s\S]*?Primeira Assembleia de Deus[\s\S]*?Outra igreja/);
-  assert.match(form, /O contato de emergência deve ser alguém que não irá ao retiro/);
+  assert.match(form, /role="note"[\s\S]*?o contato de emergência não pode participar do retiro/);
   assert.match(form, /temNecessidades === "sim"/);
   assert.doesNotMatch(form, /rotulo="Cidade"/);
 });
