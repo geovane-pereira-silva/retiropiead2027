@@ -3,10 +3,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, statSync } from "node:fs";
 
-import { evento } from "../src/content/evento";
+import { evento } from "../src/content/evento.ts";
 
 const media = JSON.parse(readFileSync("src/content/media.json", "utf8")) as {
-  fotos: Record<string, { src: string; alt: string }[]>;
+  fotos: Record<string, { src: string; alt: string; preview?: string }[]>;
   video: { src: string; titulo: string } | null;
 };
 const docs = readFileSync("docs/midia.md", "utf8");
@@ -21,6 +21,10 @@ test("mídia: grupos esperados existem e só aceitam arquivos que existem em pub
         existsSync(`public${decodeURIComponent(f.src)}`),
         `arquivo cadastrado não existe: ${f.src}`,
       );
+      assert.ok(f.preview?.startsWith("/fotos/preview/"), `foto sem prévia leve: ${f.src}`);
+      const previewPath = `public${decodeURIComponent(f.preview)}`;
+      assert.ok(existsSync(previewPath), `prévia não existe: ${f.preview}`);
+      assert.ok(statSync(previewPath).size < 60_000, `prévia pesada: ${f.preview}`);
     }
   }
   if (media.video) {
@@ -62,6 +66,13 @@ test("fotos: todas as 16 imagens reais estão cadastradas", () => {
   assert.equal(total, 16);
 });
 
+test("fotos: preview carrega antes da imagem em alta resolução", () => {
+  const fonte = readFileSync("src/landing/Gallery.tsx", "utf8");
+  assert.match(fonte, /src=\{carregarOriginal \? f\.src : undefined\}/);
+  assert.match(fonte, /src=\{f\.preview\}/);
+  assert.match(fonte, /onLoad=\{\(\) => setCarregarOriginal\(true\)\}/);
+});
+
 test("fotos: imagens que não aparecem nas outras seções são exibidas na galeria final", () => {
   const fonte = readFileSync("src/landing/Landing.tsx", "utf8");
   assert.match(fonte, /function FotosAdicionais\(\)/);
@@ -88,6 +99,7 @@ test("dados oficiais do evento permanecem inalterados", () => {
     ],
   );
   assert.equal(evento.maxParticipantesPorInscricao, 1);
+  assert.ok(evento.incluso.some((item) => item.titulo === "Kit do retiro e camisa"));
   assert.deepEqual(evento.dataCurta, { de: "5", ate: "9", mes: "fevereiro", ano: "2027" });
 });
 
@@ -107,7 +119,7 @@ test("ScrollStory: sequência de Atos 1:8 termina nos confins e não mistura out
 });
 
 test("tema Dunamis: Atos 1:8 e referências complementares presentes", async () => {
-  const { tema } = await import("../src/content/tema");
+  const { tema } = await import("../src/content/tema.ts");
   assert.equal(tema.nome, "Dunamis");
   assert.equal(tema.chamada, "Recebereis poder");
   assert.match(tema.versiculo, /recebereis a virtude do Espírito Santo/);

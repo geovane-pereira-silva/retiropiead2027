@@ -135,6 +135,7 @@ export const evento = {
     { titulo: "Hospedagem", texto: "Durante todo o retiro." },
     { titulo: "Quatro refeições por dia", texto: "Durante o retiro." },
     { titulo: "Transporte de ônibus", texto: "Na ida e no retorno." },
+    { titulo: "Kit do retiro e camisa", texto: "Incluídos no valor." },
   ],
   inclusoCarro:
     "Quem for de carro próprio continua com a hospedagem e as refeições incluídas, e não usa o ônibus da organização.",
@@ -191,7 +192,7 @@ export const evento = {
     },
     {
       p: "O que está incluído no valor?",
-      r: "Hospedagem, quatro refeições por dia durante o retiro e transporte de ônibus na ida e no retorno.",
+      r: "Hospedagem, quatro refeições por dia durante o retiro, transporte de ônibus na ida e no retorno, kit do retiro e camisa.",
     },
     {
       p: "Posso ir de carro próprio?",
@@ -220,8 +221,7 @@ export const evento = {
     },
     {
       p: "Como faço o pagamento?",
-      r: "As orientações de pagamento serão divulgadas pela organização.",
-      pendente: true,
+      r: "O pagamento por Pix deve ser quitado até 16 de janeiro de 2027, vinte dias antes do início do retiro. As demais condições de pagamento serão confirmadas pela organização.",
     },
     {
       p: "Por que preciso informar o CPF?",
@@ -234,10 +234,10 @@ export const evento = {
     },
   ] as Array<{ p: string; r: string; aberto?: boolean; pendente?: boolean }>,
 
-  /** Mostrado na confirmação de inscrição. Ajuste quando houver forma de pagamento definida. */
+  /** Mostrado na confirmação de inscrição; inclui a forma e a data limite de pagamento confirmadas. */
   proximosPassos: [
     "Este cadastro não confirma pagamento.",
-    "A organização divulgará as orientações de pagamento, os horários e os pontos de embarque do ônibus.",
+    "O pagamento por Pix deve ser quitado até 16 de janeiro de 2027, vinte dias antes do início do retiro. A organização divulgará os horários e os pontos de embarque do ônibus.",
     "Guarde esta tela (um print ajuda) e, em caso de dúvida, procure a liderança da Conexão Jovem.",
   ],
 

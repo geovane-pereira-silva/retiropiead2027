@@ -660,8 +660,8 @@ function Valores() {
           </ul>
           <p>A idade é contada em 5 de fevereiro de 2027, data de início do retiro.</p>
           <p>
-            As orientações de pagamento serão divulgadas pela organização. O formulário registra o
-            cadastro e não confirma pagamento.
+            Aceitamos Pix, com quitação até 16 de janeiro de 2027 (20 dias antes do retiro). O
+            formulário registra o cadastro e não confirma pagamento.
           </p>
           <Link to="/inscricao" className="lp-btn lp-btn-grande pv-btn-tinta">
             Fazer meu cadastro

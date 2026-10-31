@@ -1,4 +1,5 @@
 import media from "../content/media.json";
+import { useEffect, useState } from "react";
 
 /**
  * Fotos e vídeo reais do retiro. Nada é inventado: o que está listado em
@@ -15,6 +16,8 @@ export type Foto = {
   foco?: string;
   /** versão vertical (celular) opcional, usada na abertura */
   srcMobile?: string;
+  /** versão leve exibida antes de carregar a foto original */
+  preview?: string;
 };
 export type VideoInfo = { src: string; poster?: string; titulo: string };
 
@@ -47,24 +50,53 @@ export const temFotos = (g: GrupoId): boolean => fotosDe(g).length > 0;
 export const temVideo = !!videoInfo?.src;
 
 export function Imagem({ f, prioridade }: { f: Foto; prioridade?: boolean }) {
+  const [carregarOriginal, setCarregarOriginal] = useState(!f.preview);
+  const [originalPronta, setOriginalPronta] = useState(!f.preview);
+
+  useEffect(() => {
+    setCarregarOriginal(!f.preview);
+    setOriginalPronta(!f.preview);
+  }, [f.preview, f.src]);
+
   const img = (
     <img
-      src={f.src}
+      src={carregarOriginal ? f.src : undefined}
       alt={f.alt}
       width={f.largura}
       height={f.altura}
       loading={prioridade ? "eager" : "lazy"}
       fetchPriority={prioridade ? "high" : undefined}
       decoding="async"
+      className="pv-imagem-alta"
+      data-carregada={originalPronta}
+      onLoad={() => setOriginalPronta(true)}
       style={f.foco ? { objectPosition: f.foco } : undefined}
     />
   );
-  if (!f.srcMobile) return img;
+
   return (
-    <picture>
-      <source media="(max-width: 47.99rem)" srcSet={f.srcMobile} />
-      {img}
-    </picture>
+    <span className="pv-imagem-progressiva">
+      {f.preview && (
+        <img
+          className="pv-imagem-preview"
+          src={f.preview}
+          alt=""
+          aria-hidden="true"
+          width={f.largura}
+          height={f.altura}
+          loading={prioridade ? "eager" : "lazy"}
+          fetchPriority={prioridade ? "high" : undefined}
+          decoding="async"
+          onLoad={() => setCarregarOriginal(true)}
+          onError={() => setCarregarOriginal(true)}
+          style={f.foco ? { objectPosition: f.foco } : undefined}
+        />
+      )}
+      <picture className="pv-imagem-picture">
+        {f.srcMobile && <source media="(max-width: 47.99rem)" srcSet={f.srcMobile} />}
+        {img}
+      </picture>
+    </span>
   );
 }
 

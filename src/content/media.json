@@ -3,32 +3,32 @@
   "marca": { "src": "/marca/dunamis-oficial.png", "alt": "Dunamis — Recebereis poder" },
   "fotos": {
     "hero": [
-      { "src": "/fotos/frente%20do%20local%2016x9.jpg", "alt": "Fachada do local do Retiro 2027", "largura": 4000, "altura": 2252, "foco": "50% 45%" }
+      { "src": "/fotos/frente%20do%20local%2016x9.jpg", "preview": "/fotos/preview/foto-04.jpg", "alt": "Fachada do local do Retiro 2027", "largura": 4000, "altura": 2252, "foco": "50% 45%" }
     ],
     "local": [
-      { "src": "/fotos/frente%20do%20local.jpg", "alt": "Vista da entrada do local do retiro", "largura": 4000, "altura": 2252, "foco": "50% 45%" }
+      { "src": "/fotos/frente%20do%20local.jpg", "preview": "/fotos/preview/foto-05.jpg", "alt": "Vista da entrada do local do retiro", "largura": 4000, "altura": 2252, "foco": "50% 45%" }
     ],
     "culto": [
-      { "src": "/fotos/espalo%20de%20culto.jpg", "alt": "Espaço de culto do local do retiro", "largura": 4000, "altura": 1848 }
+      { "src": "/fotos/espalo%20de%20culto.jpg", "preview": "/fotos/preview/foto-03.jpg", "alt": "Espaço de culto do local do retiro", "largura": 4000, "altura": 1848 }
     ],
     "quartos": [
-      { "src": "/fotos/quarto.jpg", "alt": "Quarto disponível para hospedagem no retiro", "largura": 4000, "altura": 1848 },
-      { "src": "/fotos/quarto%20a.jpg", "alt": "Outro quarto da hospedagem do retiro", "largura": 4000, "altura": 1848 },
-      { "src": "/fotos/quarto%20b.jpg", "alt": "Quarto da hospedagem do retiro", "largura": 4000, "altura": 1848 }
+      { "src": "/fotos/quarto.jpg", "preview": "/fotos/preview/foto-16.jpg", "alt": "Quarto disponível para hospedagem no retiro", "largura": 4000, "altura": 1848 },
+      { "src": "/fotos/quarto%20a.jpg", "preview": "/fotos/preview/foto-14.jpg", "alt": "Outro quarto da hospedagem do retiro", "largura": 4000, "altura": 1848 },
+      { "src": "/fotos/quarto%20b.jpg", "preview": "/fotos/preview/foto-15.jpg", "alt": "Quarto da hospedagem do retiro", "largura": 4000, "altura": 1848 }
     ],
     "adoracao": [
-      { "src": "/fotos/jovens%20adorando.jpg", "alt": "Jovens em momento de adoração", "largura": 1362, "altura": 2048, "foco": "50% 35%" },
-      { "src": "/fotos/jovens%20abra%C3%A7ados%20adorando.jpg", "alt": "Jovens reunidos durante a adoração", "largura": 1362, "altura": 2048, "foco": "50% 8%" },
-      { "src": "/fotos/ora%C3%A7%C3%A3o%20e%20adora%C3%A7%C3%A3o.jpg", "alt": "Momento de oração e adoração", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
-      { "src": "/fotos/ora%C3%A7%C3%A3o%20pelo%20jovem.jpg", "alt": "Oração por um jovem", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
-      { "src": "/fotos/choro%20de%20adora%C3%A7%C3%A3o.jpg", "alt": "Jovem em momento de emoção durante a adoração", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
-      { "src": "/fotos/lagrimas%20de%20adora%C3%A7%C3%A3o.jpg", "alt": "Jovem em momento de emoção durante a adoração", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
-      { "src": "/fotos/jvoem%20chorando%20pelo%20toqe%20do%20Espirito.jpg", "alt": "Jovem em momento de oração", "largura": 1362, "altura": 2048, "foco": "50% 35%" }
+      { "src": "/fotos/jovens%20adorando.jpg", "preview": "/fotos/preview/foto-09.jpg", "alt": "Jovens em momento de adoração", "largura": 1362, "altura": 2048, "foco": "50% 35%" },
+      { "src": "/fotos/jovens%20abra%C3%A7ados%20adorando.jpg", "preview": "/fotos/preview/foto-08.jpg", "alt": "Jovens reunidos durante a adoração", "largura": 1362, "altura": 2048, "foco": "50% 8%" },
+      { "src": "/fotos/ora%C3%A7%C3%A3o%20e%20adora%C3%A7%C3%A3o.jpg", "preview": "/fotos/preview/foto-12.jpg", "alt": "Momento de oração e adoração", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
+      { "src": "/fotos/ora%C3%A7%C3%A3o%20pelo%20jovem.jpg", "preview": "/fotos/preview/foto-13.jpg", "alt": "Oração por um jovem", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
+      { "src": "/fotos/choro%20de%20adora%C3%A7%C3%A3o.jpg", "preview": "/fotos/preview/foto-01.jpg", "alt": "Jovem em momento de emoção durante a adoração", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
+      { "src": "/fotos/lagrimas%20de%20adora%C3%A7%C3%A3o.jpg", "preview": "/fotos/preview/foto-11.jpg", "alt": "Jovem em momento de emoção durante a adoração", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
+      { "src": "/fotos/jvoem%20chorando%20pelo%20toqe%20do%20Espirito.jpg", "preview": "/fotos/preview/foto-10.jpg", "alt": "Jovem em momento de oração", "largura": 1362, "altura": 2048, "foco": "50% 35%" }
     ],
     "convivencia": [
-      { "src": "/fotos/jovem%20feliz.jpg", "alt": "Jovem sorrindo durante o retiro", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
-      { "src": "/fotos/jovem%20na%20gincana%20feliz.jpg", "alt": "Jovem participando de uma gincana", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
-      { "src": "/fotos/espa%C3%A7o%20coberto%20gincanas.jpg", "alt": "Espaço coberto usado para gincanas", "largura": 4000, "altura": 1848 }
+      { "src": "/fotos/jovem%20feliz.jpg", "preview": "/fotos/preview/foto-06.jpg", "alt": "Jovem sorrindo durante o retiro", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
+      { "src": "/fotos/jovem%20na%20gincana%20feliz.jpg", "preview": "/fotos/preview/foto-07.jpg", "alt": "Jovem participando de uma gincana", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
+      { "src": "/fotos/espa%C3%A7o%20coberto%20gincanas.jpg", "preview": "/fotos/preview/foto-02.jpg", "alt": "Espaço coberto usado para gincanas", "largura": 4000, "altura": 1848 }
     ]
   },
   "video": { "src": "/fotos/video-oficial-web.mp4", "poster": "/fotos/frente%20do%20local%2016x9.jpg", "titulo": "DUNAMIS — Retiro 2027" }
