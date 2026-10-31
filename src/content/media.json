@@ -1,5 +1,5 @@
 {
-  "_leia-me": "Fotos reais em public/fotos. O MP4 original de 160 MB permanece preservado no checkout original. Cadastre o vídeo nesta página somente depois de validar uma cópia web compatível com o limite do deploy.",
+  "_leia-me": "Fotos reais em public/fotos. O MP4 original de 160 MB permanece preservado no checkout original; a cópia web otimizada é menor que 100 MB.",
   "marca": { "src": "/marca/dunamis-oficial.png", "alt": "Dunamis — Recebereis poder" },
   "fotos": {
     "hero": [
@@ -31,5 +31,5 @@
       { "src": "/fotos/espa%C3%A7o%20coberto%20gincanas.jpg", "alt": "Espaço coberto usado para gincanas", "largura": 4000, "altura": 1848 }
     ]
   },
-  "video": null
+  "video": { "src": "/fotos/video-oficial-web.mp4", "titulo": "DUNAMIS — Retiro 2027" }
 }
