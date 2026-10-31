@@ -221,7 +221,7 @@ export const evento = {
     },
     {
       p: "Como faço o pagamento?",
-      r: "O pagamento por Pix deve ser quitado até 16 de janeiro de 2027, vinte dias antes do início do retiro. As demais condições de pagamento serão confirmadas pela organização.",
+      r: "Aceitamos Pix, com quitação até 16 de janeiro de 2027 (20 dias antes do início do retiro), ou cartão de crédito em até 10 parcelas de R$ 50,00 (R$ 500,00 no total).",
     },
     {
       p: "Por que preciso informar o CPF?",
@@ -237,7 +237,7 @@ export const evento = {
   /** Mostrado na confirmação de inscrição; inclui a forma e a data limite de pagamento confirmadas. */
   proximosPassos: [
     "Este cadastro não confirma pagamento.",
-    "O pagamento por Pix deve ser quitado até 16 de janeiro de 2027, vinte dias antes do início do retiro. A organização divulgará os horários e os pontos de embarque do ônibus.",
+    "Aceitamos Pix, com quitação até 16 de janeiro de 2027 (20 dias antes do início do retiro), ou cartão de crédito em até 10 parcelas de R$ 50,00 (R$ 500,00 no total). A organização divulgará os horários e os pontos de embarque do ônibus.",
     "Guarde esta tela (um print ajuda) e, em caso de dúvida, procure a liderança da Conexão Jovem.",
   ],
 

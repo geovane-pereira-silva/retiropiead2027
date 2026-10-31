@@ -100,6 +100,9 @@ test("dados oficiais do evento permanecem inalterados", () => {
   );
   assert.equal(evento.maxParticipantesPorInscricao, 1);
   assert.ok(evento.incluso.some((item) => item.titulo === "Kit do retiro e camisa"));
+  const pagamento = evento.faq.find((item) => item.p === "Como faço o pagamento?")?.r ?? "";
+  assert.match(pagamento, /10 parcelas de R\$ 50,00/);
+  assert.match(pagamento, /16 de janeiro de 2027/);
   assert.deepEqual(evento.dataCurta, { de: "5", ate: "9", mes: "fevereiro", ano: "2027" });
 });
 
