@@ -401,6 +401,16 @@
   object-fit: cover;
   display: block;
 }
+.pv-video-palco:fullscreen,
+.pv-video-palco:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+.pv-video-palco:fullscreen .pv-video-midia video,
+.pv-video-palco:-webkit-full-screen .pv-video-midia video {
+  object-fit: contain;
+}
 .pv-video-controles {
   position: absolute;
   z-index: 3;
@@ -450,6 +460,26 @@
   .pv-video-controles {
     bottom: 1.75rem;
     right: 2rem;
+  }
+}
+@media (max-width: 47.99rem) {
+  .pv-video-midia video {
+    object-fit: contain;
+    background: #000;
+  }
+  .pv-video-controles {
+    left: 1rem;
+    right: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .pv-video-aviso {
+    text-align: center;
+  }
+  .pv-video-controles button {
+    padding: 0 0.85rem;
+    font-size: 0.85rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {

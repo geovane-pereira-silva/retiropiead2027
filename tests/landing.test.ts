@@ -82,6 +82,16 @@ test("vídeo: avisa sobre o som e só inicia com ação explícita da pessoa", (
   assert.doesNotMatch(fonte, /autoPlay/);
 });
 
+test("vídeo: mantém o quadro inteiro no celular e oferece tela cheia", () => {
+  const componente = readFileSync("src/landing/Landing.tsx", "utf8");
+  const estilos = readFileSync("src/landing/palavra.css", "utf8");
+  assert.match(componente, /Ver em tela cheia/);
+  assert.match(componente, /requestFullscreen\(\)/);
+  assert.match(componente, /webkitEnterFullscreen/);
+  assert.match(componente, /reduzir \|\| telaEstreita \? undefined/);
+  assert.match(estilos, /@media \(max-width: 47\.99rem\)[\s\S]*?\.pv-video-midia video\s*\{\s*object-fit: contain;/);
+});
+
 test("fotos: imagens que não aparecem nas outras seções são exibidas na galeria final", () => {
   const fonte = readFileSync("src/landing/Landing.tsx", "utf8");
   assert.match(fonte, /function FotosAdicionais\(\)/);

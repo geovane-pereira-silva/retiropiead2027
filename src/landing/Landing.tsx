@@ -189,11 +189,15 @@ function Abertura() {
 /* ── 2. Vídeo em tela cheia (expande com a rolagem) ───────────────────── */
 function VideoCinema() {
   const ref = useRef<HTMLElement>(null);
+  const palco = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const { reduzir } = useMovimento();
   const [som, setSom] = useState(false);
   const [tocando, setTocando] = useState(false);
   const [erroReproducao, setErroReproducao] = useState(false);
+  const [telaCheia, setTelaCheia] = useState(false);
+  const [erroTelaCheia, setErroTelaCheia] = useState(false);
+  const [telaEstreita, setTelaEstreita] = useState(false);
   const temVideo = !!videoInfo?.src;
 
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start start"] });
@@ -202,6 +206,18 @@ function VideoCinema() {
   const r = useTransform(scrollYProgress, [0, 1], [28, 0]);
   const zoom = useTransform(scrollYProgress, [0, 1], [1.18, 1]);
   const recorte = useMotionTemplate`inset(${v}svh ${h}vw round ${r}px)`;
+
+  useEffect(() => {
+    const consulta = window.matchMedia("(max-width: 47.99rem)");
+    const atualizar = () => setTelaEstreita(consulta.matches);
+    atualizar();
+    if (consulta.addEventListener) {
+      consulta.addEventListener("change", atualizar);
+      return () => consulta.removeEventListener("change", atualizar);
+    }
+    consulta.addListener(atualizar);
+    return () => consulta.removeListener(atualizar);
+  }, []);
 
   // Pré-carrega apenas os metadados; o vídeo começa após a pessoa ativar o som.
   useEffect(() => {
@@ -234,6 +250,27 @@ function VideoCinema() {
       visibilidade.disconnect();
     };
   }, [temVideo, reduzir]);
+
+  useEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    const sincronizar = () => {
+      const videoWebkit = el as HTMLVideoElement & { webkitDisplayingFullscreen?: boolean };
+      setTelaCheia(
+        document.fullscreenElement === palco.current ||
+          document.fullscreenElement === el ||
+          videoWebkit.webkitDisplayingFullscreen === true,
+      );
+    };
+    document.addEventListener("fullscreenchange", sincronizar);
+    el.addEventListener("webkitbeginfullscreen", sincronizar);
+    el.addEventListener("webkitendfullscreen", sincronizar);
+    return () => {
+      document.removeEventListener("fullscreenchange", sincronizar);
+      el.removeEventListener("webkitbeginfullscreen", sincronizar);
+      el.removeEventListener("webkitendfullscreen", sincronizar);
+    };
+  }, [temVideo]);
 
   const reproduzirComSom = () => {
     const el = video.current;
@@ -268,12 +305,49 @@ function VideoCinema() {
     }
   };
 
+  const alternarTelaCheia = async () => {
+    const el = video.current as
+      | (HTMLVideoElement & {
+          webkitEnterFullscreen?: () => void;
+          webkitExitFullscreen?: () => void;
+          webkitDisplayingFullscreen?: boolean;
+        })
+      | null;
+    if (!el) return;
+    setErroTelaCheia(false);
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+      if (el.webkitDisplayingFullscreen && el.webkitExitFullscreen) {
+        el.webkitExitFullscreen();
+        return;
+      }
+      if (palco.current?.requestFullscreen) {
+        await palco.current.requestFullscreen();
+        return;
+      }
+      if (el.webkitEnterFullscreen) {
+        el.webkitEnterFullscreen();
+        return;
+      }
+      setErroTelaCheia(true);
+    } catch {
+      if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
+      else setErroTelaCheia(true);
+    }
+  };
+
   return (
     <section ref={ref} className="pv-video" id="video" aria-label="Vídeo do retiro">
-      <div className="pv-video-palco">
+      <div ref={palco} className="pv-video-palco">
         <motion.div className="pv-video-quadro" style={reduzir ? undefined : { clipPath: recorte }}>
           {temVideo ? (
-            <motion.div className="pv-video-midia" style={reduzir ? undefined : { scale: zoom }}>
+            <motion.div
+              className="pv-video-midia"
+              style={reduzir || telaEstreita ? undefined : { scale: zoom }}
+            >
               <video
                 ref={video}
                 muted={!som}
@@ -304,9 +378,11 @@ function VideoCinema() {
 
         {temVideo && (
           <div className="pv-video-controles">
-            {!tocando && (
+            {(!tocando || erroTelaCheia) && (
               <p className="pv-video-aviso" role="status">
-                {erroReproducao
+                {erroTelaCheia
+                  ? "A tela cheia não está disponível neste navegador."
+                  : erroReproducao
                   ? "O vídeo não iniciou. Toque em “Reproduzir com som” para tentar novamente."
                   : "Este vídeo tem som. Toque em “Reproduzir com som” para assistir."}
               </p>
@@ -316,6 +392,9 @@ function VideoCinema() {
             </button>
             <button type="button" onClick={alternarSom}>
               {som ? "Desativar som" : "Ativar som"}
+            </button>
+            <button type="button" onClick={alternarTelaCheia}>
+              {telaCheia ? "Sair da tela cheia" : "Ver em tela cheia"}
             </button>
           </div>
         )}
