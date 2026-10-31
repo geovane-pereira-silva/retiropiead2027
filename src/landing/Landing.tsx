@@ -10,8 +10,8 @@ import { Imagem, Midia, fotosDe, videoInfo } from "./Gallery";
 
 const NAV = [
   { href: "#local", rotulo: "Local" },
-  { href: "#agenda", rotulo: "Dias" },
   { href: "#hospedagem", rotulo: "Hospedagem" },
+  { href: "#agenda", rotulo: "Dias" },
   { href: "#valores", rotulo: "Valores" },
   { href: "#transporte", rotulo: "Transporte" },
   { href: "#duvidas", rotulo: "Dúvidas" },
@@ -264,10 +264,10 @@ function VideoCinema() {
 
         {temVideo && (
           <div className="pv-video-controles">
-            <button type="button" onClick={alternarPlay} aria-pressed={tocando}>
+            <button type="button" onClick={alternarPlay}>
               {tocando ? "Pausar vídeo" : "Reproduzir vídeo"}
             </button>
-            <button type="button" onClick={alternarSom} aria-pressed={som}>
+            <button type="button" onClick={alternarSom}>
               {som ? "Desativar som" : "Ativar som"}
             </button>
           </div>
@@ -430,7 +430,7 @@ function Hospedagem() {
 const FOTO_PERIODO: Record<number, { grupo: "adoracao" | "convivencia"; i: number }> = {
   0: { grupo: "adoracao", i: 2 },
   1: { grupo: "convivencia", i: 1 },
-  2: { grupo: "adoracao", i: 0 },
+  2: { grupo: "adoracao", i: 3 },
 };
 
 function Vigilia() {
