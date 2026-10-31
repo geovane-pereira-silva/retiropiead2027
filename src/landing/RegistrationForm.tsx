@@ -597,16 +597,19 @@ export function RegistrationForm() {
         </div>
         <div className="lp-etapa" hidden={etapa !== 0}>
           <fieldset className="lp-fs">
-            <legend>Quem está preenchendo?</legend>
+            <legend>
+              {values.responsavelParticipa ? "Dados do participante" : "Dados do responsável"}
+            </legend>
             <p className="hint">
-              Um cadastro por pessoa. Para menores, pai, mãe ou responsável informa os próprios
-              dados e os do participante.
+              {values.responsavelParticipa
+                ? "Faça um cadastro separado para cada pessoa da família que participará do retiro, inclusive bebês. Para menores de idade, informe também os dados do pai, da mãe ou do responsável legal."
+                : "Você está cadastrando um menor. Informe seus dados como responsável e, na etapa seguinte, os dados do participante."}
             </p>
             <Entrada
               chave="responsavel.nome"
               rotulo={
                 values.responsavelParticipa
-                  ? "Seu nome completo"
+                  ? "Nome completo do participante"
                   : "Nome completo do pai, mãe ou responsável"
               }
               valor={values.responsavel.nome}
@@ -661,7 +664,7 @@ export function RegistrationForm() {
                 }
               />
               <span>
-                A pessoa que está preenchendo também é o participante
+                Este cadastro é para mim (sou o participante)
                 {values.responsavelParticipa && respCalc && (
                   <small className="lp-chip">
                     {respCalc.idade} anos · {textoValor(respCalc.valor)}
@@ -700,7 +703,7 @@ export function RegistrationForm() {
 
           <fieldset className="lp-fs">
             <legend>
-              {values.responsavelParticipa ? "Seu contato" : "Celular cadastrado do responsável"}
+              {values.responsavelParticipa ? "Contato do participante" : "Contato do responsável"}
             </legend>
             {!values.responsavelParticipa && (
               <p className="hint">
@@ -1143,7 +1146,7 @@ export function RegistrationForm() {
             <legend>Revise antes de enviar</legend>
             <dl className="lp-revisao">
               <div>
-                <dt>Responsável</dt>
+                <dt>{values.responsavelParticipa ? "Participante" : "Responsável pelo menor"}</dt>
                 <dd>
                   {values.responsavel.nome || "—"}
                   {!values.responsavelParticipa &&
@@ -1186,7 +1189,7 @@ export function RegistrationForm() {
             </p>
             <div className="lp-passos lp-passos-links">
               <button type="button" className="lp-link-btn" onClick={() => irParaEtapa(0)}>
-                Corrigir responsável
+                {values.responsavelParticipa ? "Corrigir participante" : "Corrigir responsável"}
               </button>
               <button
                 type="button"

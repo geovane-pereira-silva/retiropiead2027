@@ -1110,6 +1110,30 @@
   background: var(--lp-mata);
   color: var(--lp-linho);
 }
+.lp-formhead-conteudo .lp-lead {
+  margin-bottom: 0;
+}
+.lp-visitante-main {
+  max-width: 46rem;
+  padding-top: 1.5rem;
+  padding-bottom: 4rem;
+}
+.lp-visitante-form {
+  margin-bottom: 2rem;
+}
+.lp-visita-opcao > span {
+  display: grid;
+  gap: 0.25rem;
+}
+.lp-visita-opcao strong {
+  color: var(--lp-mata);
+  font-size: 1.05rem;
+}
+.lp-visitante-sem-onibus {
+  margin: 1rem 0 0;
+  color: var(--lp-mute);
+  font-size: 0.9rem;
+}
 .lp-back {
   display: inline-flex;
   align-items: center;

@@ -1,8 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import type { EntradaInscricao, RespostaInscricao } from "./inscricao.server";
+import type {
+  EntradaCadastroVisitante,
+  EntradaInscricao,
+  RespostaCadastroVisitante,
+  RespostaInscricao,
+} from "./inscricao.server";
 
-export type { EntradaInscricao, RespostaInscricao };
+export type { EntradaCadastroVisitante, EntradaInscricao, RespostaCadastroVisitante, RespostaInscricao };
 
 /**
  * Endpoint de inscrição (executa só no servidor).
@@ -17,6 +22,18 @@ export const enviarInscricao = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<RespostaInscricao> => {
     const { processarInscricao, ensaioAtivo } = await import("./inscricao.server");
     return processarInscricao(data, {
+      url: process.env.APPS_SCRIPT_URL,
+      token: process.env.APPS_SCRIPT_TOKEN,
+      ensaio: ensaioAtivo(process.env),
+    });
+  });
+
+/** Cadastro curto de day use, usando a mesma integração de planilha e o mesmo modo de ensaio. */
+export const enviarCadastroVisitante = createServerFn({ method: "POST" })
+  .validator((data: EntradaCadastroVisitante) => data)
+  .handler(async ({ data }): Promise<RespostaCadastroVisitante> => {
+    const { processarCadastroVisitante, ensaioAtivo } = await import("./inscricao.server");
+    return processarCadastroVisitante(data, {
       url: process.env.APPS_SCRIPT_URL,
       token: process.env.APPS_SCRIPT_TOKEN,
       ensaio: ensaioAtivo(process.env),

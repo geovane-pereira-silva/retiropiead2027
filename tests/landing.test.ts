@@ -178,6 +178,25 @@ test("formulário usa data digitada e seleção de igreja visível", () => {
   assert.doesNotMatch(form, /rotulo="Cidade"/);
 });
 
+test("cadastro distingue participante e responsável e informa um envio por familiar", () => {
+  const form = readFileSync("src/landing/RegistrationForm.tsx", "utf8");
+  assert.match(form, /Dados do participante/);
+  assert.match(form, /Dados do responsável/);
+  assert.match(form, /inclusive bebês/);
+  assert.match(form, /Responsável pelo menor/);
+});
+
+test("seção e formulário visitante mostram day use, datas e ausência de ônibus", () => {
+  const landing = readFileSync("src/landing/Landing.tsx", "utf8");
+  const form = readFileSync("src/landing/VisitorForm.tsx", "utf8");
+  assert.match(landing, /function Visitantes\(\)/);
+  assert.match(landing, /to="\/visitantes"/);
+  assert.match(form, /não inclui transporte de ônibus/i);
+  assert.match(form, /evento\.visitantes\.dias\.map/);
+  assert.match(form, /evento\.visitantes\.valorDiaTodo/);
+  assert.match(form, /evento\.visitantes\.valorSomenteNoite/);
+});
+
 test("tema Dunamis: Atos 1:8 e referências complementares presentes", async () => {
   const { tema } = await import("../src/content/tema.ts");
   assert.equal(tema.nome, "Dunamis");

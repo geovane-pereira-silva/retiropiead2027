@@ -52,18 +52,19 @@ export function Termos() {
           </p>
           <h4>Quais dados coletamos</h4>
           <p>
-            Um cadastro por participante. Coletamos nome, data de nascimento, CPF (obrigatório para
+            Para o retiro, faça um cadastro por participante. Coletamos nome, data de nascimento, CPF (obrigatório para
             adultos e opcional para menores), transporte escolhido, igreja de origem, congregação
             ou, para convidados, nome da igreja, pastor presidente e líder de jovens, além do
             contato de emergência. Para participante menor, coletamos o nome, vínculo e celular do
             pai, mãe ou responsável legal. Também as necessidades de hospedagem ou alimentação
-            informadas.
+            informadas. Para visitantes, coletamos o nome, celular, dia da visita e período escolhido
+            (dia todo ou somente à noite).
           </p>
           <h4>Para que usamos</h4>
           <p>
-            Organizar o cadastro individual e o retiro: identificação do participante, contato,
-            hospedagem, alimentação, segurança e comunicação em caso de emergência. O CPF serve para
-            identificar a inscrição e evitar duplicidade.
+            Organizar os cadastros do retiro e de visitantes: identificação, contato, hospedagem,
+            alimentação, dia e período da visita, segurança e comunicação em caso de emergência. O
+            CPF serve para identificar a inscrição do retiro e evitar duplicidade.
           </p>
           <h4>Dados de crianças e adolescentes</h4>
           <p>

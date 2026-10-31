@@ -166,6 +166,29 @@ export function emailValido(entrada: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(entrada) && entrada.length <= 120;
 }
 
+export type PeriodoVisitante = "dia-todo" | "somente-noite";
+export type DadosVisitante = {
+  nome: string;
+  telefone: string;
+  dia: string;
+  periodo: PeriodoVisitante | "";
+  aceitePrivacidade: boolean;
+  website: string;
+};
+
+export function validarDadosVisitante(v: DadosVisitante, diasPermitidos: string[]): Erros {
+  const erros: Erros = {};
+  if (!nomeValido(v.nome)) erros.nome = "Informe o nome completo do visitante.";
+  if (!v.telefone) erros.telefone = "Informe um celular para contato.";
+  else if (!telefoneValido(v.telefone)) erros.telefone = "Celular inválido. Use DDD + número.";
+  if (!diasPermitidos.includes(v.dia)) erros.dia = "Escolha o dia da visita.";
+  if (v.periodo !== "dia-todo" && v.periodo !== "somente-noite")
+    erros.periodo = "Escolha dia todo ou somente à noite.";
+  if (!v.aceitePrivacidade) erros.aceitePrivacidade = "Confirme a ciência do aviso de privacidade.";
+  if (v.website.trim()) erros.website = "Não foi possível processar o cadastro.";
+  return erros;
+}
+
 function nomeValido(entrada: string): boolean {
   const nome = entrada.trim().replace(/\s+/g, " ");
   if (nome.length < 5 || nome.length > 100) return false;
@@ -237,7 +260,7 @@ export type ContextoValidacao = {
 };
 
 export type Participante = {
-  papel: "Responsável" | "Integrante";
+  papel: "Participante";
   nome: string;
   dataNascimento: string;
   cpf: string; // só dígitos ("" se não informado)
@@ -303,7 +326,7 @@ function avaliarPessoa(
   const adulto = idade !== null && idade >= 18;
   if (!cpfDigitos) {
     // Obrigatório para adultos; opcional para menores (crianças nem sempre têm CPF).
-    if (adulto || (papel === "Responsável" && participa)) erros[`${chave}.cpf`] = "Informe o CPF.";
+    if (adulto) erros[`${chave}.cpf`] = "Informe o CPF.";
   } else if (!cpfValido(cpfDigitos)) {
     erros[`${chave}.cpf`] = "CPF inválido. Confira os números.";
   }
@@ -340,7 +363,7 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
   const resp = avaliarPessoa(
     v.responsavel,
     "responsavel",
-    "Responsável",
+    "Participante",
     ctx,
     erros,
     v.responsavelParticipa,
@@ -381,7 +404,7 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
     erros.integrantes = "É um cadastro por pessoa. Faça um novo envio para cada participante.";
   }
   v.integrantes.forEach((p, i) => {
-    const a = avaliarPessoa(p, `integrantes.${i}`, "Integrante", ctx, erros, true);
+    const a = avaliarPessoa(p, `integrantes.${i}`, "Participante", ctx, erros, true);
     if (a) participantes.push(a);
   });
 
@@ -445,16 +468,16 @@ export function higienizarCelula(s: string): string {
 
 export type ParticipantePlanilha = {
   ordem: number;
-  papel: "Responsável" | "Integrante";
+  papel: "Participante" | "Visitante";
   nome: string;
   dataNascimento: string;
-  idadeNaDataDoRetiro: number;
-  menorDeIdade: "SIM" | "NÃO";
+  idadeNaDataDoRetiro: number | "";
+  menorDeIdade: "SIM" | "NÃO" | "";
   faixa: string;
   valor: number | null;
   valorTexto: string;
   cpf: string; // somente dígitos ("" se não informado)
-  transporte: "Ônibus da organização" | "Carro próprio";
+  transporte: string;
 };
 
 export type CorpoPlanilha = {
@@ -475,11 +498,11 @@ export type CorpoPlanilha = {
   totalValor: number;
   totalTexto: string;
   temValorADefinir: "SIM" | "NÃO";
-  aceiteRegras: "SIM";
+  aceiteRegras: "SIM" | "N/A — visitante";
   aceitePrivacidade: "SIM";
   versaoTermos: string;
   statusPagamento: "NÃO CONFIRMADO";
-  origem: "landing-retiro-2027";
+  origem: "landing-retiro-2027" | "landing-retiro-2027-visitante";
   participantes: ParticipantePlanilha[];
 };
 

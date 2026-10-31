@@ -3,16 +3,22 @@
 import { evento } from "../content/evento";
 import {
   hojeSaoPaulo,
+  formatarReais,
+  higienizarCelula,
   montarCorpo,
+  normalizarTelefone,
   rotuloTransporte,
   somenteDigitos,
+  validarDadosVisitante,
   validar,
+  type DadosVisitante,
   type Erros,
   type FormValues,
 } from "../lib/inscricao";
 import { enviarParaPlanilha, type OpcoesEnvio } from "./sheets.server";
 
 export type EntradaInscricao = { values: FormValues; idempotencyKey: string };
+export type EntradaCadastroVisitante = { values: DadosVisitante; idempotencyKey: string };
 
 export type CodigoErro =
   | "VALIDACAO"
@@ -26,7 +32,7 @@ export type CodigoErro =
 
 export type ParticipanteConfirmado = {
   nome: string;
-  papel: "Responsável" | "Integrante";
+  papel: "Participante";
   idade: number;
   faixa: string;
   valor: number | null;
@@ -56,6 +62,23 @@ export type RespostaInscricao =
       };
     };
 
+export type RespostaCadastroVisitante =
+  | {
+      ok: true;
+      nome: string;
+      dia: string;
+      periodo: string;
+      valor: number;
+      jaRegistrada?: boolean;
+    }
+  | {
+      ok: false;
+      codigo: CodigoErro;
+      mensagem: string;
+      erros?: Erros;
+      ensaio?: { nome: string; dia: string; periodo: string; valor: number };
+    };
+
 type Ambiente = { url?: string; token?: string; ensaio?: boolean };
 
 /**
@@ -72,6 +95,7 @@ export function ensaioAtivo(env: { FORM_MODO_ENSAIO?: string; VERCEL_ENV?: strin
 // Memória do processo (melhor esforço; o bloqueio definitivo por CPF é feito na planilha).
 const JANELA_MS = 10 * 60 * 1000;
 const recentes = new Map<string, { em: number; resposta: RespostaInscricao }>();
+const visitantesRecentes = new Map<string, { em: number; resposta: RespostaCadastroVisitante }>();
 const emAndamento = new Set<string>();
 
 const higienizarNome = (n: string): string => n.trim().replace(/\s+/g, " ");
@@ -274,5 +298,134 @@ export async function processarInscricao(
     };
   } finally {
     travas.forEach((t) => emAndamento.delete(t));
+  }
+}
+
+export async function processarCadastroVisitante(
+  entrada: EntradaCadastroVisitante,
+  ambiente: Ambiente,
+  opcoes: OpcoesEnvio = {},
+): Promise<RespostaCadastroVisitante> {
+  if (!evento.visitantes.inscricoesAbertas)
+    return {
+      ok: false,
+      codigo: "ENCERRADAS",
+      mensagem: "O cadastro de visitantes não está aberto no momento.",
+    };
+  if (!ambiente.url && !ambiente.ensaio)
+    return {
+      ok: false,
+      codigo: "NAO_CONFIGURADO",
+      mensagem: "O cadastro de visitantes está temporariamente indisponível.",
+    };
+
+  const v = entrada?.values;
+  const chave = entrada?.idempotencyKey;
+  if (
+    !v ||
+    typeof v !== "object" ||
+    typeof v.nome !== "string" ||
+    typeof v.telefone !== "string" ||
+    typeof v.dia !== "string" ||
+    typeof v.periodo !== "string" ||
+    typeof v.aceitePrivacidade !== "boolean" ||
+    typeof v.website !== "string" ||
+    typeof chave !== "string" ||
+    chave.length < 8 ||
+    chave.length > 80
+  )
+    return { ok: false, codigo: "SOLICITACAO_INVALIDA", mensagem: "Recarregue a página e tente novamente." };
+
+  const erros = validarDadosVisitante(v, evento.visitantes.dias.map((d) => d.data));
+  if (Object.keys(erros).length)
+    return { ok: false, codigo: "VALIDACAO", mensagem: "Revise os campos destacados.", erros };
+
+  const dia = evento.visitantes.dias.find((d) => d.data === v.dia)!;
+  const periodo = v.periodo === "dia-todo" ? "Dia todo" : "Somente à noite";
+  const valor = v.periodo === "dia-todo"
+    ? evento.visitantes.valorDiaTodo
+    : evento.visitantes.valorSomenteNoite;
+  const nome = v.nome.trim().replace(/\s+/g, " ");
+
+  if (ambiente.ensaio)
+    return {
+      ok: false,
+      codigo: "ENSAIO",
+      mensagem: "Modo de ensaio: os dados foram validados, mas nada foi gravado.",
+      ensaio: { nome, dia: dia.rotulo, periodo, valor },
+    };
+  if (!ambiente.url)
+    return { ok: false, codigo: "NAO_CONFIGURADO", mensagem: "O cadastro está temporariamente indisponível." };
+
+  const agora = Date.now();
+  for (const [k, item] of visitantesRecentes) if (agora - item.em > JANELA_MS) visitantesRecentes.delete(k);
+  const anterior = visitantesRecentes.get(chave);
+  if (anterior?.resposta.ok) return { ...anterior.resposta, jaRegistrada: true };
+  if (emAndamento.has(chave))
+    return { ok: false, codigo: "DUPLICADO", mensagem: "Seu cadastro está sendo enviado. Aguarde." };
+
+  emAndamento.add(chave);
+  try {
+    const telefone = normalizarTelefone(v.telefone);
+    const corpo = {
+      idempotencyKey: chave,
+      familiaId: novoFamiliaId(agora),
+      enviadoEm: new Date(agora).toISOString(),
+      responsavelNome: higienizarCelula(nome),
+      responsavelCpf: "",
+      telefone,
+      whatsapp: telefone,
+      email: "",
+      igreja: "Visitante",
+      cidade: "",
+      emergenciaNome: "",
+      emergenciaTelefone: "",
+      necessidades: "",
+      totalParticipantes: 1,
+      totalValor: valor,
+      totalTexto: formatarReais(valor),
+      temValorADefinir: "NÃO" as const,
+      aceiteRegras: "N/A — visitante" as const,
+      aceitePrivacidade: "SIM" as const,
+      versaoTermos: evento.versaoTermos,
+      statusPagamento: "NÃO CONFIRMADO" as const,
+      origem: "landing-retiro-2027-visitante" as const,
+      participantes: [
+        {
+          ordem: 1,
+          papel: "Visitante" as const,
+          nome: higienizarCelula(nome),
+          dataNascimento: "",
+          idadeNaDataDoRetiro: "" as const,
+          menorDeIdade: "" as const,
+          faixa: `Visitante — ${periodo.toLocaleLowerCase("pt-BR")}`,
+          valor,
+          valorTexto: formatarReais(valor),
+          cpf: "",
+          transporte: `Sem ônibus — ${dia.rotulo} — ${periodo}`,
+        },
+      ],
+    };
+    const resultadoEnvio = await enviarParaPlanilha(
+      ambiente.url,
+      corpo as unknown as Record<string, unknown>,
+      { ...opcoes, token: ambiente.token },
+    );
+    if (resultadoEnvio.status === "ok") {
+      const resposta: RespostaCadastroVisitante = { ok: true, nome, dia: dia.rotulo, periodo, valor };
+      visitantesRecentes.set(chave, { em: agora, resposta });
+      return resposta;
+    }
+    if (resultadoEnvio.status === "duplicado")
+      return { ok: false, codigo: "DUPLICADO", mensagem: "Este cadastro já foi recebido." };
+    if (resultadoEnvio.status === "recusado")
+      return { ok: false, codigo: "RECUSADO", mensagem: "Não foi possível registrar agora. Tente novamente." };
+    return {
+      ok: false,
+      codigo: "NAO_CONFIRMADO",
+      mensagem: "Não foi possível confirmar o cadastro. Tente novamente ou procure a liderança.",
+    };
+  } finally {
+    emAndamento.delete(chave);
   }
 }

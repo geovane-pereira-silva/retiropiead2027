@@ -15,6 +15,7 @@ import {
   normalizarTelefone,
   telefoneValido,
   textoValor,
+  validarDadosVisitante,
   validar,
   VALORES_VAZIOS,
   type FormValues,
@@ -28,6 +29,23 @@ const ctx = {
   faixas: evento.faixas,
   maxParticipantes: evento.maxParticipantesPorInscricao,
 };
+
+test("visitante escolhe dia e período e não precisa escolher transporte", () => {
+  const dias = evento.visitantes.dias.map((d) => d.data);
+  const base = {
+    nome: "Ana da Silva",
+    telefone: "(35) 99999-1234",
+    dia: "2027-02-07",
+    periodo: "dia-todo" as const,
+    aceitePrivacidade: true,
+    website: "",
+  };
+  assert.deepEqual(validarDadosVisitante(base, dias), {});
+  assert.equal(evento.visitantes.valorDiaTodo, 100);
+  assert.equal(evento.visitantes.valorSomenteNoite, 60);
+  assert.ok(validarDadosVisitante({ ...base, dia: "2027-02-10" }, dias).dia);
+  assert.ok(validarDadosVisitante({ ...base, periodo: "" }, dias).periodo);
+});
 
 const pessoa = (
   nome: string,

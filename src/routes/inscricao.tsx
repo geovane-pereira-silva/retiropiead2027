@@ -11,7 +11,7 @@ export const Route = createFileRoute("/inscricao")({
       { title: `Cadastro — ${evento.nome} ${evento.edicao}` },
       {
         name: "description",
-        content: `Cadastro individual para o ${evento.nome} ${evento.edicao} (${evento.dataTexto}). Para menor de idade, pai, mãe ou responsável legal faz o cadastro.`,
+        content: `Cadastro individual para ${evento.nome} ${evento.edicao} (${evento.dataTexto}). Cadastre cada participante da família, inclusive bebês.`,
       },
       { name: "robots", content: "noindex" },
     ],
@@ -28,7 +28,7 @@ function Inscricao() {
             ← {evento.ministerio}
           </a>
           <h1 className="lp-h2" style={{ marginBottom: "0.35rem", fontSize: "clamp(1.7rem, 5vw, 2.5rem)" }}>
-            Cadastro individual
+            Cadastro de participante
           </h1>
           <p className="lp-lead" style={{ marginBottom: 0 }}>
             {evento.dataTexto} · {evento.local.cidade}/{evento.local.uf}

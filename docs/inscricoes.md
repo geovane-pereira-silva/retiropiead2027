@@ -8,7 +8,7 @@
 
 ## Fluxo
 
-Navegador (um participante adulto, ou um menor com os dados do responsável legal) → `enviarInscricao` (função de servidor) → valida de novo, recalcula idade/valor → Google Apps Script → planilha.
+Navegador (participante adulto, ou menor com os dados do responsável legal) → `enviarInscricao` → valida de novo, recalcula idade/valor → Google Apps Script → planilha. Visitantes usam `/visitantes` → `enviarCadastroVisitante` → valida dia/período e preço no servidor → a mesma planilha.
 O CPF e os demais dados nunca passam por URL, localStorage ou logs. A URL do script fica só no servidor.
 
 ## Configuração obrigatória (1 passo)
@@ -19,6 +19,7 @@ Sem isso o formulário informa "inscrições temporariamente indisponíveis" e *
 ## Formato enviado à planilha
 
 JSON no corpo do POST (`text/plain`): dados de contato e origem da igreja + uma pessoa na lista `participantes` (ver `CorpoPlanilha` em `src/lib/inscricao.ts`). Para menores, o participante é informado pelo pai/mãe/responsável; para adultos, a própria pessoa faz o cadastro. O campo de igreja transporta a congregação local ou o nome da igreja convidada e suas lideranças sem alterar as colunas já usadas pelo Apps Script.
+No cadastro de visitantes, a lista contém uma linha com papel `Visitante`; o dia e o período ficam descritos nos campos existentes `transporte` e `faixa`, e o valor calculado pelo servidor vai para `valor`. Não é oferecida opção de ônibus nem são adicionadas colunas à planilha.
 Resposta esperada: `{ "ok": true }`, ou `{ "ok": false, "code": "DUPLICATE" }` para CPF repetido.
 Qualquer outra resposta (HTML de erro, timeout) é tratada como "não confirmado" — nunca como sucesso.
 Se o seu script usa outros nomes de campos, ajuste só `montarRequisicao` em `src/api/sheets.server.ts`.
@@ -36,7 +37,7 @@ Não use `DANGEROUSLY_DEPLOY_VULNERABLE_TANSTACK_START_XSS`.
 
 ## Modo de ensaio (pré-visualização)
 
-O formulário tem 4 etapas (Responsável, Participantes, Transporte, Revisão) e aceita somente uma pessoa por envio. Em **Preview** da Vercel e no ambiente local
+O formulário do retiro aceita somente uma pessoa por envio; o formulário de visitante é curto e separado. Em **Preview** da Vercel e no ambiente local
 o envio roda em _modo de ensaio_: o servidor valida de novo e recalcula os valores, mas **não chama o Apps Script, não grava
 na planilha e nunca mostra a tela de inscrição confirmada**. A página avisa isso em uma faixa. Só a produção da Vercel
 (`VERCEL_ENV=production`) grava de verdade. Variável `FORM_MODO_ENSAIO`: `1` força ensaio, `0` libera gravação fora da produção.

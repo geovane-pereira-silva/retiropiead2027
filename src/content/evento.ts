@@ -161,6 +161,19 @@ export const evento = {
     valorMaximoParcelaCartao: 50,
   },
 
+  visitantes: {
+    inscricoesAbertas: true,
+    valorDiaTodo: 100,
+    valorSomenteNoite: 60,
+    dias: [
+      { data: "2027-02-05", rotulo: "Sexta-feira, 5 de fevereiro" },
+      { data: "2027-02-06", rotulo: "Sábado, 6 de fevereiro" },
+      { data: "2027-02-07", rotulo: "Domingo, 7 de fevereiro" },
+      { data: "2027-02-08", rotulo: "Segunda-feira, 8 de fevereiro" },
+      { data: "2027-02-09", rotulo: "Terça-feira, 9 de fevereiro" },
+    ],
+  },
+
   // ─── Transporte (oficial) ────────────────────────────────────────────────
   transporte: {
     ida: { dia: "Sexta-feira, 5 de fevereiro de 2027", texto: "Ida de ônibus." },
@@ -170,7 +183,7 @@ export const evento = {
   },
 
   orientacoes: [
-    "Faça um cadastro separado para cada pessoa, inclusive crianças e adolescentes.",
+    "Faça um cadastro separado para cada participante da família, inclusive bebês.",
     "Para menor de idade, pai, mãe ou responsável legal informa seu nome e celular cadastrado e preenche o cadastro da criança ou adolescente.",
     "A idade e o valor são calculados em 5 de fevereiro de 2027. Escolha ônibus da organização ou carro próprio.",
     "Informe se é da nossa igreja e a congregação, ou se é convidado de outra igreja.",
@@ -180,6 +193,10 @@ export const evento = {
   ],
 
   faq: [
+    {
+      p: "Posso ir como visitante por um dia?",
+      r: "Sim. Faça o cadastro de visitante, escolha o dia e selecione dia todo (R$ 100,00) ou somente à noite (R$ 60,00). O cadastro de visitante não inclui ônibus.",
+    },
     {
       p: "O que é o retiro e para quem é?",
       r: "É um retiro cristão para famílias, adultos e jovens, organizado pela Conexão Jovem da Primeira Assembleia de Deus de Santa Rita do Sapucaí/MG. A proposta é buscar a Deus juntos, fortalecer a família e viver a comunhão cristã.",

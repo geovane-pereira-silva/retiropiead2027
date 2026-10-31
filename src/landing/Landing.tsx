@@ -20,6 +20,7 @@ const NAV = [
   { href: "#hospedagem", rotulo: "Hospedagem" },
   { href: "#agenda", rotulo: "Dias" },
   { href: "#valores", rotulo: "Valores" },
+  { href: "#visitantes", rotulo: "Visitantes" },
   { href: "#transporte", rotulo: "Transporte" },
   { href: "#duvidas", rotulo: "Dúvidas" },
 ];
@@ -776,6 +777,30 @@ function Valores() {
   );
 }
 
+function Visitantes() {
+  return (
+    <section className="pv-visitantes" id="visitantes" aria-labelledby="t-visitantes">
+      <div className="pv-wrap pv-visitantes-in">
+        <div>
+          <p className="pv-visitantes-selo">Day use</p>
+          <h2 id="t-visitantes" className="pv-titulo">Vai nos visitar?</h2>
+          <p className="pv-lead">
+            Escolha o dia da visita e venha passar o dia todo ou somente a noite com a gente.
+            O cadastro de visitante não inclui ônibus.
+          </p>
+        </div>
+        <div className="pv-visitantes-card">
+          <div><span>Dia todo</span><strong>{formatarReais(evento.visitantes.valorDiaTodo)}</strong></div>
+          <div><span>Somente à noite</span><strong>{formatarReais(evento.visitantes.valorSomenteNoite)}</strong></div>
+          <Link to="/visitantes" className="lp-btn lp-btn-brasa lp-btn-grande">
+            Cadastrar como visitante
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Transporte() {
   const t = evento.transporte;
   return (
@@ -1003,6 +1028,7 @@ export function Landing() {
         <FotosAdicionais />
         <Agenda />
         <Valores />
+        <Visitantes />
         <Transporte />
         <Duvidas />
         <ChamadaFinal />
