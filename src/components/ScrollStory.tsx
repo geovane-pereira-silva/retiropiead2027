@@ -32,7 +32,7 @@ const TITLES: { texto: string; grupo?: GrupoId; indice?: number }[] = [
 const LINES: string[][] = [["Em", "Jerusalém"], ["Judeia", "e Samaria"], ["Até os", "confins"], ["Permanecer"]];
 
 const MARCAS = [
-  { src: "/logo-conexao-jovem.png", nome: evento.ministerio },
+  { src: "/marca/logo-conexao-jovem-verde.png", nome: evento.ministerio },
   { src: "/logo-igreja.png", nome: `${evento.igreja} · ${evento.igrejaCidade}` },
 ];
 
