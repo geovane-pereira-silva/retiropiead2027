@@ -766,7 +766,7 @@ function Valores() {
               : vencimentosPix.length > 0
                 ? `No Pix, datas previstas: ${vencimentosPix.map(dataCurta).join(", ")}. Quitação total até ${dataBr(evento.pagamento.limitePix)}. `
                 : `No Pix, pagamento integral até ${dataBr(evento.pagamento.limitePix)}. `}
-            O cadastro não confirma pagamento.
+            A inscrição não garante vaga; a vaga só será garantida após a confirmação do pagamento.
           </p>
           <Link to="/inscricao" className="lp-btn lp-btn-grande pv-btn-tinta">
             Fazer meu cadastro

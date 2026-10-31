@@ -258,10 +258,9 @@ export const evento = {
     },
   ] as Array<{ p: string; r: string; aberto?: boolean; pendente?: boolean }>,
 
-  /** Mostrado na confirmação de inscrição; inclui a forma e a data limite de pagamento confirmadas. */
+  /** Mostrado após a confirmação do cadastro. */
   proximosPassos: [
-    "Este cadastro não confirma pagamento.",
-    "No Pix, as parcelas previstas vencem em 25 de novembro, 5 e 25 de dezembro de 2026, com quitação total até 25 de janeiro de 2027. No cartão, as parcelas são de até R$ 50,00, em até 10 vezes. A organização divulgará os horários e os pontos de embarque do ônibus.",
+    "Depois de conferir o pagamento, a organização enviará pelo WhatsApp informado no cadastro uma mensagem confirmando sua vaga.",
     "Guarde esta tela (um print ajuda) e, em caso de dúvida, procure a liderança da Conexão Jovem.",
   ],
 

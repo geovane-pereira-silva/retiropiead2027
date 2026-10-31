@@ -184,6 +184,15 @@ test("formulário usa data digitada e seleção de igreja visível", () => {
   assert.doesNotMatch(form, /rotulo="Cidade"/);
 });
 
+test("confirmação informa inscrição feita, vaga condicionada ao pagamento e WhatsApp após confirmação", () => {
+  const form = readFileSync("src/landing/RegistrationForm.tsx", "utf8");
+  const evento = readFileSync("src/content/evento.ts", "utf8");
+  assert.match(form, /Inscrição feita!/);
+  assert.match(form, /fazer a inscrição não garante uma vaga/);
+  assert.match(evento, /WhatsApp informado no cadastro uma mensagem confirmando sua vaga/);
+  assert.doesNotMatch(form, /pagamento NÃO confirmado/);
+});
+
 test("cadastro distingue participante e responsável e informa um envio por familiar", () => {
   const form = readFileSync("src/landing/RegistrationForm.tsx", "utf8");
   assert.match(form, /Dados do participante/);

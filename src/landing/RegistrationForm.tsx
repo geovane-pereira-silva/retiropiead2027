@@ -233,7 +233,7 @@ function TelaConfirmacao({
       <span className="lp-done-ico">
         <Check size={28} aria-hidden="true" />
       </span>
-      <h2 id="t-ok">{dados.jaRegistrada ? "Cadastro já registrado" : "Cadastro recebido!"}</h2>
+      <h2 id="t-ok">{dados.jaRegistrada ? "Inscrição já registrada" : "Inscrição feita!"}</h2>
       <p style={{ margin: 0, color: "var(--lp-mute)" }}>
         {dados.responsavel}, o cadastro no {evento.nome} {evento.edicao} ({evento.dataTexto}) foi
         registrado.
@@ -253,6 +253,14 @@ function TelaConfirmacao({
           </li>
         ))}
       </ul>
+      <p className="lp-note" role="note">
+        <strong>Atenção:</strong> fazer a inscrição não garante uma vaga. A vaga só estará garantida
+        após a confirmação do pagamento pela organização.
+      </p>
+      <p className="lp-hint" style={{ margin: "0.85rem 0" }}>
+        Depois que a organização confirmar o pagamento, você receberá pelo WhatsApp informado no
+        cadastro uma mensagem confirmando sua vaga.
+      </p>
       <dl>
         <div>
           <dt>Valor total calculado</dt>
@@ -260,10 +268,6 @@ function TelaConfirmacao({
             {formatarReais(dados.total)}
             {dados.temValorADefinir && " + valores a definir pela organização"}
           </dd>
-        </div>
-        <div>
-          <dt>Situação</dt>
-          <dd>Cadastro recebido · pagamento NÃO confirmado</dd>
         </div>
       </dl>
 
@@ -1290,7 +1294,7 @@ export function RegistrationForm() {
               <p>
                 {calc.participantes.length === 0
                   ? "Informe as datas de nascimento para ver os valores."
-                  : `${calc.participantes.length} ${calc.participantes.length === 1 ? "pessoa" : "pessoas"} · idade em ${dataBr(evento.inicioData)}. O cadastro não é pagamento confirmado.`}
+                  : `${calc.participantes.length} ${calc.participantes.length === 1 ? "pessoa" : "pessoas"} · idade em ${dataBr(evento.inicioData)}. A inscrição não garante vaga; a vaga depende da confirmação do pagamento.`}
               </p>
             </div>
             {calc.temValorADefinir && (
@@ -1370,7 +1374,8 @@ export function RegistrationForm() {
             )}
           </button>
           <p className="lp-hint" style={{ textAlign: "center", margin: 0 }}>
-            O envio é apenas cadastro e não confirma pagamento.
+            A inscrição não garante vaga. A vaga só estará garantida após a confirmação do
+            pagamento.
           </p>
           <button type="button" className="lp-btn lp-btn-ghost" onClick={() => irParaEtapa(2)}>
             Voltar
