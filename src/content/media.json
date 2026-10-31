@@ -1,6 +1,12 @@
 {
-  "_leia-me": "Veja docs/midia.md. Coloque os arquivos em public/midia/ e liste aqui. Cada foto: { \"src\": \"/midia/arquivo.webp\", \"alt\": \"descrição objetiva\", \"largura\": 1600, \"altura\": 1067, \"foco\": \"50% 40%\" }. Na abertura (grupo hero) pode haver \"srcMobile\" (versão vertical). Grupo vazio = espaço reservado identificado. \"marca\": arte oficial DUNAMIS { \"src\": \"/midia/dunamis.png\", \"alt\": \"Dunamis — Recebereis poder\" } (opcional).",
-  "marca": null,
+  "_leia-me": "Veja docs/midia.md. Coloque os arquivos em public/midia/ e liste aqui. Cada foto: { \"src\": \"/midia/arquivo.webp\", \"alt\": \"descrição objetiva\", \"largura\": 1600, \"altura\": 1067, \"foco\": \"50% 40%\" }. Na abertura (grupo hero) pode haver \"srcMobile\" (versão vertical). Grupo vazio = espaço reservado identificado. \"marca\": arte oficial DUNAMIS (já cadastrada: /marca/dunamis.webp, com fundo transparente, e /marca/dunamis-fundo.webp, versão completa com o fundo verde texturizado).",
+  "marca": {
+    "src": "/marca/dunamis.webp",
+    "fundo": "/marca/dunamis-fundo.webp",
+    "alt": "Dunamis — Recebereis poder",
+    "largura": 1097,
+    "altura": 371
+  },
   "fotos": {
     "hero": [],
     "local": [],

@@ -1506,3 +1506,52 @@
     column-gap: 3rem;
   }
 }
+
+/* ─── Arte oficial DUNAMIS ────────────────────────────────────────────── */
+.lp .pv-marca-arte {
+  height: 2.5rem;
+  width: auto;
+  max-width: 55vw;
+}
+.pv-dunamis {
+  color: inherit;
+  -webkit-text-stroke: 0;
+}
+.pv-dunamis-arte {
+  display: block;
+  width: min(92vw, 46rem);
+  height: auto;
+  animation: pv-marca-entra 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
+  filter: drop-shadow(0 6px 22px rgba(0, 0, 0, 0.45));
+}
+@keyframes pv-marca-entra {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.94);
+  }
+}
+@media (min-width: 64rem) {
+  .pv-dunamis-arte {
+    width: min(64vw, calc(32svh * 2.957));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pv-dunamis-arte {
+    animation: none;
+  }
+}
+.pv-tema-arte {
+  margin: 0 0 2rem;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #1b6b5f;
+}
+.pv-tema-arte img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.lp-foot-marcas .pv-foot-dunamis {
+  height: 3rem;
+  width: auto;
+}

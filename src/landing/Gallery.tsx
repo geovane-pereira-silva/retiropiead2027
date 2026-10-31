@@ -38,7 +38,8 @@ export const ESPERADAS: Record<GrupoId, { rotulo: string; arquivos: string[] }> 
 
 const fotos = media.fotos as unknown as Partial<Record<GrupoId, Foto[]>>;
 /** Arte oficial DUNAMIS (opcional). Sem ela, o site usa a versão tipográfica provisória. */
-export const marcaInfo = (media as unknown as { marca?: { src: string; alt: string } | null }).marca ?? null;
+export type MarcaInfo = { src: string; fundo?: string; alt: string; largura?: number; altura?: number };
+export const marcaInfo = (media as unknown as { marca?: MarcaInfo | null }).marca ?? null;
 export const videoInfo = (media as unknown as { video: VideoInfo | null }).video;
 
 export const fotosDe = (g: GrupoId): Foto[] =>

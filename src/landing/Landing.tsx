@@ -27,7 +27,13 @@ function Marca() {
     >
       <img src="/logo-conexao-jovem.png" alt="" width="40" height="50" />
       {marcaInfo ? (
-        <img className="pv-marca-arte" src={marcaInfo.src} alt="" height="40" />
+        <img
+          className="pv-marca-arte"
+          src={marcaInfo.src}
+          alt=""
+          width={marcaInfo.largura}
+          height={marcaInfo.altura}
+        />
       ) : (
         <span className="pv-marca-txt" aria-hidden="true">
           <b>{tema.nome}</b>
@@ -138,18 +144,27 @@ function Abertura() {
             style={reduzir ? undefined : { x: linhaA }}
           >
             {marcaInfo ? (
-              <img className="pv-dunamis-arte" src={marcaInfo.src} alt="" />
+              <img
+                className="pv-dunamis-arte"
+                src={marcaInfo.src}
+                alt=""
+                width={marcaInfo.largura}
+                height={marcaInfo.altura}
+                fetchPriority="high"
+              />
             ) : (
               <Letras texto={tema.nome} base={4} />
             )}
           </motion.span>
-          <motion.span
-            className="pv-poder"
-            aria-hidden="true"
-            style={reduzir ? undefined : { x: linhaB }}
-          >
-            <Letras texto={tema.chamada} base={14} />
-          </motion.span>
+          {!marcaInfo && (
+            <motion.span
+              className="pv-poder"
+              aria-hidden="true"
+              style={reduzir ? undefined : { x: linhaB }}
+            >
+              <Letras texto={tema.chamada} base={14} />
+            </motion.span>
+          )}
         </h1>
 
         <motion.div className="pv-data" style={reduzir ? undefined : { y: dataY }}>
@@ -325,7 +340,19 @@ function Fundamento() {
   return (
     <section className="pv-fundamento" id="tema" aria-labelledby="t-tema">
       <div className="pv-wrap">
-        <h2 id="t-tema" className="pv-titulo">
+        {marcaInfo?.fundo && (
+          <figure className="pv-tema-arte">
+            <img
+              src={marcaInfo.fundo}
+              alt={marcaInfo.alt}
+              width={marcaInfo.largura}
+              height={marcaInfo.altura}
+              loading="lazy"
+              decoding="async"
+            />
+          </figure>
+        )}
+        <h2 id="t-tema" className={marcaInfo?.fundo ? "pv-sr" : "pv-titulo"}>
           {tema.nome}: {tema.chamada}
         </h2>
         <figure className="pv-versiculo">
@@ -690,6 +717,16 @@ export function Rodape() {
       <div className="lp-wrap lp-foot-in">
         <div className="lp-foot-marcas">
           <img src="/logo-conexao-jovem.png" alt={evento.ministerio} width="44" height="55" loading="lazy" />
+          {marcaInfo && (
+            <img
+              className="pv-foot-dunamis"
+              src={marcaInfo.src}
+              alt={marcaInfo.alt}
+              width={marcaInfo.largura}
+              height={marcaInfo.altura}
+              loading="lazy"
+            />
+          )}
           <img src="/logo-igreja.png" alt={`${evento.igreja} de ${evento.igrejaCidade}`} width="44" height="54" loading="lazy" />
         </div>
         <p>
