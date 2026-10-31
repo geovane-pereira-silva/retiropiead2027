@@ -160,6 +160,7 @@ test("faixas de valor: 4→gratuito, 5→200, 9→200, 10→400, 60→400", () =
 });
 
 test("condições nominais de preço: meia entrada e cortesia", () => {
+  assert.equal(condicaoPrecoPorNome("Ana Paula de Souza"), "meia-entrada");
   const half = validar(
     base({ responsavel: pessoa("Geovane Pereira", "1985-06-15", "529.982.247-25") }),
     ctx,
