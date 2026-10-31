@@ -479,9 +479,9 @@ function avaliarPessoa(
   const valor = valorBase === null ? null : valorBase + valorCamisa;
   const rotuloPreco =
     condicaoPreco === "cortesia"
-      ? "Cortesia"
+      ? "Equipe apoio"
       : condicaoPreco === "meia-entrada"
-        ? "Meia entrada"
+        ? "Organizador"
         : null;
   const faixaRotulo = [
     rotuloPreco,
@@ -701,9 +701,9 @@ export function montarCorpo(
         p.valorCamisa > 0
           ? `Gratuito + camisa avulsa ${formatarReais(p.valorCamisa)}`
           : p.condicaoPreco === "meia-entrada"
-            ? `Meia entrada — ${textoValor(p.valor)} (camisa incluída)`
+            ? `Organizador — ${textoValor(p.valor)} (camisa incluída)`
             : p.condicaoPreco === "cortesia"
-              ? "Não pagante — Gratuito"
+              ? "Equipe apoio — Não pagante — Gratuito"
               : p.valorBase === 0
                 ? "Gratuito"
                 : `${textoValor(p.valor)} (camisa incluída)`,

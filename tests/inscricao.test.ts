@@ -166,7 +166,7 @@ test("condições nominais de preço: meia entrada e cortesia", () => {
   );
   assert.equal(half.total, 200);
   assert.equal(half.participantes[0].condicaoPreco, "meia-entrada");
-  assert.match(half.participantes[0].faixa.rotulo, /Meia entrada/);
+  assert.match(half.participantes[0].faixa.rotulo, /Organizador/);
   const halfPayload = montarCorpo(
     base({ responsavel: pessoa("Geovane Pereira", "1985-06-15", "529.982.247-25") }),
     half,
@@ -180,7 +180,7 @@ test("condições nominais de preço: meia entrada e cortesia", () => {
   assert.equal(halfPayload.participantes[0].valor, 200);
   assert.equal(
     halfPayload.participantes[0].valorTexto,
-    "Meia entrada — R$ 200,00 (camisa incluída)",
+    "Organizador — R$ 200,00 (camisa incluída)",
   );
 
   const free = validar(
@@ -199,7 +199,7 @@ test("condições nominais de preço: meia entrada e cortesia", () => {
       versaoTermos: evento.versaoTermos,
     },
   );
-  assert.equal(freePayload.participantes[0].valorTexto, "Não pagante — Gratuito");
+  assert.equal(freePayload.participantes[0].valorTexto, "Equipe apoio — Não pagante — Gratuito");
   assert.equal(condicaoPrecoPorNome("Lucilene Ferreira da Silva"), "meia-entrada");
   assert.equal(condicaoPrecoPorNome("Lucilene"), "cortesia");
   assert.equal(condicaoPrecoPorNome("Janaina Souza"), "meia-entrada");
