@@ -63,6 +63,9 @@ test("fotos: imagens que não aparecem nas outras seções são exibidas na gale
   for (const indice of [4, 5, 6]) {
     assert.ok(fonte.includes(`grupo: "adoracao", indice: ${indice}`));
   }
+  assert.ok(fonte.includes('grupo: "adoracao", indice: 2'));
+  assert.ok(fonte.includes('grupo: "adoracao", indice: 3'));
+  assert.ok(fonte.includes('grupo: "convivencia", indice: 1'));
   assert.ok(fonte.includes('grupo: "convivencia", indice: 2'));
 });
 
@@ -81,14 +84,15 @@ test("dados oficiais do evento permanecem inalterados", () => {
   assert.deepEqual(evento.dataCurta, { de: "5", ate: "9", mes: "fevereiro", ano: "2027" });
 });
 
-test("ScrollStory: sequência de Atos 1:8 termina em PERMANECER", () => {
+test("ScrollStory: sequência de Atos 1:8 termina nos confins e não mistura outro congresso", () => {
   const fonte = readFileSync("src/components/ScrollStory.tsx", "utf8");
   const titulos = [...fonte.matchAll(/texto: "([^"]+)"/g)].map((m) => m[1].toLowerCase());
   const linhas = fonte.match(/const LINES: string\[\]\[\] = (\[.*\]);/)?.[1] ?? "";
   const palavras = [...titulos, ...[...linhas.matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase())];
   assert.deepEqual(titulos, ["dunamis", "revestidos", "testemunhas"]);
-  assert.equal(palavras[palavras.length - 1], "permanecer");
-  assert.equal(palavras.filter((p) => p === "permanecer").length, 1);
+  assert.equal(palavras[palavras.length - 1], "confins");
+  assert.doesNotMatch(fonte, /permanecer/i);
+  assert.doesNotMatch(readFileSync("src/content/tema.ts", "utf8"), /permanecer/i);
   assert.ok(palavras.includes("confins"));
 });
 
@@ -99,6 +103,6 @@ test("tema Dunamis: Atos 1:8 e referências complementares presentes", async () 
   assert.match(tema.versiculo, /recebereis a virtude do Espírito Santo/);
   assert.deepEqual(
     tema.referencias.map((r) => r.ref),
-    ["Lucas 24:49", "Atos 2:1-4", "João 15:4-5", "2 Timóteo 1:7"],
+    ["Lucas 24:49", "Atos 2:1-4", "2 Timóteo 1:7"],
   );
 });

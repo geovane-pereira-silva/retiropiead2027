@@ -18,7 +18,7 @@
     ],
     "adoracao": [
       { "src": "/fotos/jovens%20adorando.jpg", "alt": "Jovens em momento de adoração", "largura": 1362, "altura": 2048, "foco": "50% 35%" },
-      { "src": "/fotos/jovens%20abra%C3%A7ados%20adorando.jpg", "alt": "Jovens reunidos durante a adoração", "largura": 1362, "altura": 2048, "foco": "50% 35%" },
+      { "src": "/fotos/jovens%20abra%C3%A7ados%20adorando.jpg", "alt": "Jovens reunidos durante a adoração", "largura": 1362, "altura": 2048, "foco": "50% 8%" },
       { "src": "/fotos/ora%C3%A7%C3%A3o%20e%20adora%C3%A7%C3%A3o.jpg", "alt": "Momento de oração e adoração", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
       { "src": "/fotos/ora%C3%A7%C3%A3o%20pelo%20jovem.jpg", "alt": "Oração por um jovem", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
       { "src": "/fotos/choro%20de%20adora%C3%A7%C3%A3o.jpg", "alt": "Jovem em momento de emoção durante a adoração", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
@@ -31,5 +31,5 @@
       { "src": "/fotos/espa%C3%A7o%20coberto%20gincanas.jpg", "alt": "Espaço coberto usado para gincanas", "largura": 4000, "altura": 1848 }
     ]
   },
-  "video": { "src": "/fotos/video-oficial-web.mp4", "titulo": "DUNAMIS — Retiro 2027" }
+  "video": { "src": "/fotos/video-oficial-web.mp4", "poster": "/fotos/frente%20do%20local%2016x9.jpg", "titulo": "DUNAMIS — Retiro 2027" }
 }

@@ -208,6 +208,17 @@ function VideoCinema() {
     if (!el || !temVideo) return;
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
     if (reduzir || conn?.saveData) return;
+    const carregar = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          el.preload = "auto";
+          el.load();
+          carregar.disconnect();
+        }
+      },
+      { rootMargin: "1400px 0px", threshold: 0 },
+    );
+    carregar.observe(el);
     const o = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting && e.intersectionRatio > 0.35) {
@@ -223,7 +234,10 @@ function VideoCinema() {
       { threshold: [0, 0.35, 0.6] },
     );
     o.observe(el);
-    return () => o.disconnect();
+    return () => {
+      carregar.disconnect();
+      o.disconnect();
+    };
   }, [temVideo, reduzir]);
 
   const alternarSom = () => {
@@ -254,7 +268,7 @@ function VideoCinema() {
                 muted
                 loop
                 playsInline
-                preload="metadata"
+                preload="none"
                 poster={videoInfo?.poster}
                 aria-label={videoInfo?.titulo}
               >
@@ -448,7 +462,7 @@ function Hospedagem() {
     <section className="pv-hosp" id="hospedagem" aria-labelledby="t-hosp">
       <div className="pv-wrap">
         <h2 id="t-hosp" className="pv-titulo">
-          Onde cada um dorme
+          Quartos
         </h2>
         <div className="pv-quartos">
           {[0, 1, 2].map((i) => (
@@ -553,6 +567,9 @@ function Agenda() {
 }
 
 const FOTOS_ADICIONAIS = [
+  { grupo: "adoracao", indice: 2 },
+  { grupo: "convivencia", indice: 1 },
+  { grupo: "adoracao", indice: 3 },
   { grupo: "adoracao", indice: 4 },
   { grupo: "adoracao", indice: 5 },
   { grupo: "adoracao", indice: 6 },

@@ -16,7 +16,7 @@ import { useMovimento } from "./useMovimento";
 
 /* ── Textos (edite aqui) ─────────────────────────────────────────────────── */
 // Narrativa de Atos 1:8: DUNAMIS → REVESTIDOS → TESTEMUNHAS → (Jerusalém, Judeia e Samaria)
-// → ATÉ OS CONFINS → PERMANECER. PERMANECER é sempre a última palavra.
+// → ATÉ OS CONFINS.
 const ROTULO_FASE_1 = `${tema.nome} · ${tema.referencia}`;
 const ROTULO_FASE_2 = "Da promessa à missão";
 const ROTULO_MARCAS = "Realização";
@@ -28,8 +28,8 @@ const TITLES: { texto: string; grupo?: GrupoId; indice?: number }[] = [
   { texto: "Testemunhas", grupo: "convivencia", indice: 0 },
 ];
 
-/** Fase 2: linhas que sobem em pilha. A última (PERMANECER) é o encerramento e fica na tela. */
-const LINES: string[][] = [["Em", "Jerusalém"], ["Judeia", "e Samaria"], ["Até os", "confins"], ["Permanecer"]];
+/** Fase 2: linhas que sobem em pilha. O encerramento é a missão até os confins da terra. */
+const LINES: string[][] = [["Em", "Jerusalém"], ["Judeia", "e Samaria"], ["Até os", "confins"]];
 
 const MARCAS = [
   { src: "/marca/logo-conexao-jovem-verde.png", nome: evento.ministerio },
@@ -40,7 +40,7 @@ const MARCAS = [
 const FIM_FASE_1 = 0.42; // último título sai
 const INICIO_FASE_2 = 0.42; // primeira linha começa a entrar (cruzamento)
 const PRIMEIRA_LINHA = 0.52;
-const ULTIMA_LINHA = 0.9; // PERMANECER entra aqui e segura até o fim
+const ULTIMA_LINHA = 0.9; // a missão até os confins entra aqui e segura até o fim
 const SPRING = { stiffness: 120, damping: 30, mass: 0.4 };
 
 /** Pontos de translação lateral da faixa: segura, desliza, segura. */

@@ -20,9 +20,8 @@ export const tema = {
       texto: "Esse poder é a promessa do revestimento espiritual para cumprir o que Deus confiou à igreja.",
     },
     {
-      titulo: "Testemunhar e permanecer",
-      texto:
-        "Quem recebe poder se torna testemunha de Jesus, de perto e até os confins, e permanece firme nele.",
+      titulo: "Testemunhar até os confins",
+      texto: "O poder recebido capacita a testemunhar Jesus, de perto e até os confins da terra.",
     },
   ],
   referencias: [
@@ -35,11 +34,6 @@ export const tema = {
       ref: "Atos 2:1-4",
       papel: "O cumprimento no Pentecostes",
       texto: "No Pentecostes, os discípulos são cheios do Espírito Santo, como foi prometido.",
-    },
-    {
-      ref: "João 15:4-5",
-      papel: "Permanecer em Cristo",
-      texto: "Jesus é a videira: sem permanecer nele, não há fruto duradouro.",
     },
     {
       ref: "2 Timóteo 1:7",
