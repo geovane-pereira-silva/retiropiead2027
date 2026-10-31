@@ -54,8 +54,8 @@ export function Termos() {
           <p>
             Um cadastro por participante. Coletamos nome, data de nascimento, CPF (obrigatório para
             adultos e opcional para menores), transporte escolhido, igreja de origem, congregação
-            ou, para convidados, nome da igreja, pastor presidente e líder de jovens, além de cidade
-            e contato de emergência. Para participante menor, coletamos o nome, vínculo e celular do
+            ou, para convidados, nome da igreja, pastor presidente e líder de jovens, além do
+            contato de emergência. Para participante menor, coletamos o nome, vínculo e celular do
             pai, mãe ou responsável legal. Também as necessidades de hospedagem ou alimentação
             informadas.
           </p>

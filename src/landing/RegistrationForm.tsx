@@ -7,6 +7,7 @@ import {
   PESSOA_VAZIA,
   VALORES_VAZIOS,
   formatarCpf,
+  formatarDataDigitada,
   TRANSPORTES,
   formatarReais,
   formatarTelefone,
@@ -54,7 +55,6 @@ function etapaDoErro(chave: string): number {
       "whatsapp",
       "email",
       "igreja",
-      "cidade",
       "origemIgreja",
       "congregacao",
       "igrejaConvidada",
@@ -69,11 +69,15 @@ function etapaDoErro(chave: string): number {
 }
 
 const dataBr = (iso: string): string => iso.split("-").reverse().join("/");
+const dataCampo = (valor: string): string =>
+  /^\d{4}-\d{2}-\d{2}$/.test(valor) ? dataBr(valor) : valor;
 const idDe = (chave: string): string => `f-${chave.replace(/\./g, "-")}`;
 
 const igrejaParaCadastro = (v: FormValues): string =>
   v.origemIgreja === "local"
-    ? `${evento.igreja} — Congregação ${v.congregacao}`
+    ? v.congregacao === "Sede"
+      ? `${evento.igreja} — Sede`
+      : `${evento.igreja} — Congregação ${v.congregacao}`
     : v.origemIgreja === "convidado"
       ? `Convidado — ${v.igrejaConvidada}; Pastor presidente: ${v.pastorPresidente}; Líder de jovens: ${v.liderJovens}`
       : "";
@@ -110,6 +114,7 @@ type EntradaProps = {
 };
 
 function Entrada(p: EntradaProps) {
+  const dataDigitada = p.tipo === "date";
   const id = idDe(p.chave);
   const idErro = `${id}-erro`;
   const idDica = `${id}-dica`;
@@ -138,18 +143,20 @@ function Entrada(p: EntradaProps) {
         <input
           id={id}
           name={p.chave}
-          type={p.tipo ?? "text"}
-          inputMode={p.modo}
+          type={dataDigitada ? "text" : p.tipo ?? "text"}
+          inputMode={dataDigitada ? "numeric" : p.modo}
           autoComplete={p.autoComplete}
-          value={p.valor}
-          maxLength={p.maxLength}
-          placeholder={p.placeholder}
-          min={p.min}
-          max={p.max}
+          value={dataDigitada ? dataCampo(p.valor) : p.valor}
+          maxLength={p.maxLength ?? (dataDigitada ? 10 : undefined)}
+          placeholder={p.placeholder ?? (dataDigitada ? "DD/MM/AAAA" : undefined)}
+          min={dataDigitada ? undefined : p.min}
+          max={dataDigitada ? undefined : p.max}
           aria-invalid={p.erro ? true : undefined}
           aria-describedby={descrito}
           onBlur={p.onBlur}
-          onChange={(e) => p.onChange(e.target.value)}
+          onChange={(e) =>
+            p.onChange(dataDigitada ? formatarDataDigitada(e.target.value) : e.target.value)
+          }
         />
       )}
       {p.dica && (
@@ -284,6 +291,7 @@ export function RegistrationForm() {
   const [tocados, setTocados] = useState<Record<string, boolean>>({});
   const [tentou, setTentou] = useState(false);
   const [mesmoWhats, setMesmoWhats] = useState(true);
+  const [temNecessidades, setTemNecessidades] = useState<"sim" | "nao">("nao");
   const [errosServidor, setErrosServidor] = useState<Erros>({});
   const [estado, setEstado] = useState<Estado>({ tipo: "livre" });
   const [etapa, setEtapa] = useState(0);
@@ -345,7 +353,8 @@ export function RegistrationForm() {
       focarPrimeiroErro({ [dessa[0]]: calc.erros[dessa[0]] });
       return;
     }
-    irParaEtapa(Math.min(etapa + 1, ETAPAS.length - 1));
+    const proxima = etapa === 0 && values.responsavelParticipa ? 2 : etapa + 1;
+    irParaEtapa(Math.min(proxima, ETAPAS.length - 1));
   };
 
   const setCampo = <K extends keyof FormValues>(campo: K, valor: FormValues[K]) => {
@@ -520,6 +529,14 @@ export function RegistrationForm() {
   const valorDe = (chave: string) => calc.participantes.find((p) => p.chave === chave);
   const respCalc = valorDe("responsavel");
   const podeAdicionar = !values.responsavelParticipa && values.integrantes.length < 1;
+  const etapasAtuais = values.responsavelParticipa
+    ? [
+        { id: 0, nome: ETAPAS[0] },
+        { id: 2, nome: ETAPAS[2] },
+        { id: 3, nome: ETAPAS[3] },
+      ]
+    : ETAPAS.map((nome, id) => ({ id, nome }));
+  const indiceEtapaAtual = etapasAtuais.findIndex((item) => item.id === etapa);
 
   return (
     <>
@@ -563,17 +580,17 @@ export function RegistrationForm() {
           id="lp-topo-form"
           className="lp-progresso"
           role="group"
-          aria-label={`Etapa ${etapa + 1} de ${ETAPAS.length}: ${ETAPAS[etapa]}`}
+          aria-label={`Etapa ${indiceEtapaAtual + 1} de ${etapasAtuais.length}: ${ETAPAS[etapa]}`}
         >
           <ol>
-            {ETAPAS.map((nome, n) => (
+            {etapasAtuais.map((item, n) => (
               <li
-                key={nome}
-                className={n === etapa ? "atual" : n < etapa ? "feita" : undefined}
-                aria-current={n === etapa ? "step" : undefined}
+                key={item.id}
+                className={item.id === etapa ? "atual" : item.id < etapa ? "feita" : undefined}
+                aria-current={item.id === etapa ? "step" : undefined}
               >
                 <span>{n + 1}</span>
-                <b>{nome}</b>
+                <b>{item.nome}</b>
               </li>
             ))}
           </ol>
@@ -582,8 +599,8 @@ export function RegistrationForm() {
           <fieldset className="lp-fs">
             <legend>Quem está preenchendo?</legend>
             <p className="hint">
-              É um cadastro por pessoa. Para menores de idade, pai, mãe ou responsável legal deve
-              preencher o cadastro usando seu celular pessoal cadastrado.
+              Um cadastro por pessoa. Para menores, pai, mãe ou responsável informa os próprios
+              dados e os do participante.
             </p>
             <Entrada
               chave="responsavel.nome"
@@ -743,49 +760,66 @@ export function RegistrationForm() {
                 maxLength={120}
               />
             </div>
-            <div className="lp-row two" style={{ marginTop: "1rem" }}>
-              <div className="lp-field">
-                <label htmlFor="f-origemIgreja">Você é da nossa igreja ou de outra igreja?</label>
-                <select
-                  id="f-origemIgreja"
-                  value={values.origemIgreja}
-                  onChange={(e) =>
-                    setValues((v) => ({
-                      ...v,
-                      origemIgreja: e.target.value as FormValues["origemIgreja"],
-                      congregacao: "",
-                      igrejaConvidada: "",
-                      pastorPresidente: "",
-                      liderJovens: "",
-                    }))
-                  }
-                  onBlur={() => tocar("origemIgreja")}
-                  aria-invalid={erro("origemIgreja") ? true : undefined}
-                >
-                  <option value="">Selecione</option>
-                  <option value="local">Da nossa igreja</option>
-                  <option value="convidado">Convidado(a) de outra igreja</option>
-                </select>
-                {erro("origemIgreja") && (
-                  <p className="lp-err" role="alert">
-                    {erro("origemIgreja")}
-                  </p>
-                )}
+            <div className="lp-field lp-origem">
+              <p id="f-origemIgreja-label" className="lp-field-label">
+                Você é da nossa igreja ou de outra igreja?
+              </p>
+              <div
+                className="lp-origem-opcoes"
+                role="radiogroup"
+                aria-labelledby="f-origemIgreja-label"
+                aria-invalid={erro("origemIgreja") ? true : undefined}
+              >
+                <label className="lp-origem-opcao">
+                  <input
+                    type="radio"
+                    name="origemIgreja"
+                    value="local"
+                    checked={values.origemIgreja === "local"}
+                    onChange={() =>
+                      setValues((v) => ({
+                        ...v,
+                        origemIgreja: "local",
+                        congregacao: "",
+                        igrejaConvidada: "",
+                        pastorPresidente: "",
+                        liderJovens: "",
+                      }))
+                    }
+                    onBlur={() => tocar("origemIgreja")}
+                  />
+                  <span>Primeira Assembleia de Deus</span>
+                </label>
+                <label className="lp-origem-opcao">
+                  <input
+                    type="radio"
+                    name="origemIgreja"
+                    value="convidado"
+                    checked={values.origemIgreja === "convidado"}
+                    onChange={() =>
+                      setValues((v) => ({
+                        ...v,
+                        origemIgreja: "convidado",
+                        congregacao: "",
+                        igrejaConvidada: "",
+                        pastorPresidente: "",
+                        liderJovens: "",
+                      }))
+                    }
+                    onBlur={() => tocar("origemIgreja")}
+                  />
+                  <span>Outra igreja</span>
+                </label>
               </div>
-              <Entrada
-                chave="cidade"
-                rotulo="Cidade"
-                valor={values.cidade}
-                onChange={(v) => setCampo("cidade", v)}
-                onBlur={() => tocar("cidade")}
-                erro={erro("cidade")}
-                autoComplete="address-level2"
-                maxLength={80}
-              />
+              {erro("origemIgreja") && (
+                <p className="lp-err" role="alert">
+                  {erro("origemIgreja")}
+                </p>
+              )}
             </div>
             {values.origemIgreja === "local" && (
               <div className="lp-field" style={{ marginTop: "1rem" }}>
-                <label htmlFor="f-congregacao">Qual congregação?</label>
+                <label htmlFor="f-congregacao">Escolha o local</label>
                 <select
                   id="f-congregacao"
                   value={values.congregacao}
@@ -858,18 +892,13 @@ export function RegistrationForm() {
         <div className="lp-etapa" hidden={etapa !== 1}>
           <fieldset className="lp-fs">
             <legend id="integrantes-titulo" tabIndex={-1}>
-              Participante
+              Dados do participante
             </legend>
-            <p className="hint">
-              Um cadastro por pessoa, inclusive para menores de idade. O valor é calculado pela
-              idade em {dataBr(evento.inicioData)}.
-            </p>
+            <p className="hint">Informe quem vai ao retiro. A idade define o valor.</p>
 
-            {values.integrantes.length === 0 && (
+            {values.integrantes.length === 0 && !values.responsavelParticipa && (
               <p className="lp-vazio">
-                {values.responsavelParticipa
-                  ? "O cadastro será para a própria pessoa que está preenchendo."
-                  : "Adicione abaixo os dados da criança ou adolescente. O pai, a mãe ou responsável já informou seus dados de contato na etapa anterior."}
+                Inclua os dados da criança ou adolescente.
               </p>
             )}
 
@@ -953,9 +982,7 @@ export function RegistrationForm() {
               </button>
             )}
             {!values.responsavelParticipa && !podeAdicionar && (
-              <p className="lp-hint">
-                Um participante por envio. Para cadastrar outra pessoa, inicie um novo cadastro.
-              </p>
+              <p className="lp-hint">Um participante por cadastro.</p>
             )}
           </fieldset>
 
@@ -1029,6 +1056,7 @@ export function RegistrationForm() {
 
           <fieldset className="lp-fs">
             <legend>Emergência e necessidades</legend>
+            <p className="hint">O contato de emergência deve ser alguém que não irá ao retiro.</p>
             <div className="lp-row two">
               <Entrada
                 chave="emergenciaNome"
@@ -1052,25 +1080,57 @@ export function RegistrationForm() {
                 maxLength={15}
               />
             </div>
-            <div style={{ marginTop: "1rem" }}>
-              <Entrada
-                chave="necessidades"
-                rotulo="Necessidades relevantes para hospedagem ou alimentação"
-                opcional
-                multilinha
-                valor={values.necessidades}
-                onChange={(v) => setCampo("necessidades", v)}
-                onBlur={() => tocar("necessidades")}
-                erro={erro("necessidades")}
-                maxLength={500}
-                placeholder="Ex.: restrição alimentar, mobilidade reduzida…"
-                dica={`${values.necessidades.length}/500 caracteres`}
-              />
+            <div className="lp-field lp-necessidades">
+              <p id="f-temNecessidades" className="lp-field-label">
+                Há algo importante sobre hospedagem, alimentação ou mobilidade?
+              </p>
+              <div className="lp-origem-opcoes" role="radiogroup" aria-labelledby="f-temNecessidades">
+                <label className="lp-origem-opcao">
+                  <input
+                    type="radio"
+                    name="temNecessidades"
+                    checked={temNecessidades === "nao"}
+                    onChange={() => {
+                      setTemNecessidades("nao");
+                      setCampo("necessidades", "");
+                    }}
+                  />
+                  <span>Não</span>
+                </label>
+                <label className="lp-origem-opcao">
+                  <input
+                    type="radio"
+                    name="temNecessidades"
+                    checked={temNecessidades === "sim"}
+                    onChange={() => setTemNecessidades("sim")}
+                  />
+                  <span>Sim</span>
+                </label>
+              </div>
+              {temNecessidades === "sim" && (
+                <Entrada
+                  chave="necessidades"
+                  rotulo="Conte o que precisamos saber"
+                  opcional
+                  multilinha
+                  valor={values.necessidades}
+                  onChange={(v) => setCampo("necessidades", v)}
+                  onBlur={() => tocar("necessidades")}
+                  erro={erro("necessidades")}
+                  maxLength={500}
+                  placeholder="Ex.: restrição alimentar, mobilidade reduzida…"
+                  dica={`${values.necessidades.length}/500 caracteres`}
+                />
+              )}
             </div>
           </fieldset>
 
           <div className="lp-passos">
-            <button type="button" className="lp-btn lp-btn-ghost" onClick={() => irParaEtapa(1)}>
+            <button
+              type="button"
+              className="lp-btn lp-btn-ghost"
+              onClick={() => irParaEtapa(values.responsavelParticipa ? 0 : 1)}
+            >
               Voltar
             </button>
             <button type="button" className="lp-btn lp-btn-brasa" onClick={continuar}>
@@ -1094,9 +1154,9 @@ export function RegistrationForm() {
                 </dd>
               </div>
               <div>
-                <dt>Igreja e cidade</dt>
+                <dt>Igreja de origem</dt>
                 <dd>
-                  {igrejaParaCadastro(values) || "—"}, {values.cidade || "—"}
+                  {igrejaParaCadastro(values) || "—"}
                 </dd>
               </div>
               <div>
@@ -1128,8 +1188,12 @@ export function RegistrationForm() {
               <button type="button" className="lp-link-btn" onClick={() => irParaEtapa(0)}>
                 Corrigir responsável
               </button>
-              <button type="button" className="lp-link-btn" onClick={() => irParaEtapa(1)}>
-                Corrigir participantes
+              <button
+                type="button"
+                className="lp-link-btn"
+                onClick={() => irParaEtapa(values.responsavelParticipa ? 0 : 1)}
+              >
+                {values.responsavelParticipa ? "Corrigir seus dados" : "Corrigir participante"}
               </button>
               <button type="button" className="lp-link-btn" onClick={() => irParaEtapa(2)}>
                 Corrigir transporte

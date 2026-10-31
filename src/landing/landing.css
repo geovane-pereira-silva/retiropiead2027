@@ -1106,7 +1106,7 @@
 
 /* ─── Formulário ──────────────────────────────────────────────────────── */
 .lp-formhead {
-  padding: 2.5rem 0 1.5rem;
+  padding: 1.25rem 0 1rem;
   background: var(--lp-mata);
   color: var(--lp-linho);
 }
@@ -1171,7 +1171,7 @@
   font-weight: 400;
   color: var(--lp-mute);
 }
-.lp-field input:not([type="checkbox"]),
+.lp-field input:not([type="checkbox"]):not([type="radio"]),
 .lp-field textarea,
 .lp-field select {
   width: 100%;
@@ -1188,6 +1188,53 @@
 .lp-field textarea {
   min-height: 6.5rem;
   resize: vertical;
+}
+.lp-field-label {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.lp-origem-opcoes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.lp-origem-opcao {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3rem;
+  padding: 0.7rem 0.8rem;
+  border: 1.5px solid var(--lp-line);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+.lp-origem-opcao:has(input:checked) {
+  border-color: var(--lp-mata);
+  background: var(--lp-linho);
+  box-shadow: 0 0 0 2px rgba(18, 48, 42, 0.08);
+}
+.lp-origem-opcao input[type="radio"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: none;
+  margin: 0;
+  accent-color: var(--lp-mata);
+}
+.lp-origem-opcao:focus-within {
+  outline: 3px solid rgba(185, 121, 26, 0.4);
+  outline-offset: 2px;
+}
+.lp-origem-opcoes[aria-invalid="true"] .lp-origem-opcao {
+  border-color: var(--lp-err);
+}
+@media (max-width: 35rem) {
+  .lp-origem-opcoes {
+    grid-template-columns: 1fr;
+  }
 }
 .lp-field input::placeholder,
 .lp-field textarea::placeholder {

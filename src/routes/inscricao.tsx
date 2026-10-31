@@ -27,14 +27,11 @@ function Inscricao() {
           <a href="/" className="lp-back">
             ← {evento.ministerio}
           </a>
-          <h1 className="lp-h2" style={{ marginBottom: "0.5rem" }}>
+          <h1 className="lp-h2" style={{ marginBottom: "0.35rem", fontSize: "clamp(1.7rem, 5vw, 2.5rem)" }}>
             Cadastro individual
           </h1>
           <p className="lp-lead" style={{ marginBottom: 0 }}>
-            {evento.dataTexto}, no {evento.local.nome}, em {evento.local.cidade}/{evento.local.uf}.
-            Faça um cadastro por pessoa, inclusive para menores de idade. Para menor, pai, mãe ou
-            responsável legal informa seu nome e celular cadastrado. O valor é calculado antes do
-            envio.
+            {evento.dataTexto} · {evento.local.cidade}/{evento.local.uf}
           </p>
         </div>
       </header>

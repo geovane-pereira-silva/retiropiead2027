@@ -1,12 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
+import { Maximize2, Minimize2, Volume2 } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { ScrollStory } from "../components/ScrollStory";
 import { useMovimento } from "../components/useMovimento";
 import { evento } from "../content/evento";
 import { tema } from "../content/tema";
-import { textoValor } from "../lib/inscricao";
+import {
+  filtrarParcelasDisponiveis,
+  formatarReais,
+  hojeSaoPaulo,
+  textoValor,
+} from "../lib/inscricao";
 import { Imagem, Midia, fotosDe, marcaInfo, videoInfo, type Foto } from "./Gallery";
 
 const NAV = [
@@ -196,7 +202,6 @@ function VideoCinema() {
   const [tocando, setTocando] = useState(false);
   const [erroReproducao, setErroReproducao] = useState(false);
   const [telaCheia, setTelaCheia] = useState(false);
-  const [erroTelaCheia, setErroTelaCheia] = useState(false);
   const [telaEstreita, setTelaEstreita] = useState(false);
   const temVideo = !!videoInfo?.src;
 
@@ -219,35 +224,35 @@ function VideoCinema() {
     return () => consulta.removeListener(atualizar);
   }, []);
 
-  // Pré-carrega apenas os metadados; o vídeo começa após a pessoa ativar o som.
+  // Pré-carrega perto da seção e inicia sem som ao entrar na tela (permitido nos navegadores).
   useEffect(() => {
     const el = video.current;
     if (!el || !temVideo) return;
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-    let carregar: IntersectionObserver | undefined;
-    if (!reduzir && !conn?.saveData) {
-      carregar = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            el.preload = "metadata";
+    let carregou = false;
+    const observador = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          if (!carregou) {
+            el.preload = conn?.saveData ? "metadata" : "auto";
             el.load();
-            carregar?.disconnect();
+            carregou = true;
           }
-        },
-        { rootMargin: "900px 0px", threshold: 0 },
-      );
-      carregar.observe(el);
-    }
-    const visibilidade = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting && !el.paused) {
-        el.pause();
-        setTocando(false);
-      }
-    });
-    visibilidade.observe(el);
+          if (!reduzir) {
+            el.play().then(
+              () => setErroReproducao(false),
+              () => setErroReproducao(true),
+            );
+          }
+        } else if (!el.paused) {
+          el.pause();
+        }
+      },
+      { threshold: 0.18 },
+    );
+    observador.observe(el);
     return () => {
-      carregar?.disconnect();
-      visibilidade.disconnect();
+      observador.disconnect();
     };
   }, [temVideo, reduzir]);
 
@@ -272,37 +277,17 @@ function VideoCinema() {
     };
   }, [temVideo]);
 
-  const reproduzirComSom = () => {
+  const ativarSom = () => {
     const el = video.current;
     if (!el) return;
-    el.muted = false;
-    el.volume = 1;
-    setSom(true);
-    setErroReproducao(false);
-    if (el.paused)
+    const habilitar = el.muted;
+    el.muted = !habilitar;
+    setSom(habilitar);
+    if (habilitar && el.paused)
       el.play().then(
-        () => setTocando(true),
+        () => setErroReproducao(false),
         () => setErroReproducao(true),
       );
-  };
-
-  const alternarSom = () => {
-    const el = video.current;
-    if (!el) return;
-    if (el.muted) reproduzirComSom();
-    else {
-      el.muted = true;
-      setSom(false);
-    }
-  };
-  const alternarPlay = () => {
-    const el = video.current;
-    if (!el) return;
-    if (el.paused) reproduzirComSom();
-    else {
-      el.pause();
-      setTocando(false);
-    }
   };
 
   const alternarTelaCheia = async () => {
@@ -314,7 +299,6 @@ function VideoCinema() {
         })
       | null;
     if (!el) return;
-    setErroTelaCheia(false);
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
@@ -332,10 +316,8 @@ function VideoCinema() {
         el.webkitEnterFullscreen();
         return;
       }
-      setErroTelaCheia(true);
     } catch {
       if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
-      else setErroTelaCheia(true);
     }
   };
 
@@ -378,23 +360,20 @@ function VideoCinema() {
 
         {temVideo && (
           <div className="pv-video-controles">
-            {(!tocando || erroTelaCheia) && (
-              <p className="pv-video-aviso" role="status">
-                {erroTelaCheia
-                  ? "A tela cheia não está disponível neste navegador."
-                  : erroReproducao
-                  ? "O vídeo não iniciou. Toque em “Reproduzir com som” para tentar novamente."
-                  : "Este vídeo tem som. Toque em “Reproduzir com som” para assistir."}
-              </p>
-            )}
-            <button type="button" onClick={alternarPlay}>
-              {tocando ? "Pausar vídeo" : "Reproduzir com som"}
+            <span className="pv-sr" aria-live="polite">
+              {erroReproducao && !tocando ? "Toque em ativar som para iniciar o vídeo." : ""}
+            </span>
+            <button type="button" onClick={ativarSom} aria-label={som ? "Desativar som" : "Ativar som"}>
+              <Volume2 size={18} aria-hidden="true" /> {som ? "Desativar som" : "Ativar som"}
             </button>
-            <button type="button" onClick={alternarSom}>
-              {som ? "Desativar som" : "Ativar som"}
-            </button>
-            <button type="button" onClick={alternarTelaCheia}>
-              {telaCheia ? "Sair da tela cheia" : "Ver em tela cheia"}
+            <button
+              type="button"
+              className="pv-video-fullscreen"
+              onClick={alternarTelaCheia}
+              aria-label={telaCheia ? "Sair da tela cheia" : "Abrir em tela cheia"}
+              title={telaCheia ? "Sair da tela cheia" : "Abrir em tela cheia"}
+            >
+              {telaCheia ? <Minimize2 size={20} aria-hidden="true" /> : <Maximize2 size={20} aria-hidden="true" />}
             </button>
           </div>
         )}
@@ -659,7 +638,7 @@ function Agenda() {
                 key={r.periodo}
                 variante="rotina"
                 titulo={r.periodo}
-                padrao={idx === 0}
+                padrao={false}
                 imagem={<Midia grupo={f.grupo} i={f.i} />}
               >
                 <ul>
@@ -716,7 +695,22 @@ function FotosAdicionais() {
 }
 
 /* ── 8. Valores ───────────────────────────────────────────────────────── */
+function dataCurta(iso: string) {
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+}
+
+function dataBr(iso: string) {
+  return iso.split("-").reverse().join("/");
+}
+
 function Valores() {
+  const hoje = hojeSaoPaulo();
+  const vencimentosPix = filtrarParcelasDisponiveis(
+    evento.pagamento.datasPix,
+    hoje,
+    evento.pagamento.limitePix,
+  );
+  const pixEncerrado = hoje > evento.pagamento.limitePix;
   return (
     <section className="pv-valores" id="valores" aria-labelledby="t-valores">
       <div className="pv-wrap pv-valores-grade">
@@ -744,16 +738,34 @@ function Valores() {
           <ul>
             {evento.faixas.map((f) => (
               <li key={f.id}>
-                <span>{f.rotulo}</span>
+                <div className="pv-precos-faixa">
+                  <span>{f.rotulo}</span>
+                  {f.valor !== null && f.valor > 0 && (
+                    <small>
+                      {vencimentosPix.length > 0
+                        ? `Pix: ${vencimentosPix.length} ${vencimentosPix.length === 1 ? "parcela" : "parcelas"} de aprox. ${formatarReais(f.valor / vencimentosPix.length)}`
+                        : pixEncerrado
+                          ? "Pix: consulte a organização"
+                          : "Pix: pagamento integral até 25/01/2027"}
+                    </small>
+                  )}
+                </div>
                 <b>{textoValor(f.valor)}</b>
               </li>
             ))}
           </ul>
           <p>A idade é contada em 5 de fevereiro de 2027, data de início do retiro.</p>
-          <p>
-            Pix: quitação até 16 de janeiro de 2027 (20 dias antes do retiro). Cartão de crédito:
-            até 10 parcelas de R$ 50,00 (R$ 500,00 no total). O formulário registra o cadastro e
-            não confirma pagamento.
+          <p className="pv-precos-cartao">
+            Cartão de crédito: parcelas de até {formatarReais(evento.pagamento.valorMaximoParcelaCartao)},
+            em até {evento.pagamento.maxParcelasCartao}x.
+          </p>
+          <p className="pv-precos-pix">
+            {pixEncerrado
+              ? `O prazo previsto para Pix terminou em ${dataBr(evento.pagamento.limitePix)}. Consulte a organização. `
+              : vencimentosPix.length > 0
+                ? `No Pix, datas previstas: ${vencimentosPix.map(dataCurta).join(", ")}. Quitação total até ${dataBr(evento.pagamento.limitePix)}. `
+                : `No Pix, pagamento integral até ${dataBr(evento.pagamento.limitePix)}. `}
+            O cadastro não confirma pagamento.
           </p>
           <Link to="/inscricao" className="lp-btn lp-btn-grande pv-btn-tinta">
             Fazer meu cadastro

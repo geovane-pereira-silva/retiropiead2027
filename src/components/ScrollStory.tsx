@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   motion,
   useMotionTemplate,
@@ -212,6 +212,41 @@ function Animado({ compacto }: { compacto: boolean }) {
   const { scrollY } = useScroll();
   const p = useSpring(scrollYProgress, SPRING);
   const velocidade = useSpring(useVelocity(scrollY), SPRING);
+
+  useEffect(() => {
+    const section = ref.current;
+    if (!section) return;
+
+    const wheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY) || event.deltaX === 0) return;
+      event.preventDefault();
+      window.scrollBy({ top: event.deltaX, behavior: "auto" });
+    };
+    let toque: { x: number; y: number } | null = null;
+    const touchStart = (event: TouchEvent) => {
+      const point = event.touches[0];
+      toque = point ? { x: point.clientX, y: point.clientY } : null;
+    };
+    const touchMove = (event: TouchEvent) => {
+      const point = event.touches[0];
+      if (!point || !toque) return;
+      const deltaX = point.clientX - toque.x;
+      const deltaY = point.clientY - toque.y;
+      toque = { x: point.clientX, y: point.clientY };
+      if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
+      event.preventDefault();
+      window.scrollBy({ top: deltaX, behavior: "auto" });
+    };
+
+    section.addEventListener("wheel", wheel, { passive: false });
+    section.addEventListener("touchstart", touchStart, { passive: true });
+    section.addEventListener("touchmove", touchMove, { passive: false });
+    return () => {
+      section.removeEventListener("wheel", wheel);
+      section.removeEventListener("touchstart", touchStart);
+      section.removeEventListener("touchmove", touchMove);
+    };
+  }, []);
 
   // velocidade → inclinação, desfoque e aberração cromática
   const inclinacao = useTransform(velocidade, [-3000, 3000], [-12, 12], { clamp: true });

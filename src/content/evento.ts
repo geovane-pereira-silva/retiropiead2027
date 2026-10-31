@@ -154,6 +154,13 @@ export const evento = {
   /** Uma pessoa participante por cadastro. Responsável legal de menor não conta como participante. */
   maxParticipantesPorInscricao: 1,
 
+  pagamento: {
+    datasPix: ["2026-11-25", "2026-12-05", "2026-12-25"],
+    limitePix: "2027-01-25",
+    maxParcelasCartao: 10,
+    valorMaximoParcelaCartao: 50,
+  },
+
   // ─── Transporte (oficial) ────────────────────────────────────────────────
   transporte: {
     ida: { dia: "Sexta-feira, 5 de fevereiro de 2027", texto: "Ida de ônibus." },
@@ -221,7 +228,7 @@ export const evento = {
     },
     {
       p: "Como faço o pagamento?",
-      r: "Aceitamos Pix, com quitação até 16 de janeiro de 2027 (20 dias antes do início do retiro), ou cartão de crédito em até 10 parcelas de R$ 50,00 (R$ 500,00 no total).",
+      r: "No Pix, as parcelas previstas vencem em 25 de novembro, 5 e 25 de dezembro de 2026, com quitação total até 25 de janeiro de 2027. No cartão, as parcelas são de até R$ 50,00, em até 10 vezes. O formulário não confirma pagamento.",
     },
     {
       p: "Por que preciso informar o CPF?",
@@ -237,7 +244,7 @@ export const evento = {
   /** Mostrado na confirmação de inscrição; inclui a forma e a data limite de pagamento confirmadas. */
   proximosPassos: [
     "Este cadastro não confirma pagamento.",
-    "Aceitamos Pix, com quitação até 16 de janeiro de 2027 (20 dias antes do início do retiro), ou cartão de crédito em até 10 parcelas de R$ 50,00 (R$ 500,00 no total). A organização divulgará os horários e os pontos de embarque do ônibus.",
+    "No Pix, as parcelas previstas vencem em 25 de novembro, 5 e 25 de dezembro de 2026, com quitação total até 25 de janeiro de 2027. No cartão, as parcelas são de até R$ 50,00, em até 10 vezes. A organização divulgará os horários e os pontos de embarque do ônibus.",
     "Guarde esta tela (um print ajuda) e, em caso de dúvida, procure a liderança da Conexão Jovem.",
   ],
 
@@ -251,5 +258,5 @@ export const evento = {
   },
 
   /** Versão do texto de regras/privacidade aceita no formulário (vai para a planilha). */
-  versaoTermos: "2026-10-rascunho",
+  versaoTermos: "2026-10-31-cadastro-v2",
 };

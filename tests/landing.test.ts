@@ -73,19 +73,20 @@ test("fotos: preview carrega antes da imagem em alta resolução", () => {
   assert.match(fonte, /onLoad=\{\(\) => setCarregarOriginal\(true\)\}/);
 });
 
-test("vídeo: avisa sobre o som e só inicia com ação explícita da pessoa", () => {
+test("vídeo: inicia sem som ao entrar na tela e mostra só som e tela cheia", () => {
   const fonte = readFileSync("src/landing/Landing.tsx", "utf8");
-  assert.match(fonte, /Este vídeo tem som/);
-  assert.match(fonte, /Reproduzir com som/);
-  assert.match(fonte, /el\.muted = false/);
+  assert.match(fonte, /new IntersectionObserver/);
+  assert.match(fonte, /muted=\{!som\}/);
   assert.match(fonte, /el\.play\(\)/);
-  assert.doesNotMatch(fonte, /autoPlay/);
+  assert.match(fonte, /aria-label=\{som \? "Desativar som" : "Ativar som"\}/);
+  assert.match(fonte, /Maximize2/);
+  assert.doesNotMatch(fonte, /Pausar vídeo|Reproduzir com som|Este vídeo tem som/);
 });
 
 test("vídeo: mantém o quadro inteiro no celular e oferece tela cheia", () => {
   const componente = readFileSync("src/landing/Landing.tsx", "utf8");
   const estilos = readFileSync("src/landing/palavra.css", "utf8");
-  assert.match(componente, /Ver em tela cheia/);
+  assert.match(componente, /Abrir em tela cheia/);
   assert.match(componente, /requestFullscreen\(\)/);
   assert.match(componente, /webkitEnterFullscreen/);
   assert.match(componente, /reduzir \|\| telaEstreita \? undefined/);
@@ -120,8 +121,9 @@ test("dados oficiais do evento permanecem inalterados", () => {
   assert.equal(evento.maxParticipantesPorInscricao, 1);
   assert.ok(evento.incluso.some((item) => item.titulo === "Kit do retiro e camisa"));
   const pagamento = evento.faq.find((item) => item.p === "Como faço o pagamento?")?.r ?? "";
-  assert.match(pagamento, /10 parcelas de R\$ 50,00/);
-  assert.match(pagamento, /16 de janeiro de 2027/);
+  assert.match(pagamento, /até R\$ 50,00, em até 10 vezes/);
+  assert.match(pagamento, /25 de janeiro de 2027/);
+  assert.deepEqual(evento.pagamento.datasPix, ["2026-11-25", "2026-12-05", "2026-12-25"]);
   assert.deepEqual(evento.dataCurta, { de: "5", ate: "9", mes: "fevereiro", ano: "2027" });
 });
 
@@ -147,6 +149,33 @@ test("vídeo não prende a rolagem no celular e ocupa apenas uma tela", () => {
     estilos,
     /@media \(max-width: 47\.99rem\)[\s\S]*?\.pv-video\s*\{\s*height:\s*100svh;\s*\}[\s\S]*?\.pv-video-palco\s*\{\s*position:\s*relative;/,
   );
+});
+
+test("ScrollStory aceita movimento horizontal e organiza fotos sem sobreposição no celular", () => {
+  const componente = readFileSync("src/components/ScrollStory.tsx", "utf8");
+  const estilos = readFileSync("src/landing/palavra.css", "utf8");
+  assert.match(componente, /addEventListener\("wheel", wheel, \{ passive: false \}\)/);
+  assert.match(componente, /addEventListener\("touchmove", touchMove, \{ passive: false \}\)/);
+  assert.match(estilos, /height: calc\(var\(--ss-passos, 6\) \* 88svh\)/);
+  assert.match(estilos, /height: calc\(var\(--ss-passos, 6\) \* 120svh\)/);
+  assert.match(estilos, /\.ss-titulo\s*\{[\s\S]*?flex-direction: column;/);
+});
+
+test("rotina inicia fechada e sinaliza que a primeira faixa pode ser aberta", () => {
+  const landing = readFileSync("src/landing/Landing.tsx", "utf8");
+  const estilos = readFileSync("src/landing/palavra.css", "utf8");
+  assert.match(landing, /padrao=\{false\}/);
+  assert.match(estilos, /pv-cartao-rotina:first-child:not\(\.aberto\)[\s\S]*?animation: pv-sinal-toque/);
+});
+
+test("formulário usa data digitada e seleção de igreja visível", () => {
+  const form = readFileSync("src/landing/RegistrationForm.tsx", "utf8");
+  assert.match(form, /type=\{dataDigitada \? "text"/);
+  assert.match(form, /placeholder=\{p\.placeholder \?\? \(dataDigitada \? "DD\/MM\/AAAA"/);
+  assert.match(form, /role="radiogroup"[\s\S]*?Primeira Assembleia de Deus[\s\S]*?Outra igreja/);
+  assert.match(form, /O contato de emergência deve ser alguém que não irá ao retiro/);
+  assert.match(form, /temNecessidades === "sim"/);
+  assert.doesNotMatch(form, /rotulo="Cidade"/);
 });
 
 test("tema Dunamis: Atos 1:8 e referências complementares presentes", async () => {

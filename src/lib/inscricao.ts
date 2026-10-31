@@ -28,7 +28,8 @@ export type Pessoa = {
   /** Identificador local (chave React). Ignorado pelo servidor. */
   uid?: string;
   nome: string;
-  dataNascimento: string; // YYYY-MM-DD
+  /** DD/MM/AAAA digitada no formulário; a validação converte para YYYY-MM-DD ao calcular. */
+  dataNascimento: string;
   cpf: string;
   transporte: Transporte;
 };
@@ -116,6 +117,14 @@ export function formatarTelefone(s: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+/** Aplica a máscara brasileira DD/MM/AAAA enquanto a pessoa digita. */
+export function formatarDataDigitada(s: string): string {
+  const d = somenteDigitos(s).slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
 export function formatarReais(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -164,14 +173,15 @@ function nomeValido(entrada: string): boolean {
   return nome.split(" ").length >= 2;
 }
 
-// ─── Datas (sem fuso: trabalhamos com strings YYYY-MM-DD) ────────────────────
+// ─── Datas: o formulário aceita DD/MM/AAAA e o servidor também aceita YYYY-MM-DD ──
 
 export function lerDataIso(s: string): { y: number; m: number; d: number } | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s ?? "");
-  if (!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s ?? "");
+  const brasileira = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s ?? "");
+  if (!iso && !brasileira) return null;
+  const y = Number(iso ? iso[1] : brasileira?.[3]);
+  const mo = Number(iso ? iso[2] : brasileira?.[2]);
+  const d = Number(iso ? iso[3] : brasileira?.[1]);
   const dt = new Date(Date.UTC(y, mo - 1, d));
   if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d)
     return null;
@@ -197,6 +207,15 @@ export function hojeSaoPaulo(agora: Date = new Date()): string {
     day: "2-digit",
   }).format(agora);
   return partes; // en-CA → YYYY-MM-DD
+}
+
+/** Datas de parcelas ainda disponíveis, limitadas ao prazo final (YYYY-MM-DD). */
+export function filtrarParcelasDisponiveis(
+  datas: string[],
+  hoje: string,
+  limite: string,
+): string[] {
+  return datas.filter((data) => data >= hoje && data <= limite);
 }
 
 export function faixaPorIdade(idade: number, faixas: Faixa[]): Faixa | null {
@@ -256,20 +275,27 @@ function avaliarPessoa(
   if (!nomeValido(p.nome)) erros[`${chave}.nome`] = "Informe o nome completo (nome e sobrenome).";
 
   let idade: number | null = null;
+  let nascimentoIso: string | null = null;
   if (!p.dataNascimento) {
     if (participa) erros[`${chave}.dataNascimento`] = "Informe a data de nascimento.";
-  } else if (!lerDataIso(p.dataNascimento)) {
-    erros[`${chave}.dataNascimento`] = "Data de nascimento inválida.";
-  } else if (p.dataNascimento > ctx.hoje) {
-    erros[`${chave}.dataNascimento`] = "A data de nascimento não pode estar no futuro.";
   } else {
-    idade = calcularIdade(p.dataNascimento, ctx.dataReferencia);
-    if (idade === null || idade < 0) {
-      erros[`${chave}.dataNascimento`] = "Nascimento posterior ao início do retiro.";
-      idade = null;
-    } else if (idade > 110) {
-      erros[`${chave}.dataNascimento`] = "Confira o ano de nascimento.";
-      idade = null;
+    const data = lerDataIso(p.dataNascimento);
+    if (!data) {
+      erros[`${chave}.dataNascimento`] = "Digite a data no formato DD/MM/AAAA.";
+    } else {
+      nascimentoIso = `${String(data.y).padStart(4, "0")}-${String(data.m).padStart(2, "0")}-${String(data.d).padStart(2, "0")}`;
+    }
+    if (nascimentoIso && nascimentoIso > ctx.hoje) {
+      erros[`${chave}.dataNascimento`] = "A data de nascimento não pode estar no futuro.";
+    } else if (nascimentoIso) {
+      idade = calcularIdade(nascimentoIso, ctx.dataReferencia);
+      if (idade === null || idade < 0) {
+        erros[`${chave}.dataNascimento`] = "Nascimento posterior ao início do retiro.";
+        idade = null;
+      } else if (idade > 110) {
+        erros[`${chave}.dataNascimento`] = "Confira o ano de nascimento.";
+        idade = null;
+      }
     }
   }
 
@@ -295,7 +321,7 @@ function avaliarPessoa(
   return {
     papel,
     nome: texto(p.nome),
-    dataNascimento: p.dataNascimento,
+    dataNascimento: nascimentoIso ?? p.dataNascimento,
     cpf: cpfDigitos,
     idade,
     menorDeIdade: idade < 18,
@@ -348,10 +374,6 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
       erros.pastorPresidente = "Informe o pastor presidente.";
     if (texto(v.liderJovens).length < 5) erros.liderJovens = "Informe o líder de jovens.";
   }
-
-  const cidade = texto(v.cidade);
-  if (cidade.length < 2) erros.cidade = "Informe a cidade.";
-  else if (cidade.length > 80) erros.cidade = "Use no máximo 80 caracteres.";
 
   if (resp && v.responsavelParticipa) participantes.push(resp);
 

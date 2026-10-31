@@ -4,9 +4,11 @@ import assert from "node:assert/strict";
 
 import {
   calcularIdade,
+  filtrarParcelasDisponiveis,
   cpfValido,
   faixaPorIdade,
   formatarCpf,
+  formatarDataDigitada,
   formatarTelefone,
   higienizarCelula,
   montarCorpo,
@@ -83,6 +85,32 @@ test("idade na data de início (limites de aniversário)", () => {
   assert.equal(calcularIdade("2009-02-06", ref), 17);
   assert.equal(calcularIdade("2024-02-29", ref), 2); // bissexto
   assert.equal(calcularIdade("2023-02-30", ref), null); // data inexistente
+  assert.equal(calcularIdade("05/02/2022", ref), 5);
+  assert.equal(formatarDataDigitada("05022022"), "05/02/2022");
+  assert.equal(formatarDataDigitada("05/02/2022"), "05/02/2022");
+});
+
+test("cadastro converte data brasileira digitada para formato de planilha", () => {
+  const r = validar(
+    base({
+      responsavelParticipa: false,
+      responsavelParentesco: "mae",
+      integrantes: [pessoa("Laura da Silva", "05/02/2022")],
+    }),
+    ctx,
+  );
+  assert.deepEqual(r.erros, {});
+  assert.equal(r.participantes[0].dataNascimento, "2022-02-05");
+});
+
+test("parcelas Pix diminuem com o calendário e respeitam a data limite", () => {
+  const datas = evento.pagamento.datasPix;
+  assert.deepEqual(filtrarParcelasDisponiveis(datas, "2026-10-31", "2027-01-25"), datas);
+  assert.deepEqual(filtrarParcelasDisponiveis(datas, "2026-11-26", "2027-01-25"), [
+    "2026-12-05",
+    "2026-12-25",
+  ]);
+  assert.deepEqual(filtrarParcelasDisponiveis(datas, "2026-12-26", "2027-01-25"), []);
 });
 
 test("faixas de valor: 4→gratuito, 5→200, 9→200, 10→400, 60→400", () => {
