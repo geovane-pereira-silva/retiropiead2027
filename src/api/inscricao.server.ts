@@ -224,10 +224,12 @@ export async function processarInscricao(
 
   const agora = Date.now();
   limpar(agora);
-  // CPFs desta inscrição (responsável sempre conta, mesmo sem participar).
+  // A chave de deduplicação persistente é o CPF de quem participa. Um responsável
+  // que não participa pode cadastrar cada filho em um envio individual.
   const cpfs = [
     ...new Set(
-      [v.responsavel.cpf, ...v.integrantes.map((p) => p.cpf)]
+      resultado.participantes
+        .map((p) => p.cpf)
         .map(somenteDigitos)
         .filter((c) => c.length === 11),
     ),

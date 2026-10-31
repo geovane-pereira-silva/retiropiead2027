@@ -83,6 +83,18 @@ const valores = (cpf: string, extra: Partial<FormValues> = {}): FormValues => ({
   ...extra,
 });
 
+function cpfTeste(base: string): string {
+  const nove = base.replace(/\D/g, "").padStart(9, "0").slice(-9);
+  const digitos = nove.split("").map(Number);
+  const calcular = (valores: number[], peso: number) => {
+    const soma = valores.reduce((total, digito, i) => total + digito * (peso - i), 0);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  const primeiro = calcular(digitos, 10);
+  return `${nove}${primeiro}${calcular([...digitos, primeiro], 11)}`;
+}
+
 test("visitante encomenda camisa e totaliza day use mais R$ 50 na mesma linha da planilha", async () => {
   modo = "ok";
   recebidos.length = 0;
@@ -163,6 +175,50 @@ test("mesmo CPF com outra chave logo depois é bloqueado sem ir à planilha", as
   assert.equal(r.ok, false);
   if (!r.ok) assert.equal(r.codigo, "DUPLICADO");
   assert.equal(recebidos.length, 0);
+});
+
+test("CPF do responsável não participante pode ser usado em cadastros separados dos filhos", async () => {
+  modo = "ok";
+  recebidos.length = 0;
+  const cpfResponsavel = cpfTeste("912345678");
+  const cadastrarFilho = (nome: string, cpf: string, chave: string) =>
+    processarInscricao(
+      {
+        values: valores(cpfResponsavel, {
+          responsavelParticipa: false,
+          responsavelParentesco: "mae",
+          responsavel: {
+            ...VALORES_VAZIOS.responsavel,
+            nome: "Maria da Silva",
+            cpf: cpfResponsavel,
+          },
+          integrantes: [
+            {
+              ...VALORES_VAZIOS.responsavel,
+              nome,
+              dataNascimento: "2019-08-01",
+              cpf,
+              transporte: "carro",
+              camisaModelo: "infantil",
+              camisaTamanho: "8",
+            },
+          ],
+        }),
+        idempotencyKey: chave,
+      },
+      { url },
+    );
+
+  const primeiroCpf = cpfTeste("987654321");
+  const segundoCpf = cpfTeste("876543219");
+  assert.equal(cpfValido(cpfResponsavel), true);
+  assert.equal(cpfValido(primeiroCpf), true);
+  assert.equal(cpfValido(segundoCpf), true);
+  const primeiro = await cadastrarFilho("Pedro da Silva", primeiroCpf, "irmaos-0001-aaaa");
+  const segundo = await cadastrarFilho("João da Silva", segundoCpf, "irmaos-0002-bbbb");
+  assert.equal(primeiro.ok, true);
+  assert.equal(segundo.ok, true);
+  assert.equal(recebidos.length, 2);
 });
 
 test("planilha responde DUPLICATE → mensagem de duplicidade", async () => {

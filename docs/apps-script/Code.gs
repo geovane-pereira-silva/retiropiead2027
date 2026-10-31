@@ -42,7 +42,13 @@ function lerColuna(aba, nomeColuna) {
   const ultima = aba.getLastRow();
   if (ultima < 2) return [];
   const idx = COLUNAS.indexOf(nomeColuna) + 1;
-  return aba.getRange(2, idx, ultima - 1, 1).getValues().map(function (l) { return String(l[0]); });
+  return aba.getRange(2, idx, ultima - 1, 1).getDisplayValues().map(function (l) { return String(l[0]); });
+}
+
+function normalizarCpf(valor) {
+  var digitos = String(valor == null ? "" : valor).replace(/\D/g, "");
+  // Assegura comparação correta para CPFs antigos que perderam o zero inicial.
+  return digitos.length >= 10 && digitos.length <= 11 ? digitos.padStart(11, "0") : "";
 }
 
 function doPost(e) {
@@ -71,11 +77,17 @@ function doPost(e) {
       return saida({ ok: true, linhas: 0, jaRegistrada: true });
     }
 
-    // Nenhum CPF informado pode já constar na planilha.
-    const existentes = lerColuna(aba, "cpf").map(function (c) { return c.replace(/\D/g, ""); });
+    // CPF de participante não pode repetir dentro do envio nem na planilha.
+    // O lock acima mantém esta verificação atômica entre envios simultâneos.
+    const existentes = lerColuna(aba, "cpf").map(normalizarCpf).filter(Boolean);
+    const recebidos = [];
     for (var i = 0; i < d.participantes.length; i++) {
-      var cpf = String(d.participantes[i].cpf || "").replace(/\D/g, "");
-      if (cpf && existentes.indexOf(cpf) !== -1) return saida({ ok: false, code: "DUPLICATE" });
+      var cpf = normalizarCpf(d.participantes[i].cpf);
+      if (!cpf) continue; // CPF é opcional para menores sem documento.
+      if (recebidos.indexOf(cpf) !== -1 || existentes.indexOf(cpf) !== -1) {
+        return saida({ ok: false, code: "DUPLICATE" });
+      }
+      recebidos.push(cpf);
     }
 
     const linhas = d.participantes.map(function (p) {
