@@ -8,7 +8,8 @@
   --pv-verde: #1fa463;
   --pv-sol: #ffb400;
   --pv-noite: #0a1a15;
-  --pv-display: "Anton", Impact, Haettenschweiler, "Arial Narrow Bold", "sans-serif-condensed", sans-serif;
+  --pv-display:
+    "Anton", Impact, Haettenschweiler, "Arial Narrow Bold", "sans-serif-condensed", sans-serif;
 
   /* tokens herdados pelo formulário, pelos termos e pelo rodapé */
   --lp-mata: var(--pv-tinta);
@@ -1183,6 +1184,33 @@
 .pv-viagem dd {
   display: grid;
   margin: 0.2rem 0 0;
+}
+.pv-carro {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 1rem;
+  margin: 1.6rem 0;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 2px solid var(--lp-brasa-esc);
+  border-radius: 1rem;
+  background: #eef7ef;
+  box-shadow: 0 12px 32px #18392a18;
+}
+.pv-carro > span {
+  font-size: 2rem;
+  line-height: 1;
+}
+.pv-carro h3 {
+  margin: 0 0 0.65rem;
+  color: var(--lp-brasa-esc);
+  font: 700 clamp(1.25rem, 2.4vw, 1.7rem) / 1.15 var(--pv-display);
+}
+.pv-carro p {
+  margin: 0 0 0.65rem;
+}
+.pv-carro strong {
+  display: block;
 }
 .pv-orient {
   margin: 0;

@@ -1,5 +1,5 @@
 // ============================================================================
-// Regras de inscrição FAMILIAR — funções puras, sem dependências, compartilhadas entre
+// Regras de inscrição individual — funções puras, sem dependências, compartilhadas entre
 // o navegador (feedback imediato) e o servidor (validação autoritativa).
 // O servidor SEMPRE recalcula idade e valor; nunca confia no que veio do cliente.
 // ============================================================================
@@ -34,16 +34,22 @@ export type Pessoa = {
 };
 
 export type FormValues = {
-  /** Quem faz a inscrição: sempre maior de idade e responsável legal pelos menores da família. */
+  /** Quem preenche: adulto participante ou pai/mãe/responsável pelo participante menor. */
   responsavel: Pessoa;
-  /** Se o responsável também participa do retiro (entra no cálculo de valores). */
+  /** Se quem preenche também é o único participante deste cadastro. */
   responsavelParticipa: boolean;
+  responsavelParentesco: "" | "pai" | "mae" | "responsavel_legal";
   telefone: string;
   whatsapp: string;
   email: string;
   igreja: string;
+  origemIgreja: "" | "local" | "convidado";
+  congregacao: string;
+  igrejaConvidada: string;
+  pastorPresidente: string;
+  liderJovens: string;
   cidade: string;
-  /** Demais integrantes da família que vão participar. */
+  /** Para inscrição de menor, contém exatamente o participante menor. */
   integrantes: Pessoa[];
   emergenciaNome: string;
   emergenciaTelefone: string;
@@ -62,10 +68,16 @@ export const PESSOA_VAZIA: Pessoa = { nome: "", dataNascimento: "", cpf: "", tra
 export const VALORES_VAZIOS: FormValues = {
   responsavel: { ...PESSOA_VAZIA },
   responsavelParticipa: true,
+  responsavelParentesco: "",
   telefone: "",
   whatsapp: "",
   email: "",
   igreja: "",
+  origemIgreja: "",
+  congregacao: "",
+  igrejaConvidada: "",
+  pastorPresidente: "",
+  liderJovens: "",
   cidade: "",
   integrantes: [],
   emergenciaNome: "",
@@ -245,7 +257,7 @@ function avaliarPessoa(
 
   let idade: number | null = null;
   if (!p.dataNascimento) {
-    erros[`${chave}.dataNascimento`] = "Informe a data de nascimento.";
+    if (participa) erros[`${chave}.dataNascimento`] = "Informe a data de nascimento.";
   } else if (!lerDataIso(p.dataNascimento)) {
     erros[`${chave}.dataNascimento`] = "Data de nascimento inválida.";
   } else if (p.dataNascimento > ctx.hoje) {
@@ -265,7 +277,7 @@ function avaliarPessoa(
   const adulto = idade !== null && idade >= 18;
   if (!cpfDigitos) {
     // Obrigatório para adultos; opcional para menores (crianças nem sempre têm CPF).
-    if (adulto || papel === "Responsável") erros[`${chave}.cpf`] = "Informe o CPF.";
+    if (adulto || (papel === "Responsável" && participa)) erros[`${chave}.cpf`] = "Informe o CPF.";
   } else if (!cpfValido(cpfDigitos)) {
     erros[`${chave}.cpf`] = "CPF inválido. Confira os números.";
   }
@@ -299,10 +311,21 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
   const erros: Erros = {};
   const participantes: Participante[] = [];
 
-  const resp = avaliarPessoa(v.responsavel, "responsavel", "Responsável", ctx, erros, v.responsavelParticipa);
-  if (resp && resp.menorDeIdade) {
+  const resp = avaliarPessoa(
+    v.responsavel,
+    "responsavel",
+    "Responsável",
+    ctx,
+    erros,
+    v.responsavelParticipa,
+  );
+  if (resp && v.responsavelParticipa && resp.menorDeIdade) {
     erros["responsavel.dataNascimento"] =
       "O responsável pela inscrição precisa ter 18 anos ou mais na data do retiro.";
+  }
+
+  if (!v.responsavelParticipa && !v.responsavelParentesco) {
+    erros.responsavelParentesco = "Informe se você é pai, mãe ou responsável legal.";
   }
 
   if (!v.telefone) erros.telefone = "Informe o telefone.";
@@ -315,7 +338,16 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
 
   const igreja = texto(v.igreja);
   if (igreja.length < 2) erros.igreja = "Informe a igreja ou congregação.";
-  else if (igreja.length > 100) erros.igreja = "Use no máximo 100 caracteres.";
+  else if (igreja.length > 400) erros.igreja = "Confira os dados da igreja informados.";
+  if (!v.origemIgreja) erros.origemIgreja = "Escolha a igreja de origem.";
+  else if (v.origemIgreja === "local" && !v.congregacao)
+    erros.congregacao = "Escolha sua congregação.";
+  else if (v.origemIgreja === "convidado") {
+    if (texto(v.igrejaConvidada).length < 2) erros.igrejaConvidada = "Informe o nome da igreja.";
+    if (texto(v.pastorPresidente).length < 5)
+      erros.pastorPresidente = "Informe o pastor presidente.";
+    if (texto(v.liderJovens).length < 5) erros.liderJovens = "Informe o líder de jovens.";
+  }
 
   const cidade = texto(v.cidade);
   if (cidade.length < 2) erros.cidade = "Informe a cidade.";
@@ -323,8 +355,8 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
 
   if (resp && v.responsavelParticipa) participantes.push(resp);
 
-  if (v.integrantes.length > ctx.maxParticipantes) {
-    erros.integrantes = `Máximo de ${ctx.maxParticipantes} pessoas por inscrição. Faça uma segunda inscrição para os demais.`;
+  if (v.integrantes.length > 1) {
+    erros.integrantes = "É um cadastro por pessoa. Faça um novo envio para cada participante.";
   }
   v.integrantes.forEach((p, i) => {
     const a = avaliarPessoa(p, `integrantes.${i}`, "Integrante", ctx, erros, true);
@@ -332,9 +364,19 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
   });
 
   const total_ = (v.responsavelParticipa ? 1 : 0) + v.integrantes.length;
-  if (total_ === 0) erros.integrantes = "Inclua ao menos um participante.";
-  else if (total_ > ctx.maxParticipantes && !erros.integrantes) {
-    erros.integrantes = `Máximo de ${ctx.maxParticipantes} pessoas por inscrição. Faça uma segunda inscrição para os demais.`;
+  if (total_ === 0) erros.integrantes = "Inclua a pessoa que vai participar.";
+  else if (total_ !== 1 && !erros.integrantes) {
+    erros.integrantes = "É um cadastro por pessoa. Faça um novo envio para cada participante.";
+  }
+  if (!v.responsavelParticipa && v.integrantes.length === 1) {
+    const participante = participantes.find((p) => p.chave === "integrantes.0");
+    if (participante && !participante.menorDeIdade) {
+      erros.integrantes = "Para participantes adultos, a própria pessoa deve fazer seu cadastro.";
+    }
+    if (participante && participante.menorDeIdade && resp && resp.menorDeIdade) {
+      erros["responsavel.dataNascimento"] =
+        "O pai, a mãe ou responsável legal deve ter 18 anos ou mais.";
+    }
   }
 
   // CPF repetido dentro da mesma inscrição (responsável conta mesmo sem participar).

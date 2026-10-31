@@ -54,6 +54,8 @@ const valores = (cpf: string, extra: Partial<FormValues> = {}): FormValues => ({
   telefone: "(35) 99999-1234",
   whatsapp: "(35) 99999-1234",
   igreja: "Primeira Assembleia de Deus",
+  origemIgreja: "local",
+  congregacao: "Sede",
   cidade: "Santa Rita do Sapucaí",
   emergenciaNome: "José da Silva",
   emergenciaTelefone: "(35) 98888-4321",
@@ -173,14 +175,16 @@ test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", a
     { url },
   );
   assert.equal(robo.ok, false);
-  // família: um único envio grava todos os participantes
+  // menor de idade: um cadastro individual, preenchido por seu responsável
   recebidos.length = 0;
   const fam = await processarInscricao(
     {
       values: valores("390.533.447-05", {
+        responsavelParticipa: false,
+        responsavelParentesco: "mae",
+        responsavel: { nome: "Maria da Silva", dataNascimento: "", cpf: "", transporte: "" },
         integrantes: [
           { nome: "Pedro da Silva", dataNascimento: "2019-08-01", cpf: "", transporte: "carro" },
-          { nome: "Ana da Silva", dataNascimento: "2024-09-15", cpf: "", transporte: "onibus" },
         ],
       }),
       idempotencyKey: "chave-0011-kkkk",
@@ -189,12 +193,12 @@ test("dados inválidos nunca chegam à planilha; honeypot e ambiente sem URL", a
   );
   assert.equal(fam.ok, true);
   if (fam.ok) {
-    assert.equal(fam.participantes.length, 3);
-    assert.equal(fam.total, 600);
+    assert.equal(fam.participantes.length, 1);
+    assert.equal(fam.total, 200);
     assert.equal(fam.temValorADefinir, false);
   }
   assert.equal(recebidos.length, 1);
-  assert.equal((recebidos[0].participantes as unknown[]).length, 3);
+  assert.equal((recebidos[0].participantes as unknown[]).length, 1);
   recebidos.length = 0;
   const semUrl = await processarInscricao(
     { values: valores("529.982.247-25"), idempotencyKey: "chave-0010-jjjj" },

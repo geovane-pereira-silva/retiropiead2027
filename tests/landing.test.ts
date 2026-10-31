@@ -17,13 +17,19 @@ test("mídia: grupos esperados existem e só aceitam arquivos que existem em pub
     for (const f of media.fotos[g]) {
       assert.ok(f.alt && f.alt.length > 5, `foto sem texto alternativo em ${g}`);
       assert.ok(f.src.startsWith("/fotos/"), `src fora de /fotos/: ${f.src}`);
-      assert.ok(existsSync(`public${decodeURIComponent(f.src)}`), `arquivo cadastrado não existe: ${f.src}`);
+      assert.ok(
+        existsSync(`public${decodeURIComponent(f.src)}`),
+        `arquivo cadastrado não existe: ${f.src}`,
+      );
     }
   }
   if (media.video) {
     const videoPath = `public${decodeURIComponent(media.video.src)}`;
     assert.ok(existsSync(videoPath), "vídeo cadastrado não existe");
-    assert.ok(statSync(videoPath).size < 100_000_000, "vídeo ultrapassa o limite estático de 100 MB do plano Hobby");
+    assert.ok(
+      statSync(videoPath).size < 100_000_000,
+      "vídeo ultrapassa o limite estático de 100 MB do plano Hobby",
+    );
     assert.ok(media.video.titulo, "vídeo sem título");
   }
 });
@@ -66,7 +72,8 @@ test("fotos: imagens que não aparecem nas outras seções são exibidas na gale
   assert.ok(fonte.includes('grupo: "adoracao", indice: 2'));
   assert.ok(fonte.includes('grupo: "adoracao", indice: 3'));
   assert.ok(fonte.includes('grupo: "convivencia", indice: 1'));
-  assert.ok(fonte.includes('grupo: "convivencia", indice: 2'));
+  assert.ok(!fonte.includes('grupo: "convivencia", indice: 2'));
+  assert.match(fonte, /Mais momentos do retiro/);
 });
 
 test("dados oficiais do evento permanecem inalterados", () => {
@@ -80,7 +87,7 @@ test("dados oficiais do evento permanecem inalterados", () => {
       ["10-mais", 400],
     ],
   );
-  assert.equal(evento.maxParticipantesPorInscricao, 10);
+  assert.equal(evento.maxParticipantesPorInscricao, 1);
   assert.deepEqual(evento.dataCurta, { de: "5", ate: "9", mes: "fevereiro", ano: "2027" });
 });
 
@@ -88,7 +95,10 @@ test("ScrollStory: sequência de Atos 1:8 termina nos confins e não mistura out
   const fonte = readFileSync("src/components/ScrollStory.tsx", "utf8");
   const titulos = [...fonte.matchAll(/texto: "([^"]+)"/g)].map((m) => m[1].toLowerCase());
   const linhas = fonte.match(/const LINES: string\[\]\[\] = (\[.*\]);/)?.[1] ?? "";
-  const palavras = [...titulos, ...[...linhas.matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase())];
+  const palavras = [
+    ...titulos,
+    ...[...linhas.matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase()),
+  ];
   assert.deepEqual(titulos, ["dunamis", "revestidos", "testemunhas"]);
   assert.equal(palavras[palavras.length - 1], "confins");
   assert.doesNotMatch(fonte, /permanecer/i);

@@ -25,7 +25,8 @@ export const evento = {
   igreja: "Primeira Assembleia de Deus",
   igrejaCidade: "Santa Rita do Sapucaí/MG",
 
-  mensagemPrincipal: "Dias para buscar a Deus juntos, fortalecer a família e renovar a comunhão cristã.",
+  mensagemPrincipal:
+    "Dias para buscar a Deus juntos, fortalecer a família e renovar a comunhão cristã.",
 
   /** Tema oficial ainda não informado. Se preenchido, aparece no topo. */
   tema: null as string | null,
@@ -123,7 +124,8 @@ export const evento = {
     },
     jovens: {
       titulo: "Jovens",
-      texto: "Os jovens ficam em quartos separados por sexo: quartos para meninas e quartos para meninos.",
+      texto:
+        "Os jovens ficam em quartos separados por sexo: quartos para meninas e quartos para meninos.",
     },
     nota: "A distribuição dos quartos será divulgada pela organização.",
   },
@@ -140,7 +142,7 @@ export const evento = {
   /**
    * Valores por pessoa, conforme a idade em `inicioData`.
    * `valor: null` = a definir (sem cobrança automática); `0` = gratuito.
-   * ATENÇÃO: confirmar com a organização se continuam válidos para o formato familiar.
+   * Valores por pessoa, conforme definidos para o retiro.
    */
   faixas: [
     { id: "menor-5", rotulo: "Menores de 5 anos", idadeMin: 0, idadeMax: 4, valor: 0 },
@@ -148,8 +150,8 @@ export const evento = {
     { id: "10-mais", rotulo: "A partir de 10 anos", idadeMin: 10, idadeMax: null, valor: 400 },
   ] as Faixa[],
 
-  /** Limite técnico de pessoas por envio (evita abuso). Famílias maiores fazem um segundo envio. */
-  maxParticipantesPorInscricao: 10,
+  /** Uma pessoa participante por cadastro. Responsável legal de menor não conta como participante. */
+  maxParticipantesPorInscricao: 1,
 
   // ─── Transporte (oficial) ────────────────────────────────────────────────
   transporte: {
@@ -160,10 +162,11 @@ export const evento = {
   },
 
   orientacoes: [
-    "Uma pessoa maior de idade faz a inscrição e cadastra todos os integrantes da família que vão participar.",
-    "Informe a data de nascimento de cada pessoa: o valor é calculado pela idade em 5 de fevereiro de 2027.",
-    "Escolha, para cada participante, se vai de ônibus da organização ou de carro próprio.",
-    "O CPF é obrigatório para maiores de 18 anos e opcional para menores.",
+    "Faça um cadastro separado para cada pessoa, inclusive crianças e adolescentes.",
+    "Para menor de idade, pai, mãe ou responsável legal informa seu nome e celular cadastrado e preenche o cadastro da criança ou adolescente.",
+    "A idade e o valor são calculados em 5 de fevereiro de 2027. Escolha ônibus da organização ou carro próprio.",
+    "Informe se é da nossa igreja e a congregação, ou se é convidado de outra igreja.",
+    "O CPF é obrigatório para adultos e opcional para menores.",
     "Informe um contato de emergência e, se houver, necessidades de hospedagem ou alimentação.",
     "O envio do formulário registra o cadastro e não confirma pagamento.",
   ],
@@ -179,8 +182,8 @@ export const evento = {
       r: "De sexta-feira, 5 de fevereiro, a terça-feira, 9 de fevereiro de 2027, no Sítio de Retiro Espiritual Campos do Jordão, em Campos do Jordão/SP, a aproximadamente 15 minutos do centro da cidade. O período coincide com o Carnaval.",
     },
     {
-      p: "Como funciona a inscrição da família?",
-      r: "Uma pessoa maior de idade preenche o formulário e cadastra o responsável e cada integrante da família que vai participar, com nome, data de nascimento e a escolha de transporte. O valor de cada pessoa e o total aparecem antes do envio.",
+      p: "Como funciona o cadastro?",
+      r: "É um cadastro por pessoa, inclusive para crianças e adolescentes. Para cadastrar um menor, pai, mãe ou responsável legal informa seu nome e celular cadastrado e preenche os dados do participante. Para cada pessoa, o valor aparece antes do envio.",
     },
     {
       p: "Quais são os valores?",
@@ -196,7 +199,7 @@ export const evento = {
     },
     {
       p: "Como será o transporte de ônibus?",
-      r: "A ida é na sexta-feira, 5 de fevereiro, e o retorno na terça-feira, 9 de fevereiro de 2027. Horários, pontos de embarque e itinerário serão divulgados pela organização.",
+      r: "A ida é na sexta-feira, 5 de fevereiro, e o retorno na terça-feira, 9 de fevereiro de 2027. Horários, pontos de embarque e itinerário serão divulgados. A organização confirmará com a empresa como será o transporte seguro de crianças pequenas. Não presuma que a criança pode ir no colo; confirme antes da viagem. Toda pessoa deve constar na lista e ter lugar conforme a capacidade do ônibus.",
     },
     {
       p: "Como funciona a hospedagem?",
@@ -213,7 +216,7 @@ export const evento = {
     },
     {
       p: "Enviar o formulário confirma meu pagamento?",
-      r: "Não. O formulário registra o cadastro da família. O envio não significa pagamento confirmado.",
+      r: "Não. O formulário registra o cadastro da pessoa. O envio não significa pagamento confirmado.",
     },
     {
       p: "Como faço o pagamento?",

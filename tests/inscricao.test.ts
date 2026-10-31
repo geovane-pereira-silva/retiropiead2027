@@ -45,6 +45,8 @@ const base = (extra: Partial<FormValues> = {}): FormValues => ({
   telefone: "(35) 99999-1234",
   whatsapp: "(35) 99999-1234",
   igreja: "Primeira Assembleia de Deus",
+  origemIgreja: "local",
+  congregacao: "Sede",
   cidade: "Santa Rita do Sapucaí",
   emergenciaNome: "José da Silva",
   emergenciaTelefone: "(35) 98888-4321",
@@ -101,7 +103,7 @@ test("responsável sozinho: sem erros, R$ 400", () => {
   assert.equal(r.temValorADefinir, false);
 });
 
-test("família: casal + filho de 7 + bebê de 2 → 400+400+200+gratuito", () => {
+test("um cadastro não pode incluir mais de um participante", () => {
   const r = validar(
     base({
       integrantes: [
@@ -112,23 +114,30 @@ test("família: casal + filho de 7 + bebê de 2 → 400+400+200+gratuito", () =>
     }),
     ctx,
   );
-  assert.deepEqual(r.erros, {});
-  assert.equal(r.participantes.length, 4);
-  assert.deepEqual(
-    r.participantes.map((p) => p.valor),
-    [400, 400, 200, 0],
-  );
-  assert.equal(r.total, 1000);
-  assert.equal(r.temValorADefinir, false);
+  assert.ok(r.erros.integrantes);
+  assert.match(r.erros.integrantes, /um cadastro por pessoa/i);
 });
 
 test("CPF de menor é opcional; de adulto é obrigatório", () => {
-  const menor = validar(base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01")] }), ctx);
+  const menor = validar(
+    base({
+      responsavelParticipa: false,
+      responsavelParentesco: "pai",
+      responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
+      integrantes: [pessoa("Pedro da Silva", "2019-08-01")],
+    }),
+    ctx,
+  );
   assert.deepEqual(menor.erros, {});
-  const adulto = validar(base({ integrantes: [pessoa("Carlos da Silva", "1983-03-10")] }), ctx);
-  assert.ok(adulto.erros["integrantes.0.cpf"]);
+  const adulto = validar(base({ responsavel: pessoa("Carlos da Silva", "1983-03-10", "") }), ctx);
+  assert.ok(adulto.erros["responsavel.cpf"]);
   const invalido = validar(
-    base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01", "123.456.789-00")] }),
+    base({
+      responsavelParticipa: false,
+      responsavelParentesco: "mae",
+      responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
+      integrantes: [pessoa("Pedro da Silva", "2019-08-01", "123.456.789-00")],
+    }),
     ctx,
   );
   assert.ok(invalido.erros["integrantes.0.cpf"]);
@@ -144,7 +153,12 @@ test("responsável menor de 18 anos é recusado", () => {
 
 test("responsável que não participa: valor só dos integrantes", () => {
   const r = validar(
-    base({ responsavelParticipa: false, integrantes: [pessoa("Pedro da Silva", "2019-08-01")] }),
+    base({
+      responsavelParticipa: false,
+      responsavelParentesco: "mae",
+      responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
+      integrantes: [pessoa("Pedro da Silva", "2019-08-01")],
+    }),
     ctx,
   );
   assert.deepEqual(r.erros, {});
@@ -154,15 +168,20 @@ test("responsável que não participa: valor só dos integrantes", () => {
   assert.ok(nenhum.erros.integrantes);
 });
 
-test("CPF repetido na mesma inscrição e limite de participantes", () => {
-  const dup = validar(
-    base({ integrantes: [pessoa("Carlos da Silva", "1983-03-10", "529.982.247-25")] }),
+test("adulto deve ser o próprio participante e um cadastro aceita uma pessoa", () => {
+  const adultoComoDependente = validar(
+    base({
+      responsavelParticipa: false,
+      responsavelParentesco: "pai",
+      responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
+      integrantes: [pessoa("Carlos da Silva", "1983-03-10", "111.444.777-35")],
+    }),
     ctx,
   );
-  assert.ok(dup.erros["integrantes.0.cpf"]);
+  assert.match(adultoComoDependente.erros.integrantes, /própria pessoa/i);
   const muitos = validar(
     base({
-      integrantes: Array.from({ length: 10 }, (_, i) => pessoa(`Filho Numero${i}`, "2015-01-01")),
+      integrantes: [pessoa("Filho Numero1", "2015-01-01"), pessoa("Filho Numero2", "2015-01-01")],
     }),
     ctx,
   );
@@ -206,7 +225,12 @@ test("planilha: injeção de fórmula é neutralizada", () => {
 });
 
 test("corpo da planilha: um participante por linha, CPF só dígitos, pagamento não confirmado", () => {
-  const v = base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01")] });
+  const v = base({
+    responsavelParticipa: false,
+    responsavelParentesco: "mae",
+    responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
+    integrantes: [pessoa("Pedro da Silva", "2019-08-01")],
+  });
   const r = validar(v, ctx);
   const c = montarCorpo(v, r, {
     idempotencyKey: "k1",
@@ -215,22 +239,30 @@ test("corpo da planilha: um participante por linha, CPF só dígitos, pagamento 
     versaoTermos: "t",
   });
   assert.equal(c.statusPagamento, "NÃO CONFIRMADO");
-  assert.equal(c.totalParticipantes, 2);
-  assert.equal(c.totalValor, 600);
-  assert.equal(c.participantes[0].cpf, "52998224725");
-  assert.equal(c.participantes[1].cpf, "");
-  assert.equal(c.participantes[1].menorDeIdade, "SIM");
-  assert.equal(c.participantes[1].valor, 200);
+  assert.equal(c.totalParticipantes, 1);
+  assert.equal(c.totalValor, 200);
+  assert.equal(c.participantes[0].cpf, "");
+  assert.equal(c.participantes[0].menorDeIdade, "SIM");
+  assert.equal(c.participantes[0].valor, 200);
 });
 
 test("transporte: obrigatório para quem participa; responsável que não participa dispensa", () => {
   const semEscolha = validar(base({ responsavel: { ...base().responsavel, transporte: "" } }), ctx);
   assert.ok(semEscolha.erros["responsavel.transporte"]);
-  const integranteSem = validar(base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01", "", "")] }), ctx);
+  const integranteSem = validar(
+    base({
+      responsavelParticipa: false,
+      responsavelParentesco: "pai",
+      responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
+      integrantes: [pessoa("Pedro da Silva", "2019-08-01", "", "")],
+    }),
+    ctx,
+  );
   assert.ok(integranteSem.erros["integrantes.0.transporte"]);
   const naoParticipa = validar(
     base({
       responsavelParticipa: false,
+      responsavelParentesco: "pai",
       responsavel: { ...base().responsavel, transporte: "" },
       integrantes: [pessoa("Pedro da Silva", "2019-08-01")],
     }),
@@ -240,11 +272,20 @@ test("transporte: obrigatório para quem participa; responsável que não partic
 });
 
 test("transporte: ônibus e carro próprio chegam à planilha com rótulo legível", () => {
-  const v = base({ integrantes: [pessoa("Pedro da Silva", "2019-08-01", "", "carro")] });
+  const v = base({
+    responsavelParticipa: false,
+    responsavelParentesco: "mae",
+    responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
+    integrantes: [pessoa("Pedro da Silva", "2019-08-01", "", "carro")],
+  });
   const r = validar(v, ctx);
-  const c = montarCorpo(v, r, { idempotencyKey: "k2", familiaId: "F-2", enviadoEm: "2026-10-25T00:00:00Z", versaoTermos: "t" });
-  assert.equal(c.participantes[0].transporte, "Ônibus da organização");
-  assert.equal(c.participantes[1].transporte, "Carro próprio");
+  const c = montarCorpo(v, r, {
+    idempotencyKey: "k2",
+    familiaId: "F-2",
+    enviadoEm: "2026-10-25T00:00:00Z",
+    versaoTermos: "t",
+  });
+  assert.equal(c.participantes[0].transporte, "Carro próprio");
 });
 
 test("textoValor: gratuito, a definir e reais", () => {
@@ -254,8 +295,16 @@ test("textoValor: gratuito, a definir e reais", () => {
 });
 
 test("menor de 5 anos é gratuito e não gera 'valor a definir'", () => {
-  const r = validar(base({ integrantes: [pessoa("Ana da Silva", "2024-09-15")] }), ctx);
-  assert.equal(r.participantes[1].valor, 0);
+  const r = validar(
+    base({
+      responsavelParticipa: false,
+      responsavelParentesco: "mae",
+      responsavel: { ...base().responsavel, dataNascimento: "", cpf: "", transporte: "" },
+      integrantes: [pessoa("Ana da Silva", "2024-09-15")],
+    }),
+    ctx,
+  );
+  assert.equal(r.participantes[0].valor, 0);
   assert.equal(r.temValorADefinir, false);
-  assert.equal(r.total, 400);
+  assert.equal(r.total, 0);
 });

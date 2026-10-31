@@ -52,21 +52,24 @@ export function Termos() {
           </p>
           <h4>Quais dados coletamos</h4>
           <p>
-            Do responsável pela inscrição: nome, data de nascimento, CPF, telefone, WhatsApp, e-mail
-            (opcional), igreja ou congregação, cidade e contato de emergência. De cada integrante da
-            família cadastrado: nome, data de nascimento e CPF (opcional para menores de 18 anos).
-            Também as necessidades de hospedagem ou alimentação informadas.
+            Um cadastro por participante. Coletamos nome, data de nascimento, CPF (obrigatório para
+            adultos e opcional para menores), transporte escolhido, igreja de origem, congregação
+            ou, para convidados, nome da igreja, pastor presidente e líder de jovens, além de cidade
+            e contato de emergência. Para participante menor, coletamos o nome, vínculo e celular do
+            pai, mãe ou responsável legal. Também as necessidades de hospedagem ou alimentação
+            informadas.
           </p>
           <h4>Para que usamos</h4>
           <p>
-            Organizar a inscrição e o retiro: identificação do participante, contato, hospedagem,
-            alimentação, segurança e comunicação em caso de emergência. O CPF serve para identificar
-            a inscrição e evitar duplicidade.
+            Organizar o cadastro individual e o retiro: identificação do participante, contato,
+            hospedagem, alimentação, segurança e comunicação em caso de emergência. O CPF serve para
+            identificar a inscrição e evitar duplicidade.
           </p>
           <h4>Dados de crianças e adolescentes</h4>
           <p>
-            Os dados de menores de 18 anos são informados pelo responsável pela inscrição, que atua
-            como responsável legal, e são usados somente para os fins acima.
+            Os dados de crianças e adolescentes são informados pelo pai, mãe ou responsável legal,
+            cujo celular será usado para comunicações sobre o cadastro e a segurança no retiro. Os
+            dados são usados somente para os fins descritos acima.
           </p>
           <h4>Compartilhamento e acesso</h4>
           <p>

@@ -62,7 +62,7 @@ function Cabecalho() {
           ))}
         </nav>
         <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-top-cta">
-          Inscrever minha família
+          Fazer meu cadastro
         </Link>
         <button
           type="button"
@@ -83,7 +83,7 @@ function Cabecalho() {
               </a>
             ))}
             <Link to="/inscricao" className="lp-btn lp-btn-brasa" onClick={() => setAberto(false)}>
-              Inscrever minha família
+              Fazer meu cadastro
             </Link>
           </div>
         </nav>
@@ -120,7 +120,10 @@ function Abertura() {
 
   return (
     <section ref={ref} className="pv-abertura" id="topo" aria-labelledby="titulo">
-      <motion.div className="pv-abertura-foto" style={reduzir ? undefined : { y: fotoY, scale: fotoZoom }}>
+      <motion.div
+        className="pv-abertura-foto"
+        style={reduzir ? undefined : { y: fotoY, scale: fotoZoom }}
+      >
         {foto ? <Imagem f={foto} prioridade /> : <Midia grupo="hero" />}
       </motion.div>
       <div className="pv-abertura-veu" aria-hidden="true" />
@@ -133,10 +136,7 @@ function Abertura() {
           <span className="pv-evento" aria-hidden="true">
             {evento.nome} {evento.edicao}
           </span>
-          <motion.span
-            className="pv-dunamis"
-            style={reduzir ? undefined : { x: linhaA }}
-          >
+          <motion.span className="pv-dunamis" style={reduzir ? undefined : { x: linhaA }}>
             {marcaInfo ? (
               <img className="pv-dunamis-arte" src={marcaInfo.src} alt="" />
             ) : (
@@ -174,7 +174,7 @@ function Abertura() {
           </p>
           <div className="pv-abertura-acoes">
             <Link to="/inscricao" className="lp-btn lp-btn-brasa lp-btn-grande">
-              Inscrever minha família
+              Fazer meu cadastro
             </Link>
             <a className="pv-link" href="#valores">
               Ver o que está incluído
@@ -245,12 +245,20 @@ function VideoCinema() {
     if (!el) return;
     el.muted = !el.muted;
     setSom(!el.muted);
-    if (!el.muted && el.paused) el.play().then(() => setTocando(true), () => undefined);
+    if (!el.muted && el.paused)
+      el.play().then(
+        () => setTocando(true),
+        () => undefined,
+      );
   };
   const alternarPlay = () => {
     const el = video.current;
     if (!el) return;
-    if (el.paused) el.play().then(() => setTocando(true), () => undefined);
+    if (el.paused)
+      el.play().then(
+        () => setTocando(true),
+        () => undefined,
+      );
     else {
       el.pause();
       setTocando(false);
@@ -276,7 +284,11 @@ function VideoCinema() {
               </video>
             </motion.div>
           ) : (
-            <div className="pv-reserva pv-reserva-video" role="img" aria-label="Espaço reservado: vídeo real pendente">
+            <div
+              className="pv-reserva pv-reserva-video"
+              role="img"
+              aria-label="Espaço reservado: vídeo real pendente"
+            >
               <span className="pv-reserva-selo">
                 Vídeo real pendente
                 <small>Envie o vídeo do retiro (MP4) para ocupar esta tela</small>
@@ -324,7 +336,13 @@ function Cartao({
       onPointerEnter={(e) => e.pointerType === "mouse" && setAberto(true)}
     >
       {imagem && <div className="pv-cartao-img">{imagem}</div>}
-      <button type="button" className="pv-cartao-topo" aria-expanded={aberto} aria-controls={id} onClick={() => setAberto((v) => !v)}>
+      <button
+        type="button"
+        className="pv-cartao-topo"
+        aria-expanded={aberto}
+        aria-controls={id}
+        onClick={() => setAberto((v) => !v)}
+      >
         {destaque && <span className="pv-cartao-destaque">{destaque}</span>}
         <span className="pv-cartao-titulo">{titulo}</span>
         <i aria-hidden="true" />
@@ -385,9 +403,9 @@ function Proposta() {
           </h2>
           <p className="pv-lead">
             O {evento.nome} {evento.edicao} reúne famílias, adultos e jovens da {evento.igreja} de{" "}
-            {evento.igrejaCidade} em Campos do Jordão. A rotina combina devocional, culto de louvor e
-            adoração e uma vigília pentecostal, com tempo para a convivência entre as famílias e para o
-            descanso.
+            {evento.igrejaCidade} em Campos do Jordão. A rotina combina devocional, culto de louvor
+            e adoração e uma vigília pentecostal, com tempo para a convivência entre as famílias e
+            para o descanso.
           </p>
         </div>
         <div className="pv-proposta-fotos">
@@ -423,7 +441,8 @@ function Local() {
           {evento.local.nome}
         </h2>
         <p className="pv-lead pv-lead-claro">
-          Em {evento.local.cidade}/{evento.local.uf}. Um espaço pensado para cultos, convivência e descanso.
+          Em {evento.local.cidade}/{evento.local.uf}. Um espaço pensado para cultos, convivência e
+          descanso.
         </p>
 
         <div className="pv-local-fotos">
@@ -445,7 +464,12 @@ function Local() {
 
         {evento.local.mapsUrl && (
           <p>
-            <a className="pv-link" href={evento.local.mapsUrl} target="_blank" rel="noopener noreferrer">
+            <a
+              className="pv-link"
+              href={evento.local.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Ver no mapa
             </a>
           </p>
@@ -573,7 +597,6 @@ const FOTOS_ADICIONAIS = [
   { grupo: "adoracao", indice: 4 },
   { grupo: "adoracao", indice: 5 },
   { grupo: "adoracao", indice: 6 },
-  { grupo: "convivencia", indice: 2 },
 ] as const;
 
 /** Exibe as fotos reais ainda não usadas nas outras seções. */
@@ -637,11 +660,11 @@ function Valores() {
           </ul>
           <p>A idade é contada em 5 de fevereiro de 2027, data de início do retiro.</p>
           <p>
-            As orientações de pagamento serão divulgadas pela organização. O formulário registra o cadastro
-            e não confirma pagamento.
+            As orientações de pagamento serão divulgadas pela organização. O formulário registra o
+            cadastro e não confirma pagamento.
           </p>
           <Link to="/inscricao" className="lp-btn lp-btn-grande pv-btn-tinta">
-            Inscrever minha família
+            Fazer meu cadastro
           </Link>
         </div>
       </div>
@@ -674,7 +697,14 @@ function Transporte() {
               </dd>
             </div>
           </dl>
-          <p>{t.carroProprio}</p>
+          <aside className="pv-carro" aria-labelledby="t-carro">
+            <span aria-hidden="true">🚗</span>
+            <div>
+              <h3 id="t-carro">Vai de carro próprio?</h3>
+              <p>{t.carroProprio}</p>
+              <strong>Você escolhe o carro próprio no cadastro de cada participante.</strong>
+            </div>
+          </aside>
           <p className="lp-pendente">{t.pendente}</p>
         </div>
         <div>
@@ -698,7 +728,9 @@ function Duvidas() {
           <h2 id="t-faq" className="pv-titulo">
             Dúvidas frequentes
           </h2>
-          <p className="pv-lead">O que ainda não foi definido aparece como “será divulgado pela organização”.</p>
+          <p className="pv-lead">
+            O que ainda não foi definido aparece como “será divulgado pela organização”.
+          </p>
         </div>
         <div className="pv-faq">
           {evento.faq.map((q) => (
@@ -720,13 +752,13 @@ function ChamadaFinal() {
   return (
     <section className="pv-final" id="inscrever" aria-labelledby="t-final">
       <div className="pv-wrap pv-final-in">
-        <h2 id="t-final">Inscreva sua família</h2>
+        <h2 id="t-final">Faça seu cadastro</h2>
         <p>
-          {evento.dataTexto}, {evento.local.cidade}/{evento.local.uf}. O formulário leva poucos minutos e
-          mostra o valor de cada pessoa antes do envio.
+          Um cadastro por pessoa, inclusive para menores. {evento.dataTexto}, {evento.local.cidade}/
+          {evento.local.uf}. O formulário mostra o valor antes do envio.
         </p>
         <Link to="/inscricao" className="lp-btn lp-btn-grande pv-btn-tinta">
-          Inscrever minha família
+          Fazer meu cadastro
         </Link>
       </div>
     </section>
@@ -740,13 +772,26 @@ export function Rodape() {
     <footer className="lp-foot">
       <div className="lp-wrap lp-foot-in">
         <div className="lp-foot-marcas">
-          <img src="/marca/logo-conexao-jovem-verde.png" alt={evento.ministerio} width="44" height="55" loading="lazy" />
-          <img src="/logo-igreja.png" alt={`${evento.igreja} de ${evento.igrejaCidade}`} width="44" height="54" loading="lazy" />
+          <img
+            src="/marca/logo-conexao-jovem-verde.png"
+            alt={evento.ministerio}
+            width="44"
+            height="55"
+            loading="lazy"
+          />
+          <img
+            src="/logo-igreja.png"
+            alt={`${evento.igreja} de ${evento.igrejaCidade}`}
+            width="44"
+            height="54"
+            loading="lazy"
+          />
         </div>
         <p>
           {evento.nome} {evento.edicao}. Organização da {evento.ministerio}, {evento.igreja} de{" "}
           {evento.igrejaCidade}.
         </p>
+        <p>Líder de jovens: Dc Geovane Pereira · Pastor Presidente: Ricardo Ribeiro.</p>
         <p>
           {temContato ? (
             <>
@@ -767,7 +812,8 @@ export function Rodape() {
           )}
         </p>
         <p>
-          <a href="/inscricao#regras">Regras do retiro</a> <a href="/inscricao#privacidade">Privacidade</a>
+          <a href="/inscricao#regras">Regras do retiro</a>{" "}
+          <a href="/inscricao#privacidade">Privacidade</a>
         </p>
       </div>
     </footer>
