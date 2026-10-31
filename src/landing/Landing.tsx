@@ -193,6 +193,7 @@ function VideoCinema() {
   const { reduzir } = useMovimento();
   const [som, setSom] = useState(false);
   const [tocando, setTocando] = useState(false);
+  const [erroReproducao, setErroReproducao] = useState(false);
   const temVideo = !!videoInfo?.src;
 
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start start"] });
@@ -202,63 +203,65 @@ function VideoCinema() {
   const zoom = useTransform(scrollYProgress, [0, 1], [1.18, 1]);
   const recorte = useMotionTemplate`inset(${v}svh ${h}vw round ${r}px)`;
 
-  // Reprodução automática sem som, só enquanto visível e sem economia de dados.
+  // Pré-carrega apenas os metadados; o vídeo começa após a pessoa ativar o som.
   useEffect(() => {
     const el = video.current;
     if (!el || !temVideo) return;
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-    if (reduzir || conn?.saveData) return;
-    const carregar = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          el.preload = "auto";
-          el.load();
-          carregar.disconnect();
-        }
-      },
-      { rootMargin: "1400px 0px", threshold: 0 },
-    );
-    carregar.observe(el);
-    const o = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting && e.intersectionRatio > 0.35) {
-          el.play().then(
-            () => setTocando(true),
-            () => setTocando(false),
-          );
-        } else {
-          el.pause();
-          setTocando(false);
-        }
-      },
-      { threshold: [0, 0.35, 0.6] },
-    );
-    o.observe(el);
+    let carregar: IntersectionObserver | undefined;
+    if (!reduzir && !conn?.saveData) {
+      carregar = new IntersectionObserver(
+        ([e]) => {
+          if (e.isIntersecting) {
+            el.preload = "metadata";
+            el.load();
+            carregar?.disconnect();
+          }
+        },
+        { rootMargin: "900px 0px", threshold: 0 },
+      );
+      carregar.observe(el);
+    }
+    const visibilidade = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting && !el.paused) {
+        el.pause();
+        setTocando(false);
+      }
+    });
+    visibilidade.observe(el);
     return () => {
-      carregar.disconnect();
-      o.disconnect();
+      carregar?.disconnect();
+      visibilidade.disconnect();
     };
   }, [temVideo, reduzir]);
+
+  const reproduzirComSom = () => {
+    const el = video.current;
+    if (!el) return;
+    el.muted = false;
+    el.volume = 1;
+    setSom(true);
+    setErroReproducao(false);
+    if (el.paused)
+      el.play().then(
+        () => setTocando(true),
+        () => setErroReproducao(true),
+      );
+  };
 
   const alternarSom = () => {
     const el = video.current;
     if (!el) return;
-    el.muted = !el.muted;
-    setSom(!el.muted);
-    if (!el.muted && el.paused)
-      el.play().then(
-        () => setTocando(true),
-        () => undefined,
-      );
+    if (el.muted) reproduzirComSom();
+    else {
+      el.muted = true;
+      setSom(false);
+    }
   };
   const alternarPlay = () => {
     const el = video.current;
     if (!el) return;
-    if (el.paused)
-      el.play().then(
-        () => setTocando(true),
-        () => undefined,
-      );
+    if (el.paused) reproduzirComSom();
     else {
       el.pause();
       setTocando(false);
@@ -273,12 +276,14 @@ function VideoCinema() {
             <motion.div className="pv-video-midia" style={reduzir ? undefined : { scale: zoom }}>
               <video
                 ref={video}
-                muted
+                muted={!som}
                 loop
                 playsInline
                 preload="none"
                 poster={videoInfo?.poster}
                 aria-label={videoInfo?.titulo}
+                onPlay={() => setTocando(true)}
+                onPause={() => setTocando(false)}
               >
                 <source src={videoInfo?.src} />
               </video>
@@ -299,8 +304,15 @@ function VideoCinema() {
 
         {temVideo && (
           <div className="pv-video-controles">
+            {!tocando && (
+              <p className="pv-video-aviso" role="status">
+                {erroReproducao
+                  ? "O vídeo não iniciou. Toque em “Reproduzir com som” para tentar novamente."
+                  : "Este vídeo tem som. Toque em “Reproduzir com som” para assistir."}
+              </p>
+            )}
             <button type="button" onClick={alternarPlay}>
-              {tocando ? "Pausar vídeo" : "Reproduzir vídeo"}
+              {tocando ? "Pausar vídeo" : "Reproduzir com som"}
             </button>
             <button type="button" onClick={alternarSom}>
               {som ? "Desativar som" : "Ativar som"}

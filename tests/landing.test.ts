@@ -73,6 +73,15 @@ test("fotos: preview carrega antes da imagem em alta resolução", () => {
   assert.match(fonte, /onLoad=\{\(\) => setCarregarOriginal\(true\)\}/);
 });
 
+test("vídeo: avisa sobre o som e só inicia com ação explícita da pessoa", () => {
+  const fonte = readFileSync("src/landing/Landing.tsx", "utf8");
+  assert.match(fonte, /Este vídeo tem som/);
+  assert.match(fonte, /Reproduzir com som/);
+  assert.match(fonte, /el\.muted = false/);
+  assert.match(fonte, /el\.play\(\)/);
+  assert.doesNotMatch(fonte, /autoPlay/);
+});
+
 test("fotos: imagens que não aparecem nas outras seções são exibidas na galeria final", () => {
   const fonte = readFileSync("src/landing/Landing.tsx", "utf8");
   assert.match(fonte, /function FotosAdicionais\(\)/);
