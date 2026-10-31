@@ -40,6 +40,7 @@ test("docs/midia.md lista todos os arquivos pendentes", () => {
     "oração pelo jovem.jpg",
     "jovem feliz.jpg",
     "jovem na gincana feliz.jpg",
+    "espaço coberto gincanas.jpg",
   ]) {
     assert.ok(docs.includes(nome), `docs/midia.md não cita ${nome}`);
   }
@@ -58,4 +59,26 @@ test("dados oficiais do evento permanecem inalterados", () => {
   );
   assert.equal(evento.maxParticipantesPorInscricao, 10);
   assert.deepEqual(evento.dataCurta, { de: "5", ate: "9", mes: "fevereiro", ano: "2027" });
+});
+
+test("ScrollStory: sequência de Atos 1:8 termina em PERMANECER", () => {
+  const fonte = readFileSync("src/components/ScrollStory.tsx", "utf8");
+  const titulos = [...fonte.matchAll(/texto: "([^"]+)"/g)].map((m) => m[1].toLowerCase());
+  const linhas = fonte.match(/const LINES: string\[\]\[\] = (\[.*\]);/)?.[1] ?? "";
+  const palavras = [...titulos, ...[...linhas.matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase())];
+  assert.deepEqual(titulos, ["dunamis", "revestidos", "testemunhas"]);
+  assert.equal(palavras[palavras.length - 1], "permanecer");
+  assert.equal(palavras.filter((p) => p === "permanecer").length, 1);
+  assert.ok(palavras.includes("confins"));
+});
+
+test("tema Dunamis: Atos 1:8 e referências complementares presentes", async () => {
+  const { tema } = await import("../src/content/tema");
+  assert.equal(tema.nome, "Dunamis");
+  assert.equal(tema.chamada, "Recebereis poder");
+  assert.match(tema.versiculo, /recebereis a virtude do Espírito Santo/);
+  assert.deepEqual(
+    tema.referencias.map((r) => r.ref),
+    ["Lucas 24:49", "Atos 2:1-4", "João 15:4-5", "2 Timóteo 1:7"],
+  );
 });
