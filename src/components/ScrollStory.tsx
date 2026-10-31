@@ -10,23 +10,26 @@ import {
 } from "framer-motion";
 
 import { evento } from "../content/evento";
-import { fotosDe } from "../landing/Gallery";
+import { tema } from "../content/tema";
+import { fotosDe, type GrupoId } from "../landing/Gallery";
 import { useMovimento } from "./useMovimento";
 
 /* ── Textos (edite aqui) ─────────────────────────────────────────────────── */
-const ROTULO_FASE_1 = `${evento.nome} ${evento.edicao}`;
-const ROTULO_FASE_2 = "O que nos reúne";
+// Narrativa de Atos 1:8: DUNAMIS → REVESTIDOS → TESTEMUNHAS → (Jerusalém, Judeia e Samaria)
+// → ATÉ OS CONFINS → PERMANECER. PERMANECER é sempre a última palavra.
+const ROTULO_FASE_1 = `${tema.nome} · ${tema.referencia}`;
+const ROTULO_FASE_2 = "Da promessa à missão";
 const ROTULO_MARCAS = "Realização";
 
 /** Fase 1: títulos que migram para o lado. A foto (opcional) vem de media.json. */
-const TITLES: { texto: string; grupo?: "local" | "adoracao" | "convivencia" }[] = [
-  { texto: "Permanecer", grupo: "local" },
-  { texto: "Adorar", grupo: "adoracao" },
-  { texto: "Conectar", grupo: "convivencia" },
+const TITLES: { texto: string; grupo?: GrupoId; indice?: number }[] = [
+  { texto: "Dunamis", grupo: "adoracao", indice: 0 },
+  { texto: "Revestidos", grupo: "adoracao", indice: 2 },
+  { texto: "Testemunhas", grupo: "convivencia", indice: 0 },
 ];
 
-/** Fase 2: linhas que sobem em pilha. */
-const LINES: string[][] = [["Uma", "geração"], ["Uma só", "fé"], ["Uma", "presença"]];
+/** Fase 2: linhas que sobem em pilha. A última (PERMANECER) é o encerramento e fica na tela. */
+const LINES: string[][] = [["Em", "Jerusalém"], ["Judeia", "e Samaria"], ["Até os", "confins"], ["Permanecer"]];
 
 const MARCAS = [
   { src: "/logo-conexao-jovem.png", nome: evento.ministerio },
@@ -37,7 +40,7 @@ const MARCAS = [
 const FIM_FASE_1 = 0.42; // último título sai
 const INICIO_FASE_2 = 0.42; // primeira linha começa a entrar (cruzamento)
 const PRIMEIRA_LINHA = 0.52;
-const ULTIMA_LINHA = 0.96;
+const ULTIMA_LINHA = 0.9; // PERMANECER entra aqui e segura até o fim
 const SPRING = { stiffness: 120, damping: 30, mass: 0.4 };
 
 /** Pontos de translação lateral da faixa: segura, desliza, segura. */
@@ -171,7 +174,7 @@ function Linha({
   const pop = useTransform(progresso, [c - passo * 0.25, c], [0.6, 1], { clamp: true });
 
   return (
-    <motion.p className="ss-linha" style={{ y, opacity, filter }}>
+    <motion.p className={`ss-linha${ultima ? " ss-linha-fecho" : ""}`} style={{ y, opacity, filter }}>
       <span className="ss-linha-txt">
         {palavras.map((p) => (
           <span key={p} className="ss-linha-palavra">
@@ -252,7 +255,7 @@ function Animado({ compacto }: { compacto: boolean }) {
         <motion.div className="ss-fase1" style={{ opacity: saidaFase1, filter: saidaFiltro }}>
           <motion.div className="ss-faixa" style={{ x, width: `${n * 100}vw` }}>
             {TITLES.map((t, i) => {
-              const foto = t.grupo ? fotosDe(t.grupo)[0] : undefined;
+              const foto = t.grupo ? fotosDe(t.grupo)[t.indice ?? 0] : undefined;
               return (
                 <Titulo
                   key={t.texto}
