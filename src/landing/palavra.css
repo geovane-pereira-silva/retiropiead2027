@@ -1506,3 +1506,27 @@
     column-gap: 3rem;
   }
 }
+
+/* ─── Fotos reais que ainda não aparecem nas outras seções ─────────────── */
+.pv-momentos {
+  padding: clamp(3.5rem, 8vw, 6rem) 0;
+  background: var(--pv-papel);
+  color: var(--pv-tinta);
+}
+.pv-momentos-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+}
+.pv-momentos-foto img {
+  height: auto;
+  object-fit: contain;
+}
+@media (min-width: 48rem) {
+  .pv-momentos-grade {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.1rem;
+  }
+}

@@ -1,7 +1,7 @@
 // Proteções da landing: mídia (sem imagens inventadas), preços e datas oficiais.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 
 import { evento } from "../src/content/evento";
 
@@ -16,12 +16,14 @@ test("mídia: grupos esperados existem e só aceitam arquivos que existem em pub
     assert.ok(Array.isArray(media.fotos[g]), `grupo ${g} ausente`);
     for (const f of media.fotos[g]) {
       assert.ok(f.alt && f.alt.length > 5, `foto sem texto alternativo em ${g}`);
-      assert.ok(f.src.startsWith("/midia/"), `src fora de /midia/: ${f.src}`);
-      assert.ok(existsSync(`public${f.src}`), `arquivo cadastrado não existe: ${f.src}`);
+      assert.ok(f.src.startsWith("/fotos/"), `src fora de /fotos/: ${f.src}`);
+      assert.ok(existsSync(`public${decodeURIComponent(f.src)}`), `arquivo cadastrado não existe: ${f.src}`);
     }
   }
   if (media.video) {
-    assert.ok(existsSync(`public${media.video.src}`), "vídeo cadastrado não existe");
+    const videoPath = `public${decodeURIComponent(media.video.src)}`;
+    assert.ok(existsSync(videoPath), "vídeo cadastrado não existe");
+    assert.ok(statSync(videoPath).size < 100_000_000, "vídeo ultrapassa o limite estático de 100 MB do plano Hobby");
     assert.ok(media.video.titulo, "vídeo sem título");
   }
 });
@@ -41,9 +43,27 @@ test("docs/midia.md lista todos os arquivos pendentes", () => {
     "jovem feliz.jpg",
     "jovem na gincana feliz.jpg",
     "espaço coberto gincanas.jpg",
+    "choro de adoração.jpg",
+    "lagrimas de adoração.jpg",
+    "jvoem chorando pelo toqe do Espirito.jpg",
   ]) {
     assert.ok(docs.includes(nome), `docs/midia.md não cita ${nome}`);
   }
+});
+
+test("fotos: todas as 16 imagens reais estão cadastradas", () => {
+  const total = Object.values(media.fotos).reduce((n, fotos) => n + fotos.length, 0);
+  assert.equal(total, 16);
+});
+
+test("fotos: imagens que não aparecem nas outras seções são exibidas na galeria final", () => {
+  const fonte = readFileSync("src/landing/Landing.tsx", "utf8");
+  assert.match(fonte, /function FotosAdicionais\(\)/);
+  assert.match(fonte, /<FotosAdicionais \/>/);
+  for (const indice of [4, 5, 6]) {
+    assert.ok(fonte.includes(`grupo: "adoracao", indice: ${indice}`));
+  }
+  assert.ok(fonte.includes('grupo: "convivencia", indice: 2'));
 });
 
 test("dados oficiais do evento permanecem inalterados", () => {

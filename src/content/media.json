@@ -1,13 +1,35 @@
 {
-  "_leia-me": "Veja docs/midia.md. Coloque os arquivos em public/midia/ e liste aqui. Cada foto: { \"src\": \"/midia/arquivo.webp\", \"alt\": \"descrição objetiva\", \"largura\": 1600, \"altura\": 1067, \"foco\": \"50% 40%\" }. Na abertura (grupo hero) pode haver \"srcMobile\" (versão vertical). Grupo vazio = espaço reservado identificado. \"marca\": arte oficial DUNAMIS { \"src\": \"/midia/dunamis.png\", \"alt\": \"Dunamis — Recebereis poder\" } (opcional).",
+  "_leia-me": "Fotos reais em public/fotos. O MP4 original de 160 MB permanece preservado no checkout original. Cadastre o vídeo nesta página somente depois de validar uma cópia web compatível com o limite do deploy.",
   "marca": null,
   "fotos": {
-    "hero": [],
-    "local": [],
-    "culto": [],
-    "quartos": [],
-    "adoracao": [],
-    "convivencia": []
+    "hero": [
+      { "src": "/fotos/frente%20do%20local%2016x9.jpg", "alt": "Fachada do local do Retiro 2027", "largura": 4000, "altura": 2252, "foco": "50% 45%" }
+    ],
+    "local": [
+      { "src": "/fotos/frente%20do%20local.jpg", "alt": "Vista da entrada do local do retiro", "largura": 4000, "altura": 2252, "foco": "50% 45%" }
+    ],
+    "culto": [
+      { "src": "/fotos/espalo%20de%20culto.jpg", "alt": "Espaço de culto do local do retiro", "largura": 4000, "altura": 1848 }
+    ],
+    "quartos": [
+      { "src": "/fotos/quarto.jpg", "alt": "Quarto disponível para hospedagem no retiro", "largura": 4000, "altura": 1848 },
+      { "src": "/fotos/quarto%20a.jpg", "alt": "Outro quarto da hospedagem do retiro", "largura": 4000, "altura": 1848 },
+      { "src": "/fotos/quarto%20b.jpg", "alt": "Quarto da hospedagem do retiro", "largura": 4000, "altura": 1848 }
+    ],
+    "adoracao": [
+      { "src": "/fotos/jovens%20adorando.jpg", "alt": "Jovens em momento de adoração", "largura": 1362, "altura": 2048, "foco": "50% 35%" },
+      { "src": "/fotos/jovens%20abra%C3%A7ados%20adorando.jpg", "alt": "Jovens reunidos durante a adoração", "largura": 1362, "altura": 2048, "foco": "50% 35%" },
+      { "src": "/fotos/ora%C3%A7%C3%A3o%20e%20adora%C3%A7%C3%A3o.jpg", "alt": "Momento de oração e adoração", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
+      { "src": "/fotos/ora%C3%A7%C3%A3o%20pelo%20jovem.jpg", "alt": "Oração por um jovem", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
+      { "src": "/fotos/choro%20de%20adora%C3%A7%C3%A3o.jpg", "alt": "Jovem em momento de emoção durante a adoração", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
+      { "src": "/fotos/lagrimas%20de%20adora%C3%A7%C3%A3o.jpg", "alt": "Jovem em momento de emoção durante a adoração", "largura": 2048, "altura": 1362, "foco": "50% 35%" },
+      { "src": "/fotos/jvoem%20chorando%20pelo%20toqe%20do%20Espirito.jpg", "alt": "Jovem em momento de oração", "largura": 1362, "altura": 2048, "foco": "50% 35%" }
+    ],
+    "convivencia": [
+      { "src": "/fotos/jovem%20feliz.jpg", "alt": "Jovem sorrindo durante o retiro", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
+      { "src": "/fotos/jovem%20na%20gincana%20feliz.jpg", "alt": "Jovem participando de uma gincana", "largura": 2048, "altura": 1362, "foco": "50% 40%" },
+      { "src": "/fotos/espa%C3%A7o%20coberto%20gincanas.jpg", "alt": "Espaço coberto usado para gincanas", "largura": 4000, "altura": 1848 }
+    ]
   },
   "video": null
 }

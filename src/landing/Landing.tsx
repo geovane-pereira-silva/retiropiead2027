@@ -7,7 +7,7 @@ import { useMovimento } from "../components/useMovimento";
 import { evento } from "../content/evento";
 import { tema } from "../content/tema";
 import { textoValor } from "../lib/inscricao";
-import { Imagem, Midia, fotosDe, marcaInfo, videoInfo } from "./Gallery";
+import { Imagem, Midia, fotosDe, marcaInfo, videoInfo, type Foto } from "./Gallery";
 
 const NAV = [
   { href: "#local", rotulo: "Local" },
@@ -25,7 +25,7 @@ function Marca() {
       href="#topo"
       aria-label={`${tema.nome}: ${tema.chamada}. ${evento.ministerio}. Início da página`}
     >
-      <img src="/logo-conexao-jovem.png" alt="" width="40" height="50" />
+      <img src="/marca/logo-conexao-jovem-verde.png" alt="" width="40" height="50" />
       {marcaInfo ? (
         <img className="pv-marca-arte" src={marcaInfo.src} alt="" height="40" />
       ) : (
@@ -552,6 +552,38 @@ function Agenda() {
   );
 }
 
+const FOTOS_ADICIONAIS = [
+  { grupo: "adoracao", indice: 4 },
+  { grupo: "adoracao", indice: 5 },
+  { grupo: "adoracao", indice: 6 },
+  { grupo: "convivencia", indice: 2 },
+] as const;
+
+/** Exibe as fotos reais ainda não usadas nas outras seções. */
+function FotosAdicionais() {
+  const fotos = FOTOS_ADICIONAIS.map(({ grupo, indice }) => fotosDe(grupo)[indice]).filter(
+    (foto): foto is Foto => !!foto,
+  );
+  if (fotos.length === 0) return null;
+
+  return (
+    <section className="pv-momentos" aria-labelledby="t-momentos">
+      <div className="pv-wrap">
+        <h2 id="t-momentos" className="pv-titulo">
+          Mais momentos do retiro
+        </h2>
+        <div className="pv-momentos-grade">
+          {fotos.map((foto) => (
+            <figure className="pv-foto pv-momentos-foto" key={foto.src} data-rev>
+              <Imagem f={foto} />
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ── 8. Valores ───────────────────────────────────────────────────────── */
 function Valores() {
   return (
@@ -691,7 +723,7 @@ export function Rodape() {
     <footer className="lp-foot">
       <div className="lp-wrap lp-foot-in">
         <div className="lp-foot-marcas">
-          <img src="/logo-conexao-jovem.png" alt={evento.ministerio} width="44" height="55" loading="lazy" />
+          <img src="/marca/logo-conexao-jovem-verde.png" alt={evento.ministerio} width="44" height="55" loading="lazy" />
           <img src="/logo-igreja.png" alt={`${evento.igreja} de ${evento.igrejaCidade}`} width="44" height="54" loading="lazy" />
         </div>
         <p>
@@ -801,6 +833,7 @@ export function Landing() {
         <Proposta />
         <Local />
         <Hospedagem />
+        <FotosAdicionais />
         <Agenda />
         <Valores />
         <Transporte />
