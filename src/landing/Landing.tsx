@@ -5,8 +5,9 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ScrollStory } from "../components/ScrollStory";
 import { useMovimento } from "../components/useMovimento";
 import { evento } from "../content/evento";
+import { tema } from "../content/tema";
 import { textoValor } from "../lib/inscricao";
-import { Imagem, Midia, fotosDe, videoInfo } from "./Gallery";
+import { Imagem, Midia, fotosDe, marcaInfo, videoInfo } from "./Gallery";
 
 const NAV = [
   { href: "#local", rotulo: "Local" },
@@ -19,14 +20,20 @@ const NAV = [
 
 function Marca() {
   return (
-    <a className="lp-marca" href="#topo" aria-label={`${evento.ministerio}: início da página`}>
+    <a
+      className="lp-marca"
+      href="#topo"
+      aria-label={`${tema.nome}: ${tema.chamada}. ${evento.ministerio}. Início da página`}
+    >
       <img src="/logo-conexao-jovem.png" alt="" width="40" height="50" />
-      <span>
-        <b>{evento.ministerio}</b>
-        <small>
-          {evento.igreja} de {evento.igrejaCidade}
-        </small>
-      </span>
+      {marcaInfo ? (
+        <img className="pv-marca-arte" src={marcaInfo.src} alt="" height="40" />
+      ) : (
+        <span className="pv-marca-txt" aria-hidden="true">
+          <b>{tema.nome}</b>
+          <small>{tema.chamada}</small>
+        </span>
+      )}
     </a>
   );
 }
@@ -91,7 +98,7 @@ function Letras({ texto, base = 0 }: { texto: string; base?: number }) {
     <span className="pv-palavra" aria-hidden="true">
       {Array.from(texto).map((l, i) => (
         <span key={i} className="pv-letra" style={{ ["--i" as string]: base + i }}>
-          {l}
+          {l === " " ? "\u00A0" : l}
         </span>
       ))}
     </span>
@@ -108,10 +115,8 @@ function Abertura() {
   const linhaA = useTransform(scrollYProgress, [0, 1], ["0vw", "-12vw"]);
   const linhaB = useTransform(scrollYProgress, [0, 1], ["0vw", "12vw"]);
   const dataY = useTransform(scrollYProgress, [0, 1], ["0%", "-30%"]);
-  const palavras = evento.nome.split(" ");
   const d = evento.dataCurta;
   const foto = fotosDe("hero")[0] ?? fotosDe("local")[0];
-  let acc = 0;
 
   return (
     <section ref={ref} className="pv-abertura" id="topo" aria-labelledby="titulo">
@@ -123,24 +128,28 @@ function Abertura() {
       <div className="pv-wrap pv-abertura-in">
         <h1 id="titulo" className="pv-nome">
           <span className="pv-sr">
+            {tema.nome}: {tema.chamada}. {evento.nome} {evento.edicao}
+          </span>
+          <span className="pv-evento" aria-hidden="true">
             {evento.nome} {evento.edicao}
           </span>
-          {palavras.map((p, i) => {
-            const base = acc;
-            acc += p.length + 1;
-            return (
-              <motion.span
-                key={p}
-                className="pv-nome-linha"
-                style={reduzir ? undefined : { x: i % 2 === 0 ? linhaA : linhaB }}
-              >
-                <Letras texto={p} base={base} />
-              </motion.span>
-            );
-          })}
-          <span className="pv-nome-linha pv-nome-ano">
-            <Letras texto={evento.edicao} base={acc} />
-          </span>
+          <motion.span
+            className="pv-dunamis"
+            style={reduzir ? undefined : { x: linhaA }}
+          >
+            {marcaInfo ? (
+              <img className="pv-dunamis-arte" src={marcaInfo.src} alt="" />
+            ) : (
+              <Letras texto={tema.nome} base={4} />
+            )}
+          </motion.span>
+          <motion.span
+            className="pv-poder"
+            aria-hidden="true"
+            style={reduzir ? undefined : { x: linhaB }}
+          >
+            <Letras texto={tema.chamada} base={14} />
+          </motion.span>
         </h1>
 
         <motion.div className="pv-data" style={reduzir ? undefined : { y: dataY }}>
@@ -310,6 +319,44 @@ function Cartao({
         <div>{children}</div>
       </div>
     </div>
+  );
+}
+
+/* ── 3. Fundamento bíblico: Atos 1:8 ───────────────────────────────── */
+function Fundamento() {
+  return (
+    <section className="pv-fundamento" id="tema" aria-labelledby="t-tema">
+      <div className="pv-wrap">
+        <h2 id="t-tema" className="pv-titulo">
+          {tema.nome}: {tema.chamada}
+        </h2>
+        <figure className="pv-versiculo">
+          <blockquote>
+            <p>“{tema.versiculo}”</p>
+          </blockquote>
+          <figcaption>{tema.referencia}</figcaption>
+        </figure>
+        <p className="pv-nota">{tema.nota}</p>
+
+        <ol className="pv-ideias" aria-label="Três ideias do tema">
+          {tema.ideias.map((i) => (
+            <li key={i.titulo}>
+              <h3>{i.titulo}</h3>
+              <p>{i.texto}</p>
+            </li>
+          ))}
+        </ol>
+
+        <h3 className="pv-h3 pv-refs-titulo">Outras passagens que sustentam o tema</h3>
+        <div className="pv-refs">
+          {tema.referencias.map((r) => (
+            <Cartao key={r.ref} variante="ref" destaque={r.ref} titulo={r.papel}>
+              {r.texto}
+            </Cartao>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -750,6 +797,7 @@ export function Landing() {
         <Abertura />
         <VideoCinema />
         <ScrollStory />
+        <Fundamento />
         <Proposta />
         <Local />
         <Hospedagem />

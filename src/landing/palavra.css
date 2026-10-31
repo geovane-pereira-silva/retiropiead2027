@@ -8,7 +8,7 @@
   --pv-verde: #1fa463;
   --pv-sol: #ffb400;
   --pv-noite: #0a1a15;
-  --pv-display: "Anton", "Archivo Black", Impact, "Arial Narrow Bold", sans-serif;
+  --pv-display: "Anton", Impact, Haettenschweiler, "Arial Narrow Bold", "sans-serif-condensed", sans-serif;
 
   /* tokens herdados pelo formulário, pelos termos e pelo rodapé */
   --lp-mata: var(--pv-tinta);
@@ -1303,4 +1303,206 @@
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
+}
+
+/* ─── Identidade DUNAMIS ──────────────────────────────────────────────── */
+.lp-marca {
+  gap: 0.6rem;
+}
+.pv-marca-txt {
+  display: grid;
+  gap: 0.15rem;
+  line-height: 1;
+}
+.lp-marca .pv-marca-txt b {
+  font: 400 1.65rem / 1 var(--pv-display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--pv-sol);
+}
+.lp-marca .pv-marca-txt small {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.9;
+}
+.pv-marca-arte {
+  height: 2.4rem;
+  width: auto;
+}
+
+/* abertura: DUNAMIS em primeiro plano */
+.pv-nome {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font: 400 1rem / 1 var(--pv-display);
+}
+.pv-evento {
+  font: 800 clamp(0.95rem, 3.8vw, 1.5rem) / 1.2 var(--lp-sans);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--pv-sol);
+}
+.pv-dunamis {
+  display: block;
+  font: 400 min(23vw, 15svh) / 0.88 var(--pv-display);
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: rgba(247, 246, 241, 0.1);
+  -webkit-text-stroke: clamp(1.5px, 0.45vw, 5px) var(--pv-papel);
+  will-change: transform;
+}
+.pv-dunamis .pv-palavra {
+  padding-inline: 0.06em;
+}
+.pv-dunamis-arte {
+  display: block;
+  width: min(88vw, 46rem);
+  height: auto;
+}
+.pv-poder {
+  display: block;
+  font: 400 min(9.5vw, 6svh) / 1 var(--pv-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pv-sol);
+  will-change: transform;
+}
+.pv-data-num {
+  font-size: min(15vw, 9svh);
+}
+@media (min-width: 64rem) {
+  .pv-nome {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    font-size: 1rem;
+  }
+  .pv-dunamis {
+    font-size: min(19vw, 30svh);
+  }
+  .pv-poder {
+    font-size: min(5.5vw, 8svh);
+  }
+  .pv-data-num {
+    font-size: min(8vw, 12svh);
+  }
+}
+
+/* ─── ScrollStory na identidade verde ─────────────────────────────────── */
+.ss {
+  background-color: var(--pv-tinta);
+  background-image: radial-gradient(rgba(247, 246, 241, 0.07) 1px, transparent 1.6px);
+  color: var(--pv-papel);
+}
+.ss-palco {
+  color: var(--pv-papel);
+}
+.ss-rotulos {
+  color: var(--pv-sol);
+}
+.ss-principal {
+  color: var(--pv-papel);
+}
+.ss-camada {
+  mix-blend-mode: screen;
+}
+.ss-sticker img {
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
+}
+.ss-pop {
+  box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.35);
+}
+.ss-linha:nth-child(3) .ss-pop {
+  background: var(--pv-papel);
+  box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.35);
+}
+.ss-linha-fecho {
+  color: var(--pv-sol);
+  font-size: clamp(3rem, 13vw, 11rem);
+}
+.ss-linha-fecho .ss-linha-txt::after {
+  content: "";
+  display: block;
+  height: 0.07em;
+  margin-top: 0.08em;
+  background: var(--pv-papel);
+}
+.ss-linha-fecho .ss-pop {
+  background: var(--pv-papel);
+}
+.ss-estatico {
+  background: var(--pv-tinta);
+  color: var(--pv-papel);
+}
+.ss-rotulo-fixo {
+  color: var(--pv-sol);
+}
+
+/* ─── Fundamento bíblico ──────────────────────────────────────────────── */
+.pv-fundamento {
+  background: #fff;
+  color: var(--pv-tinta);
+  padding: clamp(4rem, 10vw, 8rem) 0;
+}
+.pv-versiculo {
+  margin: 1.5rem 0 1rem;
+  padding-left: 1.25rem;
+  border-left: 6px solid var(--pv-sol);
+}
+.pv-versiculo blockquote {
+  margin: 0;
+}
+.pv-versiculo blockquote p {
+  max-width: 50rem;
+  margin: 0;
+  font: 600 clamp(1.25rem, 3.2vw, 2.1rem) / 1.35 var(--lp-sans);
+}
+.pv-versiculo figcaption {
+  margin-top: 0.8rem;
+  font: 400 1.6rem / 1 var(--pv-display);
+  text-transform: uppercase;
+  color: var(--lp-brasa-esc);
+}
+.pv-ideias {
+  display: grid;
+  gap: 1.5rem;
+  margin: 2.5rem 0 3rem;
+  padding: 0;
+  list-style: none;
+}
+.pv-ideias li {
+  padding-top: 1rem;
+  border-top: 2px solid var(--pv-tinta);
+}
+.pv-ideias h3 {
+  margin: 0 0 0.5rem;
+  font: 400 clamp(1.6rem, 3.5vw, 2.3rem) / 1 var(--pv-display);
+  text-transform: uppercase;
+}
+.pv-ideias p {
+  margin: 0;
+}
+.pv-refs {
+  display: grid;
+}
+.pv-cartao-ref .pv-cartao-destaque {
+  min-width: 8.5rem;
+  font-size: clamp(1.2rem, 3vw, 1.7rem);
+  color: var(--lp-brasa-esc);
+}
+@media (hover: hover) {
+  .pv-cartao-ref:hover {
+    background: rgba(31, 164, 99, 0.08);
+  }
+}
+@media (min-width: 62rem) {
+  .pv-ideias {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+  .pv-refs {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 3rem;
+  }
 }

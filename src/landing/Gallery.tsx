@@ -30,10 +30,15 @@ export const ESPERADAS: Record<GrupoId, { rotulo: string; arquivos: string[] }> 
     rotulo: "Adoração e oração",
     arquivos: ["jovens adorando.jpg", "jovens abraçados adorando.jpg", "oração e adoração.jpg", "oração pelo jovem.jpg"],
   },
-  convivencia: { rotulo: "Convivência e gincanas", arquivos: ["jovem feliz.jpg", "jovem na gincana feliz.jpg"] },
+  convivencia: {
+    rotulo: "Convivência e gincanas",
+    arquivos: ["jovem feliz.jpg", "jovem na gincana feliz.jpg", "espaço coberto gincanas.jpg"],
+  },
 };
 
 const fotos = media.fotos as unknown as Partial<Record<GrupoId, Foto[]>>;
+/** Arte oficial DUNAMIS (opcional). Sem ela, o site usa a versão tipográfica provisória. */
+export const marcaInfo = (media as unknown as { marca?: { src: string; alt: string } | null }).marca ?? null;
 export const videoInfo = (media as unknown as { video: VideoInfo | null }).video;
 
 export const fotosDe = (g: GrupoId): Foto[] =>

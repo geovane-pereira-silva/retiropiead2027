@@ -1,5 +1,6 @@
 {
-  "_leia-me": "Veja docs/midia.md. Coloque os arquivos em public/midia/ e liste aqui. Cada foto: { \"src\": \"/midia/arquivo.webp\", \"alt\": \"descrição objetiva\", \"largura\": 1600, \"altura\": 1067, \"foco\": \"50% 40%\" }. Na abertura (grupo hero) pode haver \"srcMobile\" (versão vertical). Grupo vazio = espaço reservado identificado.",
+  "_leia-me": "Veja docs/midia.md. Coloque os arquivos em public/midia/ e liste aqui. Cada foto: { \"src\": \"/midia/arquivo.webp\", \"alt\": \"descrição objetiva\", \"largura\": 1600, \"altura\": 1067, \"foco\": \"50% 40%\" }. Na abertura (grupo hero) pode haver \"srcMobile\" (versão vertical). Grupo vazio = espaço reservado identificado. \"marca\": arte oficial DUNAMIS { \"src\": \"/midia/dunamis.png\", \"alt\": \"Dunamis — Recebereis poder\" } (opcional).",
+  "marca": null,
   "fotos": {
     "hero": [],
     "local": [],
