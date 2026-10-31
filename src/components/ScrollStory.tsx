@@ -40,17 +40,43 @@ const PRIMEIRA_LINHA = 0.52;
 const ULTIMA_LINHA = 0.96;
 const SPRING = { stiffness: 120, damping: 30, mass: 0.4 };
 
-/** Pontos de translação lateral: segura, desliza, segura. `fator` > 1 = parallax mais rápido. */
-function faixaX(n: number, fator = 1) {
+/** Pontos de translação lateral da faixa: segura, desliza, segura. */
+function faixaX(n: number) {
   const passo = FIM_FASE_1 / (n - 1);
   const entrada: number[] = [0];
   const saida: string[] = ["0vw"];
   for (let k = 0; k < n - 1; k++) {
     entrada.push(k * passo + passo * 0.2, (k + 1) * passo - passo * 0.2);
-    saida.push(`${-k * 100 * fator}vw`, `${-(k + 1) * 100 * fator}vw`);
+    saida.push(`${-k * 100}vw`, `${-(k + 1) * 100}vw`);
   }
   entrada.push(1);
-  saida.push(`${-(n - 1) * 100 * fator}vw`);
+  saida.push(`${-(n - 1) * 100}vw`);
+  return { entrada, saida };
+}
+
+/**
+ * Parallax do sticker: deslocamento EXTRA (0,4×) relativo ao título dele, que vale zero
+ * enquanto o título está parado no centro. Somado à faixa, o sticker anda 1,4× mais rápido.
+ */
+function stickerX(i: number, n: number) {
+  const passo = FIM_FASE_1 / (n - 1);
+  const extra = 40;
+  const entrada: number[] = [];
+  const saida: string[] = [];
+  if (i > 0) {
+    entrada.push(i * passo - 0.8 * passo, i * passo - 0.2 * passo);
+    saida.push(`${extra}vw`, "0vw");
+  } else {
+    entrada.push(0);
+    saida.push("0vw");
+  }
+  if (i < n - 1) {
+    entrada.push(i * passo + 0.2 * passo, i * passo + 0.8 * passo);
+    saida.push("0vw", `${-extra}vw`);
+  } else {
+    entrada.push(1);
+    saida.push("0vw");
+  }
   return { entrada, saida };
 }
 
@@ -67,7 +93,8 @@ function Titulo({
   alt,
   vel,
   progresso,
-  fatorSticker,
+  indice,
+  total,
   compacto,
 }: {
   texto: string;
@@ -75,15 +102,16 @@ function Titulo({
   alt?: string;
   vel: Vel;
   progresso: MotionValue<number>;
-  fatorSticker: { entrada: number[]; saida: string[] };
+  indice: number;
+  total: number;
   compacto: boolean;
 }) {
-  // diferença entre a translação do sticker (1,4×) e a da faixa (1×)
-  const stickerX = useTransform(progresso, fatorSticker.entrada, fatorSticker.saida);
+  const pontos = stickerX(indice, total);
+  const extraX = useTransform(progresso, pontos.entrada, pontos.saida);
   return (
     <div className="ss-titulo">
       {imagem && (
-        <motion.figure className="ss-sticker" style={{ x: stickerX }} aria-hidden="true">
+        <motion.figure className="ss-sticker" style={{ x: extraX }} aria-hidden="true">
           <img src={imagem} alt={alt ?? ""} loading="lazy" decoding="async" />
         </motion.figure>
       )}
@@ -193,7 +221,6 @@ function Animado({ compacto }: { compacto: boolean }) {
 
   const n = TITLES.length;
   const faixa = faixaX(n);
-  const sticker = faixaX(n, 1.4);
   const x = useTransform(p, faixa.entrada, faixa.saida);
   const saidaFase1 = useTransform(p, [FIM_FASE_1, 0.5], [1, 0], { clamp: true });
   const saidaBlur = useTransform(p, [FIM_FASE_1, 0.5], [0, 14], { clamp: true });
@@ -224,7 +251,7 @@ function Animado({ compacto }: { compacto: boolean }) {
 
         <motion.div className="ss-fase1" style={{ opacity: saidaFase1, filter: saidaFiltro }}>
           <motion.div className="ss-faixa" style={{ x, width: `${n * 100}vw` }}>
-            {TITLES.map((t) => {
+            {TITLES.map((t, i) => {
               const foto = t.grupo ? fotosDe(t.grupo)[0] : undefined;
               return (
                 <Titulo
@@ -234,7 +261,8 @@ function Animado({ compacto }: { compacto: boolean }) {
                   alt={foto?.alt}
                   vel={vel}
                   progresso={p}
-                  fatorSticker={sticker}
+                  indice={i}
+                  total={n}
                   compacto={compacto}
                 />
               );
