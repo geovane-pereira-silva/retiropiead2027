@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 import {
   calcularIdade,
+  condicaoPrecoPorNome,
   filtrarParcelasDisponiveis,
   cpfValido,
   faixaPorIdade,
@@ -139,6 +140,48 @@ test("faixas de valor: 4→gratuito, 5→200, 9→200, 10→400, 60→400", () =
   assert.equal(v(9), 200);
   assert.equal(v(10), 400);
   assert.equal(v(60), 400);
+});
+
+test("condições nominais de preço: meia entrada e cortesia", () => {
+  const half = validar(base({ responsavel: pessoa("Geovane Pereira", "1985-06-15", "529.982.247-25") }), ctx);
+  assert.equal(half.total, 200);
+  assert.equal(half.participantes[0].condicaoPreco, "meia-entrada");
+  assert.match(half.participantes[0].faixa.rotulo, /Meia entrada/);
+  const halfPayload = montarCorpo(base({ responsavel: pessoa("Geovane Pereira", "1985-06-15", "529.982.247-25") }), half, {
+    idempotencyKey: "half-price-key",
+    familiaId: "family-half",
+    enviadoEm: "2026-10-31T12:00:00.000Z",
+    versaoTermos: evento.versaoTermos,
+  });
+  assert.equal(halfPayload.participantes[0].valor, 200);
+  assert.equal(halfPayload.participantes[0].valorTexto, "Meia entrada — R$ 200,00");
+
+  const free = validar(base({ responsavel: pessoa("Simone Pereira", "1985-06-15", "529.982.247-25") }), ctx);
+  assert.equal(free.total, 0);
+  assert.equal(free.participantes[0].condicaoPreco, "cortesia");
+  const freePayload = montarCorpo(base({ responsavel: pessoa("Simone Pereira", "1985-06-15", "529.982.247-25") }), free, {
+    idempotencyKey: "free-price-key",
+    familiaId: "family-free",
+    enviadoEm: "2026-10-31T12:00:00.000Z",
+    versaoTermos: evento.versaoTermos,
+  });
+  assert.equal(freePayload.participantes[0].valorTexto, "Não pagante — Gratuito");
+  assert.equal(condicaoPrecoPorNome("Lucilene Ferreira da Silva"), "meia-entrada");
+  assert.equal(condicaoPrecoPorNome("Lucilene"), "cortesia");
+  assert.equal(condicaoPrecoPorNome("Janaina Souza"), "meia-entrada");
+  assert.equal(condicaoPrecoPorNome("Pessoa Convidada"), null);
+});
+
+test("contato de emergência aceita apenas um nome, sem relaxar nome de participante", () => {
+  const r = validar(base({ emergenciaNome: "Josilene" }), ctx);
+  assert.equal(r.erros.emergenciaNome, undefined);
+  const vazio = validar(base({ emergenciaNome: " " }), ctx);
+  assert.ok(vazio.erros.emergenciaNome);
+  const participanteIncompleto = validar(
+    base({ responsavel: pessoa("Geovane", "1985-06-15", "529.982.247-25") }),
+    ctx,
+  );
+  assert.ok(participanteIncompleto.erros["responsavel.nome"]);
 });
 
 test("responsável sozinho: sem erros, R$ 400", () => {

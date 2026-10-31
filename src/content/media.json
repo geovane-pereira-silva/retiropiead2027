@@ -1,6 +1,6 @@
 {
   "_leia-me": "Fotos reais em public/fotos. O MP4 original de 160 MB permanece preservado no checkout original; a cópia web otimizada é menor que 100 MB.",
-  "marca": { "src": "/marca/dunamis-oficial.png", "alt": "Dunamis — Recebereis poder" },
+  "marca": { "src": "/marca/dunamis-branca.png", "alt": "Dunamis — Recebereis poder" },
   "fotos": {
     "hero": [
       { "src": "/fotos/frente%20do%20local%2016x9.jpg", "preview": "/fotos/preview/foto-04.jpg", "alt": "Fachada do local do Retiro 2027", "largura": 4000, "altura": 2252, "foco": "50% 45%" }

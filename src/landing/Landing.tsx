@@ -32,7 +32,7 @@ function Marca() {
       href="#topo"
       aria-label={`${tema.nome}: ${tema.chamada}. ${evento.ministerio}. Início da página`}
     >
-      <img src="/marca/logo-conexao-jovem-verde.png" alt="" width="40" height="50" />
+      <img src="/marca/logo-conexao-jovem-branca.png" alt="" width="40" height="50" />
       {marcaInfo ? (
         <img className="pv-marca-arte" src={marcaInfo.src} alt="" height="40" />
       ) : (
@@ -902,7 +902,7 @@ export function Rodape() {
       <div className="lp-wrap lp-foot-in">
         <div className="lp-foot-marcas">
           <img
-            src="/marca/logo-conexao-jovem-verde.png"
+            src="/marca/logo-conexao-jovem-branca.png"
             alt={evento.ministerio}
             width="44"
             height="55"

@@ -668,6 +668,7 @@ export function RegistrationForm() {
                 {values.responsavelParticipa && respCalc && (
                   <small className="lp-chip">
                     {respCalc.idade} anos · {textoValor(respCalc.valor)}
+                    {respCalc.condicaoPreco && ` · ${respCalc.faixa.rotulo.split(" — ")[0]}`}
                   </small>
                 )}
               </span>
@@ -917,6 +918,7 @@ export function RegistrationForm() {
                       {info && (
                         <span className="lp-chip">
                           {info.idade} anos · {textoValor(info.valor)}
+                          {info.condicaoPreco && ` · ${info.faixa.rotulo.split(" — ")[0]}`}
                         </span>
                       )}
                       <button

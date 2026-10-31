@@ -196,6 +196,11 @@ function nomeValido(entrada: string): boolean {
   return nome.split(" ").length >= 2;
 }
 
+function nomeContatoValido(entrada: string): boolean {
+  const nome = entrada.trim().replace(/\s+/g, " ");
+  return nome.length >= 2 && nome.length <= 100 && /^[\p{L}][\p{L}\p{M}'’ .\-]*$/u.test(nome);
+}
+
 // ─── Datas: o formulário aceita DD/MM/AAAA e o servidor também aceita YYYY-MM-DD ──
 
 export function lerDataIso(s: string): { y: number; m: number; d: number } | null {
@@ -247,6 +252,49 @@ export function faixaPorIdade(idade: number, faixas: Faixa[]): Faixa | null {
   );
 }
 
+const normalizarNomePreco = (nome: string): string =>
+  (nome ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleUpperCase("pt-BR");
+
+const MEIA_ENTRADA_NOME_UNICO = new Set(["GEOVANE", "JANAINA", "DAIANE", "HELLIOS", "GIULIA"]);
+const MEIA_ENTRADA_NOMES = [
+  "ANDERSON PEDRO",
+  "ANA PAULA RIBERIO",
+  "ANA PAULA RIBEIRO",
+  "RICARDO RIBEIRO",
+  "IVANILDA RIBEIRO",
+  "LUCILENE FERREIRA",
+].map(normalizarNomePreco);
+const CORTESIA_NOMES = ["JOSILENE", "SIMONE PEREIRA", "LUCILENE", "LILIANE"].map(
+  normalizarNomePreco,
+);
+
+export type CondicaoPreco = "meia-entrada" | "cortesia" | null;
+
+/** Desconto aplicado ao participante (nunca ao responsável que não vai ao retiro). */
+export function condicaoPrecoPorNome(nome: string): CondicaoPreco {
+  const normalizado = normalizarNomePreco(nome);
+  const partes = normalizado.split(" ");
+  if (MEIA_ENTRADA_NOME_UNICO.has(partes[0])) return "meia-entrada";
+  if (
+    MEIA_ENTRADA_NOMES.some(
+      (prefixo) => normalizado === prefixo || normalizado.startsWith(`${prefixo} `),
+    )
+  )
+    return "meia-entrada";
+  if (
+    CORTESIA_NOMES.some(
+      (prefixo) => normalizado === prefixo || normalizado.startsWith(`${prefixo} `),
+    )
+  )
+    return "cortesia";
+  return null;
+}
+
 // ─── Validação completa ──────────────────────────────────────────────────────
 
 export type ContextoValidacao = {
@@ -267,6 +315,7 @@ export type Participante = {
   idade: number;
   menorDeIdade: boolean;
   faixa: Faixa;
+  condicaoPreco: CondicaoPreco;
   /** null = valor a definir */
   valor: number | null;
   transporte: Exclude<Transporte, "">;
@@ -341,6 +390,18 @@ function avaliarPessoa(
     erros[`${chave}.dataNascimento`] = "Não foi possível determinar o valor para esta idade.";
     return null;
   }
+  const condicaoPreco = faixa.valor === 0 ? null : condicaoPrecoPorNome(p.nome);
+  const valor =
+    condicaoPreco === "cortesia"
+      ? 0
+      : condicaoPreco === "meia-entrada" && faixa.valor !== null
+        ? Math.round(faixa.valor / 2)
+        : faixa.valor;
+  const rotuloPreco = condicaoPreco === "cortesia"
+    ? "Cortesia"
+    : condicaoPreco === "meia-entrada"
+      ? "Meia entrada"
+      : null;
   return {
     papel,
     nome: texto(p.nome),
@@ -348,8 +409,9 @@ function avaliarPessoa(
     cpf: cpfDigitos,
     idade,
     menorDeIdade: idade < 18,
-    faixa,
-    valor: faixa.valor,
+    faixa: rotuloPreco ? { ...faixa, rotulo: `${rotuloPreco} — ${faixa.rotulo}` } : faixa,
+    condicaoPreco,
+    valor,
     transporte: p.transporte === "carro" ? "carro" : "onibus",
     chave,
   };
@@ -437,7 +499,7 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
   checar(v.responsavel.cpf, "responsavel");
   v.integrantes.forEach((p, i) => checar(p.cpf, `integrantes.${i}`));
 
-  if (!nomeValido(v.emergenciaNome))
+  if (!nomeContatoValido(v.emergenciaNome))
     erros.emergenciaNome = "Informe o nome do contato de emergência.";
   if (!v.emergenciaTelefone) erros.emergenciaTelefone = "Informe o telefone de emergência.";
   else if (!telefoneValido(v.emergenciaTelefone))
@@ -544,7 +606,12 @@ export function montarCorpo(
       menorDeIdade: p.menorDeIdade ? "SIM" : "NÃO",
       faixa: p.faixa.rotulo,
       valor: p.valor,
-      valorTexto: textoValor(p.valor),
+      valorTexto:
+        p.condicaoPreco === "meia-entrada"
+          ? `Meia entrada — ${textoValor(p.valor)}`
+          : p.condicaoPreco === "cortesia"
+            ? "Não pagante — Gratuito"
+            : textoValor(p.valor),
       cpf: p.cpf,
       transporte: rotuloTransporte(p.transporte) as ParticipantePlanilha["transporte"],
     })),
