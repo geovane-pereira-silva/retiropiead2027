@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -41,6 +41,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
+  // Diagnóstico só em endereços de teste da Vercel (*.vercel.app): mostra o motivo do erro.
+  const [detalhe, setDetalhe] = useState("");
+  useEffect(() => {
+    if (/\.vercel\.app$/.test(window.location.hostname)) {
+      setDetalhe(`${error?.message ?? error}\n${(error?.stack ?? "").split("\n").slice(0, 6).join("\n")}`);
+    }
+  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -51,6 +58,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">
           Algo deu errado do nosso lado. Tente recarregar ou volte ao início.
         </p>
+        {detalhe && (
+          <pre className="mt-4 max-h-48 overflow-auto rounded-md border border-input p-3 text-left text-xs text-muted-foreground whitespace-pre-wrap">
+            {detalhe}
+          </pre>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
