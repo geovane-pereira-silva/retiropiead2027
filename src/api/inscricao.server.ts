@@ -16,6 +16,8 @@ import {
   type DadosVisitante,
   type Erros,
   type FormValues,
+  type Participante,
+  type StatusOrganizacao,
 } from "../lib/inscricao";
 import { enviarParaPlanilha, type OpcoesEnvio } from "./sheets.server";
 
@@ -111,6 +113,14 @@ const emAndamento = new Set<string>();
 
 const higienizarNome = (n: string): string => n.trim().replace(/\s+/g, " ");
 
+function statusOrganizacaoDaPessoa(p: Participante): StatusOrganizacao {
+  if (p.condicaoPreco === "meia-entrada") return "ORGANIZADOR (PAGA MEIA)";
+  if (p.condicaoPreco === "cortesia") return "APOIO (NÃO PAGANTE)";
+  if (p.idade <= 4 || p.valorBase === 0) return "NÃO PAGANTE (CRIANÇAS DE 0 A 4)";
+  if (p.valorBase !== null && p.valor !== null && p.valor < p.valorBase) return "PARTICIPANTE MEIA";
+  return "PARTICIPANTE INTEIRA";
+}
+
 function limpar(agora: number) {
   for (const [k, v] of recentes) if (agora - v.em > JANELA_MS) recentes.delete(k);
   if (recentes.size > 1000) recentes.clear();
@@ -204,7 +214,7 @@ export async function processarInscricao(
           nome: p.nome,
           papel: p.papel,
           idade: p.idade,
-          faixa: p.faixa.rotulo,
+          faixa: p.faixa.rotulo.replace(/^(?:Organizador|Equipe apoio) — /, ""),
           valor: p.valor,
           transporte: rotuloTransporte(p.transporte),
         })),
@@ -263,6 +273,13 @@ export async function processarInscricao(
       enviadoEm: new Date(agora).toISOString(),
       versaoTermos: evento.versaoTermos,
     });
+    corpo.participantes.forEach((p, i) => {
+      const status = statusOrganizacaoDaPessoa(resultado.participantes[i]);
+      // Compatibilidade: o Apps Script já ativo lê `papel`; o script atualizado
+      // usa a coluna privada `statusOrganizacao`.
+      p.papel = status;
+      p.statusOrganizacao = status;
+    });
     // Até a atualização do Apps Script ativo, a coluna antiga de necessidades
     // preserva a preferência de quarto em vez de descartar o campo novo.
     if (corpo.familiaresQuarto) {
@@ -286,7 +303,7 @@ export async function processarInscricao(
           nome: p.nome,
           papel: p.papel,
           idade: p.idade,
-          faixa: p.faixa.rotulo,
+          faixa: p.faixa.rotulo.replace(/^(?:Organizador|Equipe apoio) — /, ""),
           valor: p.valor,
           transporte: rotuloTransporte(p.transporte),
         })),
@@ -435,7 +452,8 @@ export async function processarCadastroVisitante(
       participantes: [
         {
           ordem: 1,
-          papel: "Visitante" as const,
+          papel: "VISITANTE" as const,
+          statusOrganizacao: "VISITANTE" as const,
           nome: higienizarCelula(nome),
           dataNascimento: "",
           idadeNaDataDoRetiro: "" as const,

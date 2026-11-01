@@ -164,6 +164,33 @@ test("sucesso: grava corpo correto e devolve nome, faixa e valor", async () => {
   );
 });
 
+test("Ana Paula de Souza é enviada como organizadora na planilha, sem expor o status no retorno", async () => {
+  modo = "ok";
+  recebidos.length = 0;
+  const cpf = cpfTeste("835761204");
+  const r = await processarInscricao(
+    {
+      values: valores(cpf, {
+        responsavel: { ...valores(cpf).responsavel, nome: "Ana Paula de Souza" },
+      }),
+      idempotencyKey: "ana-paula-organizadora-001",
+    },
+    { url },
+  );
+
+  assert.equal(r.ok, true);
+  const participanteEnviado = (recebidos[0].participantes as Record<string, unknown>[])[0];
+  assert.equal(participanteEnviado.statusOrganizacao, "ORGANIZADOR (PAGA MEIA)");
+  assert.equal(participanteEnviado.papel, "ORGANIZADOR (PAGA MEIA)");
+  assert.equal(participanteEnviado.valor, 200);
+  assert.equal("statusOrganizacao" in (r as object), false);
+  assert.equal(
+    r.ok && /organizador/i.test(r.participantes[0].faixa),
+    false,
+    "status administrativo não aparece na confirmação pública",
+  );
+});
+
 test("mesmo envio repetido (duplo clique) não grava duas vezes", async () => {
   modo = "ok";
   recebidos.length = 0;

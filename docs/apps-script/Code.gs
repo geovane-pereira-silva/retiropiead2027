@@ -16,8 +16,10 @@
  * (o app é público, mas a PLANILHA continua privada: compartilhe-a só com quem for autorizado).
  * Depois de colar este código, crie uma NOVA VERSÃO da implantação (a URL /exec continua a mesma).
  *
- * ATENÇÃO: antes de substituir o script atual, GUARDE uma cópia do código antigo.
- * Se a aba "Inscrições" já existir com outras colunas, renomeie-a ou mude NOME_ABA abaixo.
+ * A coluna privada statusOrganizacao substitui papel no mesmo lugar. Na primeira execução,
+ * o script renomeia o cabeçalho antigo e classifica os cadastros existentes. Para recalcular
+ * explicitamente todas as linhas, execute reclassificarStatusInscricoes no editor.
+ * ATENÇÃO: antes de substituir o script ativo, GUARDE uma cópia do código antigo.
  */
 const NOME_ABA = "Inscrições";
 const COLUNAS = [
@@ -25,7 +27,7 @@ const COLUNAS = [
   "familiaId",
   "idempotencyKey",
   "ordem",
-  "papel",
+  "statusOrganizacao",
   "nome",
   "dataNascimento",
   "idadeNaDataDoRetiro",
@@ -91,6 +93,99 @@ function normalizarCpf(valor) {
   return digitos.length >= 10 && digitos.length <= 11 ? digitos.padStart(11, "0") : "";
 }
 
+function obterCabecalho(aba) {
+  const ultimaColuna = aba.getLastColumn();
+  return ultimaColuna > 0 ? aba.getRange(1, 1, 1, ultimaColuna).getDisplayValues()[0] : [];
+}
+
+function garantirColunaStatus(aba) {
+  const cabecalho = obterCabecalho(aba);
+  let indice = cabecalho.indexOf("statusOrganizacao");
+  if (indice === -1) {
+    const papelAntigo = cabecalho.indexOf("papel");
+    if (papelAntigo !== -1) {
+      indice = papelAntigo;
+      aba.getRange(1, indice + 1).setValue("statusOrganizacao");
+    } else {
+      indice = cabecalho.length;
+      aba.getRange(1, indice + 1).setValue("statusOrganizacao");
+    }
+    aba.getRange(1, indice + 1, aba.getMaxRows(), 1).setNumberFormat("@");
+    aba.getRange(1, indice + 1).setFontWeight("bold");
+  }
+  return indice + 1;
+}
+
+function classificarLinha(linha, cabecalho) {
+  function campo(nome) {
+    const indice = cabecalho.indexOf(nome);
+    return indice < 0 ? "" : linha[indice];
+  }
+
+  const anterior = String(campo("papel") || campo("statusOrganizacao") || "")
+    .trim()
+    .toLocaleUpperCase("pt-BR");
+  const origem = String(campo("origem") || "").toLocaleUpperCase("pt-BR");
+  if (anterior === "VISITANTE" || origem.indexOf("VISITANTE") !== -1) return "VISITANTE";
+
+  const rotulo = (String(campo("faixa") || "") + " " + String(campo("valorTexto") || ""))
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleUpperCase("pt-BR");
+  if (rotulo.indexOf("ORGANIZADOR") !== -1) return "ORGANIZADOR (PAGA MEIA)";
+  if (rotulo.indexOf("EQUIPE APOIO") !== -1 || rotulo.indexOf("APOIO (NAO PAGANTE)") !== -1)
+    return "APOIO (NÃO PAGANTE)";
+
+  const idadeTexto = String(campo("idadeNaDataDoRetiro") || "").trim();
+  const idade = idadeTexto === "" ? null : Number(idadeTexto);
+  if ((idade !== null && idade >= 0 && idade <= 4) || rotulo.indexOf("MENORES DE 5 ANOS") !== -1)
+    return "NÃO PAGANTE (CRIANÇAS DE 0 A 4)";
+  const valorTexto = String(campo("valor") == null ? "" : campo("valor")).trim();
+  const valor = Number(campo("valor"));
+  const valorBase = idade === null ? null : idade >= 10 ? 400 : idade >= 5 ? 200 : null;
+  if (valorBase !== null && valorTexto !== "" && Number.isFinite(valor) && valor < valorBase)
+    return "PARTICIPANTE MEIA";
+  return "PARTICIPANTE INTEIRA";
+}
+
+function statusOrganizacaoValido(valor) {
+  return (
+    [
+      "ORGANIZADOR (PAGA MEIA)",
+      "APOIO (NÃO PAGANTE)",
+      "NÃO PAGANTE (CRIANÇAS DE 0 A 4)",
+      "PARTICIPANTE INTEIRA",
+      "PARTICIPANTE MEIA",
+      "VISITANTE",
+    ].indexOf(String(valor || "")) !== -1
+  );
+}
+
+function preencherStatusInscricoes(aba, recalcularTudo) {
+  const colunaStatus = garantirColunaStatus(aba);
+  const ultimaLinha = aba.getLastRow();
+  if (ultimaLinha < 2) return 0;
+  const cabecalho = obterCabecalho(aba);
+  const dados = aba.getRange(2, 1, ultimaLinha - 1, cabecalho.length).getValues();
+  let alteradas = 0;
+  const valores = dados.map(function (linha) {
+    const atual = String(linha[colunaStatus - 1] || "");
+    if (statusOrganizacaoValido(atual) && !recalcularTudo) return [atual];
+    alteradas++;
+    return [classificarLinha(linha, cabecalho)];
+  });
+  if (alteradas) aba.getRange(2, colunaStatus, valores.length, 1).setValues(valores);
+  return alteradas;
+}
+
+/** Atualiza também os cadastros antigos, incluindo os já marcados como Participante. */
+function reclassificarStatusInscricoes() {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet();
+  const aba = planilha.getSheetByName(NOME_ABA);
+  if (!aba) throw new Error("A aba Inscrições não foi encontrada.");
+  return preencherStatusInscricoes(aba, true);
+}
+
 function garantirColunaFamiliaresQuarto(aba) {
   const ultimaColuna = aba.getLastColumn();
   if (ultimaColuna === 0) return;
@@ -134,6 +229,7 @@ function doPost(e) {
         aba.getRange(1, COLUNAS.indexOf(c) + 1, aba.getMaxRows(), 1).setNumberFormat("@");
       });
     }
+    preencherStatusInscricoes(aba, false);
     garantirColunaFamiliaresQuarto(aba);
 
     // Reenvio do mesmo formulário (ex.: resposta perdida): já está gravado → sucesso.
@@ -160,8 +256,16 @@ function doPost(e) {
         const v =
           c === "nome"
             ? p.nome
-            : c === "papel"
-              ? p.papel
+            : c === "statusOrganizacao"
+              ? p.statusOrganizacao ||
+                (statusOrganizacaoValido(p.papel)
+                  ? p.papel
+                  : classificarLinha(
+                      COLUNAS.map(function (chave) {
+                        return todos[chave];
+                      }),
+                      COLUNAS,
+                    ))
               : c === "necessidades"
                 ? necessidadesSemFamiliares(todos[c], d.familiaresQuarto)
                 : todos[c]; // transporte e demais vêm de `p`/`d`

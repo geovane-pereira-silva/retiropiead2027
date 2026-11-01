@@ -11,11 +11,17 @@ function criarAppsScript(iniciais: unknown[][] = []) {
     getMaxRows: () => 1000,
     setFrozenRows: () => undefined,
     appendRow: (linha: unknown[]) => linhas.push(linha),
-    getRange: (linha: number, coluna: number, quantidade: number) => ({
+    getRange: (linha: number, coluna: number, quantidade = 1, largura = 1) => ({
       getDisplayValues: () =>
-        Array.from({ length: quantidade }, (_, i) => [
-          String(linhas[linha - 1 + i]?.[coluna - 1] ?? ""),
-        ]),
+        Array.from({ length: quantidade }, (_, i) =>
+          Array.from({ length: largura }, (_, j) =>
+            String(linhas[linha - 1 + i]?.[coluna - 1 + j] ?? ""),
+          ),
+        ),
+      getValues: () =>
+        Array.from({ length: quantidade }, (_, i) =>
+          Array.from({ length: largura }, (_, j) => linhas[linha - 1 + i]?.[coluna - 1 + j] ?? ""),
+        ),
       setNumberFormat: () => undefined,
       setFontWeight: () => undefined,
       setValue: (valor: unknown) => {
@@ -23,8 +29,11 @@ function criarAppsScript(iniciais: unknown[][] = []) {
         linhas[linha - 1][coluna - 1] = valor;
       },
       setValues: (valores: unknown[][]) => {
-        valores.forEach((valor, i) => {
-          linhas[linha - 1 + i] = valor;
+        valores.forEach((valoresLinha, i) => {
+          linhas[linha - 1 + i] ??= [];
+          valoresLinha.forEach((valor, j) => {
+            linhas[linha - 1 + i][coluna - 1 + j] = valor;
+          });
         });
       },
     }),
@@ -54,6 +63,7 @@ function criarAppsScript(iniciais: unknown[][] = []) {
       });
       return JSON.parse(saida.content) as { ok: boolean; code?: string; linhas?: number };
     },
+    reclassificar: () => (contexto.reclassificarStatusInscricoes as () => number)(),
   };
 }
 
@@ -152,4 +162,53 @@ test("Apps Script acrescenta a nova coluna sem recriar a aba de inscrições exi
   assert.equal(script.linhas[1][cabecalhoAntigo.indexOf("nome")], "Inscrição já existente");
   const indice = script.linhas[0].indexOf("familiaresQuarto");
   assert.equal(script.linhas[2][indice], "José da Silva");
+});
+
+test("reclassifica o cadastro antigo de Ana Paula como organizadora", () => {
+  const cabecalhoAntigo = [
+    "enviadoEm",
+    "familiaId",
+    "idempotencyKey",
+    "ordem",
+    "papel",
+    "nome",
+    "dataNascimento",
+    "idadeNaDataDoRetiro",
+    "menorDeIdade",
+    "faixa",
+    "valorTexto",
+    "valor",
+    "cpf",
+    "transporte",
+    "responsavelNome",
+    "telefone",
+    "whatsapp",
+    "email",
+    "igreja",
+    "cidade",
+    "emergenciaNome",
+    "emergenciaTelefone",
+    "necessidades",
+    "totalParticipantes",
+    "totalTexto",
+    "temValorADefinir",
+    "aceiteRegras",
+    "aceitePrivacidade",
+    "versaoTermos",
+    "statusPagamento",
+    "origem",
+  ];
+  const linha = Array(cabecalhoAntigo.length).fill("");
+  linha[cabecalhoAntigo.indexOf("papel")] = "Participante";
+  linha[cabecalhoAntigo.indexOf("nome")] = "Ana Paula de Souza";
+  linha[cabecalhoAntigo.indexOf("idadeNaDataDoRetiro")] = 35;
+  linha[cabecalhoAntigo.indexOf("faixa")] = "A partir de 10 anos";
+  linha[cabecalhoAntigo.indexOf("valorTexto")] = "Organizador — R$ 200,00 (camisa incluída)";
+  linha[cabecalhoAntigo.indexOf("valor")] = 200;
+  const script = criarAppsScript([cabecalhoAntigo, linha]);
+
+  assert.equal(script.reclassificar(), 1);
+  const statusIndex = cabecalhoAntigo.indexOf("papel");
+  assert.equal(script.linhas[0][statusIndex], "statusOrganizacao");
+  assert.equal(script.linhas[1][statusIndex], "ORGANIZADOR (PAGA MEIA)");
 });

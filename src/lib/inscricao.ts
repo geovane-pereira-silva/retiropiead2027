@@ -225,6 +225,14 @@ export function emailValido(entrada: string): boolean {
 }
 
 export type PeriodoVisitante = "dia-todo" | "somente-noite";
+export type StatusOrganizacao =
+  | "ORGANIZADOR (PAGA MEIA)"
+  | "APOIO (NÃO PAGANTE)"
+  | "NÃO PAGANTE (CRIANÇAS DE 0 A 4)"
+  | "PARTICIPANTE INTEIRA"
+  | "PARTICIPANTE MEIA"
+  | "VISITANTE";
+
 export type DadosVisitante = {
   nome: string;
   telefone: string;
@@ -625,7 +633,9 @@ export function higienizarCelula(s: string): string {
 
 export type ParticipantePlanilha = {
   ordem: number;
-  papel: "Participante" | "Visitante";
+  papel: "Participante" | "Visitante" | StatusOrganizacao;
+  /** Categoria administrativa, gravada apenas na planilha. */
+  statusOrganizacao?: StatusOrganizacao;
   nome: string;
   dataNascimento: string;
   idadeNaDataDoRetiro: number | "";
