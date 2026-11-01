@@ -93,6 +93,33 @@ function normalizarCpf(valor) {
   return digitos.length >= 10 && digitos.length <= 11 ? digitos.padStart(11, "0") : "";
 }
 
+function normalizarNomeResponsavel(valor) {
+  return String(valor == null ? "" : valor)
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleUpperCase("pt-BR");
+}
+
+/** Execute uma vez para deixar em maiúsculas os responsáveis já registrados. */
+function padronizarResponsavelNomeExistentes() {
+  const aba = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(NOME_ABA);
+  if (!aba) throw new Error("A aba Inscrições não foi encontrada.");
+  const indice = obterCabecalho(aba).indexOf("responsavelNome") + 1;
+  if (indice === 0) throw new Error("A coluna responsavelNome não foi encontrada.");
+  const ultima = aba.getLastRow();
+  if (ultima < 2) return 0;
+  const valores = aba.getRange(2, indice, ultima - 1, 1).getValues();
+  let alteradas = 0;
+  const padronizadas = valores.map(function (linha) {
+    const antes = String(linha[0] == null ? "" : linha[0]);
+    const depois = normalizarNomeResponsavel(antes);
+    if (antes !== depois) alteradas++;
+    return [depois];
+  });
+  if (alteradas) aba.getRange(2, indice, padronizadas.length, 1).setValues(padronizadas);
+  return alteradas;
+}
+
 function obterCabecalho(aba) {
   const ultimaColuna = aba.getLastColumn();
   return ultimaColuna > 0 ? aba.getRange(1, 1, 1, ultimaColuna).getDisplayValues()[0] : [];
@@ -268,7 +295,9 @@ function doPost(e) {
                     ))
               : c === "necessidades"
                 ? necessidadesSemFamiliares(todos[c], d.familiaresQuarto)
-                : todos[c]; // transporte e demais vêm de `p`/`d`
+                : c === "responsavelNome"
+                  ? normalizarNomeResponsavel(todos[c])
+                  : todos[c]; // transporte e demais vêm de `p`/`d`
         return v === undefined || v === null ? "" : v;
       });
     });

@@ -273,6 +273,7 @@ export async function processarInscricao(
       enviadoEm: new Date(agora).toISOString(),
       versaoTermos: evento.versaoTermos,
     });
+    corpo.responsavelNome = corpo.responsavelNome.toLocaleUpperCase("pt-BR");
     corpo.participantes.forEach((p, i) => {
       const status = statusOrganizacaoDaPessoa(resultado.participantes[i]);
       // Compatibilidade: o Apps Script já ativo lê `papel`; o script atualizado
@@ -298,7 +299,7 @@ export async function processarInscricao(
     if (r.status === "ok") {
       const ok: RespostaInscricao = {
         ok: true,
-        responsavel: resultado.participantes.length ? corpo.responsavelNome.replace(/^'/, "") : "",
+        responsavel: resultado.participantes.length ? higienizarNome(v.responsavel.nome) : "",
         participantes: resultado.participantes.map((p) => ({
           nome: p.nome,
           papel: p.papel,
@@ -430,7 +431,7 @@ export async function processarCadastroVisitante(
       idempotencyKey: chave,
       familiaId: novoFamiliaId(agora),
       enviadoEm: new Date(agora).toISOString(),
-      responsavelNome: higienizarCelula(nome),
+      responsavelNome: higienizarCelula(nome).toLocaleUpperCase("pt-BR"),
       responsavelCpf: "",
       telefone,
       whatsapp: telefone,

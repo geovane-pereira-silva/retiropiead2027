@@ -64,6 +64,7 @@ function criarAppsScript(iniciais: unknown[][] = []) {
       return JSON.parse(saida.content) as { ok: boolean; code?: string; linhas?: number };
     },
     reclassificar: () => (contexto.reclassificarStatusInscricoes as () => number)(),
+    padronizarResponsavel: () => (contexto.padronizarResponsavelNomeExistentes as () => number)(),
   };
 }
 
@@ -102,6 +103,7 @@ test("Apps Script cria a coluna para os familiares e grava os nomes informados",
   const resposta = script.enviar({
     idempotencyKey: "quarto-familiar-001",
     familiaresQuarto: "Janaina Silva Furtado",
+    responsavelNome: "Ana da Silva",
     necessidades:
       "Restrição alimentar\nFamiliares para organização do quarto: Janaina Silva Furtado",
     participantes: [{ nome: "Maria da Silva", papel: "Participante", cpf: "52998224725" }],
@@ -110,6 +112,7 @@ test("Apps Script cria a coluna para os familiares e grava os nomes informados",
   const indice = script.linhas[0].indexOf("familiaresQuarto");
   assert.ok(indice >= 0, "cabeçalho familiar foi acrescentado");
   assert.equal(script.linhas[1][indice], "Janaina Silva Furtado");
+  assert.equal(script.linhas[1][script.linhas[0].indexOf("responsavelNome")], "ANA DA SILVA");
   assert.equal(script.linhas[1][script.linhas[0].indexOf("necessidades")], "Restrição alimentar");
 });
 
@@ -211,4 +214,11 @@ test("reclassifica o cadastro antigo de Ana Paula como organizadora", () => {
   const statusIndex = cabecalhoAntigo.indexOf("papel");
   assert.equal(script.linhas[0][statusIndex], "statusOrganizacao");
   assert.equal(script.linhas[1][statusIndex], "ORGANIZADOR (PAGA MEIA)");
+});
+
+test("padroniza nomes de responsáveis antigos em caixa alta, preservando os outros dados", () => {
+  const cabecalho = ["responsavelNome", "nome", "valor"];
+  const script = criarAppsScript([cabecalho, ["Ana Paula de Souza", "Ana Paula", 200]]);
+  assert.equal(script.padronizarResponsavel(), 1);
+  assert.deepEqual(script.linhas[1], ["ANA PAULA DE SOUZA", "Ana Paula", 200]);
 });

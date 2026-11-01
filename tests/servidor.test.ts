@@ -121,6 +121,7 @@ test("visitante encomenda camisa e totaliza day use mais R$ 50 na mesma linha da
   }
   assert.equal(recebidos.length, 1);
   assert.equal(recebidos[0].totalValor, evento.visitantes.valorDiaTodo + 50);
+  assert.equal(recebidos[0].responsavelNome, "ANA DA SILVA");
   const participante = (recebidos[0].participantes as Record<string, unknown>[])[0];
   assert.equal(participante.valor, evento.visitantes.valorDiaTodo + 50);
   assert.match(String(participante.faixa), /Camisa Babylook M/);
@@ -157,6 +158,7 @@ test("sucesso: grava corpo correto e devolve nome, faixa e valor", async () => {
   assert.equal(recebidos[0].token, "segredo");
   assert.equal(recebidos[0].statusPagamento, "NÃO CONFIRMADO");
   assert.equal(recebidos[0].totalValor, 400);
+  assert.equal(recebidos[0].responsavelNome, "MARIA DA SILVA");
   assert.equal(recebidos[0].familiaresQuarto, "Janaina Silva Furtado");
   assert.match(
     String(recebidos[0].necessidades),
