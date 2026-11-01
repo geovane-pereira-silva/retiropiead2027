@@ -645,7 +645,7 @@
   box-shadow: 4px 6px 0 var(--pv-sol);
 }
 .ss {
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 @media (max-width: 47.99rem) {
   .ss-titulo {

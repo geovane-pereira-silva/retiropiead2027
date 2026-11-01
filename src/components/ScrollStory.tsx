@@ -222,29 +222,54 @@ function Animado({ compacto }: { compacto: boolean }) {
       event.preventDefault();
       window.scrollBy({ top: event.deltaX, behavior: "auto" });
     };
-    let toque: { x: number; y: number } | null = null;
+    let toque: {
+      inicioX: number;
+      inicioY: number;
+      anteriorX: number;
+      eixo: "horizontal" | "vertical" | null;
+    } | null = null;
     const touchStart = (event: TouchEvent) => {
       const point = event.touches[0];
-      toque = point ? { x: point.clientX, y: point.clientY } : null;
+      toque = point
+        ? {
+            inicioX: point.clientX,
+            inicioY: point.clientY,
+            anteriorX: point.clientX,
+            eixo: null,
+          }
+        : null;
     };
     const touchMove = (event: TouchEvent) => {
       const point = event.touches[0];
       if (!point || !toque) return;
-      const deltaX = point.clientX - toque.x;
-      const deltaY = point.clientY - toque.y;
-      toque = { x: point.clientX, y: point.clientY };
-      if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
+      const deltaX = point.clientX - toque.inicioX;
+      const deltaY = point.clientY - toque.inicioY;
+      if (toque.eixo === null) {
+        if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 8) return;
+        toque.eixo = Math.abs(deltaX) > Math.abs(deltaY) * 1.15 ? "horizontal" : "vertical";
+      }
+      if (toque.eixo !== "horizontal") return;
+
       event.preventDefault();
-      window.scrollBy({ top: deltaX, behavior: "auto" });
+      const passo = toque.anteriorX - point.clientX;
+      toque.anteriorX = point.clientX;
+      window.scrollBy({ top: passo * 3, behavior: "auto" });
+    };
+    const touchEnd = () => {
+      toque = null;
     };
 
     section.addEventListener("wheel", wheel, { passive: false });
     section.addEventListener("touchstart", touchStart, { passive: true });
     section.addEventListener("touchmove", touchMove, { passive: false });
+    section.addEventListener("touchend", touchEnd, { passive: true });
+    section.addEventListener("touchcancel", touchEnd, { passive: true });
     return () => {
       section.removeEventListener("wheel", wheel);
       section.removeEventListener("touchstart", touchStart);
       section.removeEventListener("touchmove", touchMove);
+      section.removeEventListener("touchend", touchEnd);
+      section.removeEventListener("touchcancel", touchEnd);
     };
   }, []);
 
