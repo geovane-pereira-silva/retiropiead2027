@@ -18,11 +18,13 @@ import { fluxoPrevisto, resumirFamilia, resumirTudo, rotuloSituacao } from "./ca
 import type { ResumoFamilia } from "./calculos";
 import { criarDemo } from "./demo";
 import { aplicarLocal } from "./local";
-import { csvInscritos, MODELOS, resumoCamisetas, resumoTransporte, TAMANHOS } from "./relatorios";
+import { csvInscritos, MODELOS, resumoCamisetas, resumoTransporte, TAMANHOS_POR_MODELO } from "./relatorios";
 import { CATEGORIAS } from "./tipos";
+import { hojeLocalISO, lerDinheiro, normalizarBusca, ordenarPor, type DirecaoOrdenacao } from "./utilitarios";
 import type {
   Base,
   CategoriaDespesa,
+  ClassificacaoParticipante,
   Doacao,
   FormaPagamento,
   Pagamento,
@@ -34,7 +36,7 @@ import type {
 const reais = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const dma = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
-const hojeISO = () => new Date().toISOString().slice(0, 10);
+const hojeISO = () => hojeLocalISO();
 const novoId = (p: string) => `${p}-${Date.now().toString(36)}${Math.floor(Math.random() * 1e3)}`;
 
 type Tela = "painel" | "inscritos" | "pagamentos" | "despesas" | "doacoes" | "relatorios";
@@ -286,7 +288,7 @@ function Painel({ resumo, hoje, abrir }: { resumo: ReturnType<typeof resumirTudo
     .filter((f) => f.proximoVencimento && f.atrasado === 0)
     .sort((a, b) => a.proximoVencimento!.data.localeCompare(b.proximoVencimento!.data))
     .slice(0, 5);
-  const falta = Math.max(0, resumo.pontoEquilibrio - resumo.pessoasPagantes);
+  const falta = resumo.pontoEquilibrio === null ? null : Math.max(0, resumo.pontoEquilibrio - resumo.pessoasPagantes);
   return (
     <main className="adm-pagina">
       <h1>Visão geral</h1>
@@ -299,19 +301,20 @@ function Painel({ resumo, hoje, abrir }: { resumo: ReturnType<typeof resumirTudo
 
       <section className="adm-bloco" aria-label="Ponto de equilíbrio">
         <h2>Ponto de equilíbrio</h2>
-        <p className="adm-sub">
-          {resumo.pessoasPagantes} pessoas pagantes inscritas · precisam ser {resumo.pontoEquilibrio} para cobrir o
-          orçamento ({reais(resumo.ticketMedio)} em média por pessoa).{" "}
-          {falta > 0 ? `Faltam ${falta}.` : "Meta atingida."}
-        </p>
-        <div className="adm-barra" role="progressbar" aria-valuemin={0} aria-valuemax={resumo.pontoEquilibrio} aria-valuenow={Math.min(resumo.pessoasPagantes, resumo.pontoEquilibrio)}>
-          <span style={{ width: `${Math.min(100, (resumo.pessoasPagantes / Math.max(1, resumo.pontoEquilibrio)) * 100)}%` }} />
-        </div>
+        {falta === null
+          ? <p className="adm-sub">A estimativa aparecerá após o primeiro participante pagante. Assim evitamos projetar uma média sem dados.</p>
+          : <>
+              <p className="adm-sub">{resumo.pessoasPagantes} pessoas pagantes inscritas · estimativa de {resumo.pontoEquilibrio} para cobrir o orçamento ({reais(resumo.ticketMedio)} em média por pessoa). {falta > 0 ? `Faltam ${falta}.` : "Meta atingida."}</p>
+              <div className="adm-barra" role="progressbar" aria-label="Progresso do ponto de equilíbrio" aria-valuemin={0} aria-valuemax={resumo.pontoEquilibrio} aria-valuenow={Math.min(resumo.pessoasPagantes, resumo.pontoEquilibrio)}>
+                <span style={{ width: `${Math.min(100, (resumo.pessoasPagantes / Math.max(1, resumo.pontoEquilibrio)) * 100)}%` }} />
+              </div>
+            </>}
       </section>
 
       <div className="adm-duas">
         <section className="adm-bloco" aria-label="Entradas previstas">
           <h2>Entradas previstas por vencimento</h2>
+          <p className="adm-sub">Alertas e previsão de vencimentos consideram o calendário Pix. Cartão e dinheiro entram no saldo conforme os pagamentos são registrados.</p>
           <ul className="adm-colunas">
             {fluxo.map((f) => (
               <li key={f.data} className={f.vencido ? "vencido" : ""}>
@@ -357,6 +360,7 @@ function Painel({ resumo, hoje, abrir }: { resumo: ReturnType<typeof resumirTudo
 /* ───────────────────────────── Inscritos ───────────────────────────── */
 
 const COLUNAS_QUADRO: SituacaoFamilia[] = ["pendente", "parcial", "quitado", "isento"];
+const CLASSIFICACOES: ClassificacaoParticipante[] = ["Organizador (paga meia)", "Apoio (não pagante)", "Não pagante (0–4 anos)", "Participante inteira", "Participante meia", "Visitante"];
 
 function Inscritos({
   resumo, aberta, setAberta, hoje, base, lancar, exec,
@@ -372,11 +376,28 @@ function Inscritos({
   const [visao, setVisao] = useState<"tabela" | "quadro">("tabela");
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<SituacaoFamilia | "todas">("todas");
+  const [classificacao, setClassificacao] = useState<ClassificacaoParticipante | "todas">("todas");
+  const [transporte, setTransporte] = useState<"todos" | "onibus" | "proprio">("todos");
+  const [ordenacao, setOrdenacao] = useState("nome");
+  const [direcao, setDirecao] = useState<DirecaoOrdenacao>("asc");
 
-  const lista = resumo.familias.filter((f) => {
+  const filtradas = resumo.familias.filter((f) => {
     const alvo = `${f.familia.responsavel} ${f.familia.igreja} ${f.pessoas.map((p) => p.nome).join(" ")}`.toLowerCase();
-    return alvo.includes(busca.toLowerCase()) && (filtro === "todas" || f.situacao === filtro);
+    return normalizarBusca(alvo).includes(normalizarBusca(busca))
+      && (filtro === "todas" || f.situacao === filtro)
+      && (classificacao === "todas" || f.pessoas.some((p) => p.classificacao === classificacao))
+      && (transporte === "todos" || f.pessoas.some((p) => p.transporte === transporte));
   });
+  const lista = ordenarPor(filtradas, (f) => {
+    switch (ordenacao) {
+      case "pessoas": return f.pessoas.length;
+      case "devido": return f.devido;
+      case "pago": return f.pago;
+      case "vencimento": return f.proximoVencimento?.data ?? "9999-12-31";
+      case "situacao": return rotuloSituacao[f.situacao];
+      default: return f.familia.responsavel;
+    }
+  }, direcao);
   const atual = aberta ? resumo.familias.find((f) => f.familia.id === aberta) : undefined;
 
   return (
@@ -395,8 +416,19 @@ function Inscritos({
         </label>
         <select value={filtro} onChange={(e) => setFiltro(e.target.value as SituacaoFamilia | "todas")} aria-label="Filtrar por situação">
           <option value="todas">Todas as situações</option>
-          {COLUNAS_QUADRO.map((s) => (<option key={s} value={s}>{rotuloSituacao[s]}</option>))}
+          {(["pre", ...COLUNAS_QUADRO] as SituacaoFamilia[]).map((s) => (<option key={s} value={s}>{rotuloSituacao[s]}</option>))}
         </select>
+        <select value={classificacao} onChange={(e) => setClassificacao(e.target.value as ClassificacaoParticipante | "todas")} aria-label="Filtrar por classificação">
+          <option value="todas">Todas as categorias</option>{CLASSIFICACOES.map((x) => <option key={x}>{x}</option>)}
+        </select>
+        <select value={transporte} onChange={(e) => setTransporte(e.target.value as typeof transporte)} aria-label="Filtrar por transporte">
+          <option value="todos">Todos os transportes</option><option value="onibus">Ônibus</option><option value="proprio">Carro próprio</option>
+        </select>
+        <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar inscritos por">
+          <option value="nome">Ordenar: nome</option><option value="pessoas">Número de pessoas</option><option value="devido">Valor devido</option><option value="pago">Valor pago</option><option value="situacao">Situação</option><option value="vencimento">Próximo vencimento</option>
+        </select>
+        <button className="adm-btn adm-btn-fantasma" onClick={() => setDirecao((d) => d === "asc" ? "desc" : "asc")} aria-label={`Ordem ${direcao === "asc" ? "crescente" : "decrescente"}`} title="Inverter ordem">{direcao === "asc" ? "↑ Crescente" : "↓ Decrescente"}</button>
+        {(busca || filtro !== "todas" || classificacao !== "todas" || transporte !== "todos") && <button className="adm-btn adm-btn-fantasma" onClick={() => { setBusca(""); setFiltro("todas"); setClassificacao("todas"); setTransporte("todos"); }}>Limpar filtros</button>}
         <span className="adm-mudo">{lista.length} família(s) · {lista.reduce((s, f) => s + f.pessoas.length, 0)} pessoa(s)</span>
       </div>
 
@@ -494,7 +526,7 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
           </>
         )}
         <h3>Lançar pagamento</h3>
-        <FormPagamento familias={[atual.familia]} fixa lancar={lancar} />
+        <FormPagamento familias={[atual.familia]} fixa lancar={lancar} limiteEstorno={() => Math.max(0, atual.pago)} />
         <h3>Ajustes</h3>
         {base.ajustes.filter((a) => a.familiaId === atual.familia.id).length === 0 && <p className="adm-vazio">Nenhum ajuste.</p>}
         <ul className="adm-lista adm-lista-simples">
@@ -509,18 +541,28 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
 }
 
 function Camiseta({ p, exec }: { p: Base["pessoas"][number]; exec: (g: Gravacao) => Promise<boolean> }) {
-  const [tamanho, setTamanho] = useState(p.tamanho ?? "");
   const [modelo, setModelo] = useState(p.modelo ?? "");
-  const mudou = tamanho !== (p.tamanho ?? "") || modelo !== (p.modelo ?? "");
+  const tamanhos: readonly string[] = modelo ? TAMANHOS_POR_MODELO[modelo as keyof typeof TAMANHOS_POR_MODELO] ?? [] : Object.values(TAMANHOS_POR_MODELO).flat();
+  const existenteEhEspecial = !!p.tamanho && !tamanhos.includes(p.tamanho);
+  const [tamanho, setTamanho] = useState(existenteEhEspecial ? "Medida especial" : p.tamanho ?? "");
+  const [medida, setMedida] = useState(existenteEhEspecial ? p.tamanho ?? "" : "");
+  const valorFinal = tamanho === "Medida especial" ? medida.trim() : tamanho;
+  const mudou = valorFinal !== (p.tamanho ?? "") || modelo !== (p.modelo ?? "");
   return (
     <span className="adm-camiseta">
-      <select value={modelo} onChange={(e) => setModelo(e.target.value)} aria-label={`Modelo da camiseta de ${p.nome}`}>
+      <select value={modelo} onChange={(e) => {
+        const novoModelo = e.target.value;
+        const permitidos: readonly string[] = novoModelo ? TAMANHOS_POR_MODELO[novoModelo as keyof typeof TAMANHOS_POR_MODELO] ?? [] : Object.values(TAMANHOS_POR_MODELO).flat();
+        if (tamanho && !permitidos.includes(tamanho)) { setTamanho(""); setMedida(""); }
+        setModelo(novoModelo);
+      }} aria-label={`Modelo da camiseta de ${p.nome}`}>
         <option value="">Modelo</option>{MODELOS.map((m) => (<option key={m}>{m}</option>))}
       </select>
       <select value={tamanho} onChange={(e) => setTamanho(e.target.value)} aria-label={`Tamanho da camiseta de ${p.nome}`}>
-        <option value="">Tamanho</option>{TAMANHOS.map((t) => (<option key={t}>{t}</option>))}
+        <option value="">Tamanho</option>{tamanhos.map((t) => (<option key={t}>{t}</option>))}
       </select>
-      {mudou && tamanho && (<button className="adm-btn adm-btn-fantasma" onClick={() => void exec({ tipo: "camiseta", pessoaId: p.id, tamanho, modelo })}>Salvar</button>)}
+      {tamanho === "Medida especial" && <input className="adm-camiseta-medida" value={medida} onChange={(e) => setMedida(e.target.value)} maxLength={80} placeholder="Descreva a medida" aria-label={`Medida especial da camiseta de ${p.nome}`} />}
+      {mudou && valorFinal && modelo && (<button className="adm-btn adm-btn-fantasma" onClick={() => void exec({ tipo: "camiseta", pessoaId: p.id, tamanho: valorFinal, modelo })}>Salvar</button>)}
     </span>
   );
 }
@@ -529,7 +571,7 @@ function FormAjuste({ familiaId, exec }: { familiaId: string; exec: (g: Gravacao
   const [tipo, setTipo] = useState<TipoAjuste>("Observação");
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
-  const n = Number(valor.replace(",", "."));
+  const n = lerDinheiro(valor);
   const comValor = tipo === "Desconto" || tipo === "Isenção";
   const valido = descricao.trim() && (!comValor || (Number.isFinite(n) && n > 0));
   return (
@@ -552,19 +594,21 @@ function FormAjuste({ familiaId, exec }: { familiaId: string; exec: (g: Gravacao
 
 /* ───────────────────────────── Pagamentos ───────────────────────────── */
 
-function FormPagamento({ familias, fixa, lancar }: { familias: { id: string; responsavel: string }[]; fixa?: boolean; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean> }) {
+function FormPagamento({ familias, fixa, lancar, limiteEstorno }: { familias: { id: string; responsavel: string }[]; fixa?: boolean; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>; limiteEstorno?: (familiaId: string) => number }) {
   const [familiaId, setFamiliaId] = useState(familias[0]?.id ?? "");
   const [valor, setValor] = useState("");
   const [forma, setForma] = useState<FormaPagamento>("Pix");
   const [data, setData] = useState(hojeISO());
   const [obs, setObs] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const n = Number(valor.replace(",", "."));
-  const valido = familiaId && Number.isFinite(n) && n !== 0;
+  const n = lerDinheiro(valor);
+  const maximoEstorno = limiteEstorno?.(familiaId) ?? 0;
+  const valido = familiaId && Number.isFinite(n) && n !== 0 && (n > 0 || Math.abs(n) <= maximoEstorno);
   return (
     <form className="adm-form" onSubmit={async (e) => {
       e.preventDefault();
       if (!valido || salvando) return;
+      if (n < 0 && !window.confirm(`Confirmar estorno de ${reais(Math.abs(n))}? O valor será abatido do total recebido desta família.`)) return;
       setSalvando(true);
       try {
         const ok = await lancar({ familiaId, valor: n, forma, data, obs: obs.trim() || undefined });
@@ -586,8 +630,9 @@ function FormPagamento({ familias, fixa, lancar }: { familias: { id: string; res
           <option>Pix</option><option>Cartão</option><option>Dinheiro</option>
         </select>
       </label>
-      <label>Data<input type="date" value={data} onChange={(e) => setData(e.target.value)} /></label>
+      <label>Data<input type="date" value={data} onChange={(e) => setData(e.target.value)} required /></label>
       <label className="adm-form-largo">Observação<input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Opcional" /></label>
+      {n < 0 && <p className="adm-mudo adm-form-largo">Disponível para estorno: {reais(maximoEstorno)}.</p>}
       <button className="adm-btn adm-btn-primario" disabled={!valido || salvando}>{salvando ? "Salvando…" : n < 0 ? "Registrar estorno" : "Lançar pagamento"}</button>
     </form>
   );
@@ -595,7 +640,28 @@ function FormPagamento({ familias, fixa, lancar }: { familias: { id: string; res
 
 function Pagamentos({ base, resumo, lancar }: { base: Base; resumo: ReturnType<typeof resumirTudo>; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean> }) {
   const nome = (id: string) => base.familias.find((f) => f.id === id)?.responsavel ?? id;
-  const ordenados = [...base.pagamentos].sort((a, b) => b.data.localeCompare(a.data));
+  const [busca, setBusca] = useState("");
+  const [forma, setForma] = useState<"todas" | FormaPagamento>("todas");
+  const [tipo, setTipo] = useState<"todos" | "entrada" | "estorno">("todos");
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [ordenacao, setOrdenacao] = useState("data");
+  const [direcao, setDirecao] = useState<DirecaoOrdenacao>("desc");
+  const filtrados = base.pagamentos.filter((p) => {
+    const texto = `${nome(p.familiaId)} ${p.forma} ${p.obs ?? ""}`;
+    return normalizarBusca(texto).includes(normalizarBusca(busca))
+      && (forma === "todas" || p.forma === forma)
+      && (tipo === "todos" || (tipo === "entrada" ? p.valor > 0 : p.valor < 0))
+      && (!de || p.data >= de) && (!ate || p.data <= ate);
+  });
+  const ordenados = ordenarPor(filtrados, (p) => {
+    switch (ordenacao) {
+      case "familia": return nome(p.familiaId);
+      case "forma": return p.forma;
+      case "valor": return p.valor;
+      default: return p.data;
+    }
+  }, direcao);
   return (
     <main className="adm-pagina">
       <h1>Pagamentos</h1>
@@ -606,11 +672,22 @@ function Pagamentos({ base, resumo, lancar }: { base: Base; resumo: ReturnType<t
       </section>
       <section className="adm-bloco">
         <h2>Novo lançamento</h2>
-        <FormPagamento familias={base.familias} lancar={lancar} />
+        <FormPagamento familias={base.familias} lancar={lancar} limiteEstorno={(id) => Math.max(0, resumo.familias.find((f) => f.familia.id === id)?.pago ?? 0)} />
       </section>
       <section className="adm-bloco">
         <h2>Histórico</h2>
         <p className="adm-sub">Pagamentos não são editados. Para corrigir um erro, lance um estorno.</p>
+        <div className="adm-ferramentas" role="search" aria-label="Filtrar lançamentos de pagamento">
+          <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar família ou observação" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar pagamento" /></label>
+          <select value={forma} onChange={(e) => setForma(e.target.value as typeof forma)} aria-label="Filtrar por forma de pagamento"><option value="todas">Todas as formas</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select>
+          <select value={tipo} onChange={(e) => setTipo(e.target.value as typeof tipo)} aria-label="Filtrar entradas e estornos"><option value="todos">Entradas e estornos</option><option value="entrada">Entradas</option><option value="estorno">Estornos</option></select>
+          <label>De<input type="date" value={de} onChange={(e) => setDe(e.target.value)} aria-label="Data inicial" /></label>
+          <label>Até<input type="date" value={ate} onChange={(e) => setAte(e.target.value)} aria-label="Data final" /></label>
+          <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar pagamentos por"><option value="data">Ordenar: data</option><option value="familia">Família</option><option value="forma">Forma</option><option value="valor">Valor</option></select>
+          <button className="adm-btn adm-btn-fantasma" onClick={() => setDirecao((d) => d === "asc" ? "desc" : "asc")} aria-label="Inverter ordem">{direcao === "asc" ? "↑" : "↓"}</button>
+          {(busca || forma !== "todas" || tipo !== "todos" || de || ate) && <button className="adm-btn adm-btn-fantasma" onClick={() => { setBusca(""); setForma("todas"); setTipo("todos"); setDe(""); setAte(""); }}>Limpar filtros</button>}
+          <span className="adm-mudo">{ordenados.length} de {base.pagamentos.length} lançamento(s)</span>
+        </div>
         <div className="adm-tabela-caixa">
           <table className="adm-tabela">
             <thead><tr><th>Data</th><th>Família</th><th>Forma</th><th>Valor</th><th></th></tr></thead>
@@ -619,9 +696,14 @@ function Pagamentos({ base, resumo, lancar }: { base: Base; resumo: ReturnType<t
                 <tr key={p.id}>
                   <td>{dma(p.data)}</td><td>{nome(p.familiaId)}{p.obs && <span className="adm-mudo adm-bloco-sub">{p.obs}</span>}</td><td>{p.forma}</td>
                   <td className={p.valor < 0 ? "tom-vermelho" : "tom-verde"}>{reais(p.valor)}</td>
-                  <td>{p.valor > 0 && (<button className="adm-btn adm-btn-fantasma" onClick={() => lancar({ familiaId: p.familiaId, valor: -p.valor, forma: p.forma, data: hojeISO(), obs: `Estorno de ${dma(p.data)}` })}>Estornar</button>)}</td>
+                  <td>{p.valor > 0 && Math.max(0, resumo.familias.find((f) => f.familia.id === p.familiaId)?.pago ?? 0) > 0 && (<button className="adm-btn adm-btn-fantasma" onClick={() => {
+                    const disponivel = Math.max(0, resumo.familias.find((f) => f.familia.id === p.familiaId)?.pago ?? 0);
+                    const valorEstorno = Math.min(p.valor, disponivel);
+                    if (valorEstorno > 0 && window.confirm(`Estornar ${reais(valorEstorno)} para ${nome(p.familiaId)}?`)) void lancar({ familiaId: p.familiaId, valor: -valorEstorno, forma: p.forma, data: hojeISO(), obs: `Estorno de ${dma(p.data)}` });
+                  }}>Estornar até {reais(Math.min(p.valor, Math.max(0, resumo.familias.find((f) => f.familia.id === p.familiaId)?.pago ?? 0)))}</button>)}</td>
                 </tr>
               ))}
+              {ordenados.length === 0 && <tr><td colSpan={5} className="adm-vazio">Nenhum lançamento corresponde a esses filtros.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -637,19 +719,50 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
   const [fornecedor, setFornecedor] = useState("");
   const [descricao, setDescricao] = useState("");
   const [orcado, setOrcado] = useState("");
-  const n = Number(orcado.replace(",", "."));
-  const valido = fornecedor.trim() && Number.isFinite(n) && n > 0;
-  const total = (c: CategoriaDespesa) => base.despesas.filter((d) => d.categoria === c);
-  const mudarStatus = (id: string, status: StatusDespesa) => void exec({ tipo: "despesa-status", id, status });
+  const [pago, setPago] = useState("");
+  const [data, setData] = useState(hojeISO());
+  const [salvando, setSalvando] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState<"todas" | CategoriaDespesa>("todas");
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | StatusDespesa>("todos");
+  const [ordenacao, setOrdenacao] = useState("data");
+  const [direcao, setDirecao] = useState<DirecaoOrdenacao>("desc");
+  const n = lerDinheiro(orcado);
+  const valorPago = lerDinheiro(pago);
+  const valido = fornecedor.trim() && Number.isFinite(n) && n > 0 && Number.isFinite(valorPago) && valorPago >= 0;
+  const filtradas = base.despesas.filter((d) => normalizarBusca(`${d.fornecedor} ${d.descricao} ${d.categoria} ${d.status}`).includes(normalizarBusca(busca))
+    && (filtroCategoria === "todas" || d.categoria === filtroCategoria) && (filtroStatus === "todos" || d.status === filtroStatus));
+  const despesas = ordenarPor(filtradas, (d) => {
+    switch (ordenacao) {
+      case "fornecedor": return d.fornecedor;
+      case "categoria": return d.categoria;
+      case "orcado": return d.orcado;
+      case "pago": return d.pago;
+      case "status": return d.status;
+      default: return d.data ?? "";
+    }
+  }, direcao);
+  const mudarStatus = async (id: string, status: StatusDespesa) => {
+    if (status === "Pago" && !window.confirm("Confirmar que esta despesa foi paga?")) return;
+    await exec({ tipo: "despesa-status", id, status });
+  };
   return (
     <main className="adm-pagina">
       <h1>Despesas</h1>
+      <section className="adm-grade adm-grade-3" aria-label="Resumo de despesas">
+        <Cartao rotulo="Orçado" valor={reais(base.despesas.reduce((s, d) => s + d.orcado, 0))} />
+        <Cartao rotulo="Já pago" valor={reais(base.despesas.reduce((s, d) => s + d.pago, 0))} tom="vermelho" />
+        <Cartao rotulo="Saldo a pagar" valor={reais(base.despesas.reduce((s, d) => s + Math.max(0, d.orcado - d.pago), 0))} tom="ambar" />
+      </section>
       <section className="adm-bloco">
         <h2>Nova despesa</h2>
         <form className="adm-form" onSubmit={async (e) => {
           e.preventDefault();
-          if (!valido) return;
-          if (await exec({ tipo: "despesa", categoria, fornecedor: fornecedor.trim(), descricao: descricao.trim(), orcado: n })) { setFornecedor(""); setDescricao(""); setOrcado(""); }
+          if (!valido || salvando) return;
+          setSalvando(true);
+          try {
+            if (await exec({ tipo: "despesa", categoria, fornecedor: fornecedor.trim(), descricao: descricao.trim(), orcado: n, pago: valorPago, data })) { setFornecedor(""); setDescricao(""); setOrcado(""); setPago(""); setData(hojeISO()); }
+          } finally { setSalvando(false); }
         }}>
           <label>Categoria
             <select value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaDespesa)}>
@@ -658,34 +771,33 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
           </label>
           <label>Fornecedor<input value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} /></label>
           <label>Valor orçado (R$)<input inputMode="decimal" value={orcado} onChange={(e) => setOrcado(e.target.value)} placeholder="0,00" /></label>
+          <label>Valor já pago (R$)<input inputMode="decimal" value={pago} onChange={(e) => setPago(e.target.value)} placeholder="0,00" /></label>
+          <label>Data<input type="date" value={data} onChange={(e) => setData(e.target.value)} required /></label>
           <label className="adm-form-largo">Descrição<input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Opcional" /></label>
-          <button className="adm-btn adm-btn-primario" disabled={!valido}>Lançar despesa</button>
+          <button className="adm-btn adm-btn-primario" disabled={!valido || salvando}>{salvando ? "Salvando…" : "Lançar despesa"}</button>
         </form>
       </section>
-      {CATEGORIAS.map((c) => (
-        <section className="adm-bloco" key={c}>
-          <h2>{c} <span className="adm-mudo">{reais(total(c).reduce((s, d) => s + d.orcado, 0))} orçados</span></h2>
-          {total(c).length === 0 && <p className="adm-vazio">Sem despesas nesta categoria.</p>}
-          <div className="adm-tabela-caixa">
-            <table className="adm-tabela">
-              <tbody>
-                {total(c).map((d) => (
-                  <tr key={d.id}>
-                    <td><strong>{d.fornecedor}</strong><span className="adm-mudo adm-bloco-sub">{d.descricao}</span></td>
-                    <td>{reais(d.orcado)}</td>
-                    <td className="tom-vermelho">{reais(d.pago)}</td>
-                    <td><span className={`adm-selo adm-selo-${d.status === "Pago" ? "verde" : d.status === "Aprovado" ? "azul" : "neutro"}`}>{d.status}</span></td>
-                    <td>
-                      {d.status === "Orçado" && <button className="adm-btn adm-btn-fantasma" onClick={() => mudarStatus(d.id, "Aprovado")}>Aprovar</button>}
-                      {d.status !== "Pago" && <button className="adm-btn adm-btn-fantasma" onClick={() => mudarStatus(d.id, "Pago")}>Marcar pago</button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
+      <section className="adm-bloco">
+        <div className="adm-topo"><h2>Lançamentos</h2><span className="adm-mudo">{despesas.length} de {base.despesas.length}</span></div>
+        <div className="adm-ferramentas" role="search" aria-label="Filtrar despesas">
+          <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar fornecedor, descrição ou categoria" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar despesas" /></label>
+          <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value as typeof filtroCategoria)} aria-label="Filtrar categoria"><option value="todas">Todas as categorias</option>{CATEGORIAS.map((c) => <option key={c}>{c}</option>)}</select>
+          <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)} aria-label="Filtrar situação"><option value="todos">Todos os status</option><option>Orçado</option><option>Aprovado</option><option>Pago</option></select>
+          <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar despesas por"><option value="data">Ordenar: data</option><option value="fornecedor">Fornecedor</option><option value="categoria">Categoria</option><option value="orcado">Valor orçado</option><option value="pago">Valor pago</option><option value="status">Status</option></select>
+          <button className="adm-btn adm-btn-fantasma" onClick={() => setDirecao((d) => d === "asc" ? "desc" : "asc")} aria-label="Inverter ordem">{direcao === "asc" ? "↑" : "↓"}</button>
+          {(busca || filtroCategoria !== "todas" || filtroStatus !== "todos") && <button className="adm-btn adm-btn-fantasma" onClick={() => { setBusca(""); setFiltroCategoria("todas"); setFiltroStatus("todos"); }}>Limpar filtros</button>}
+        </div>
+        <div className="adm-tabela-caixa">
+          <table className="adm-tabela"><thead><tr><th>Data</th><th>Categoria</th><th>Fornecedor / descrição</th><th>Orçado</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>{despesas.map((d) => <tr key={d.id}>
+              <td>{d.data ? dma(d.data) : "—"}</td><td>{d.categoria}</td><td><strong>{d.fornecedor}</strong><span className="adm-mudo adm-bloco-sub">{d.descricao}</span></td>
+              <td>{reais(d.orcado)}</td><td className="tom-vermelho">{reais(d.pago)}</td>
+              <td><span className={`adm-selo adm-selo-${d.status === "Pago" ? "verde" : d.status === "Aprovado" ? "azul" : "neutro"}`}>{d.status}</span></td>
+              <td>{d.status === "Orçado" && <button className="adm-btn adm-btn-fantasma" onClick={() => void mudarStatus(d.id, "Aprovado")}>Aprovar</button>}{d.status !== "Pago" && <button className="adm-btn adm-btn-fantasma" onClick={() => void mudarStatus(d.id, "Pago")}>Marcar pago</button>}</td>
+            </tr>)}{despesas.length === 0 && <tr><td colSpan={7} className="adm-vazio">Nenhuma despesa corresponde a esses filtros.</td></tr>}</tbody>
+          </table>
+        </div>
+      </section>
     </main>
   );
 }
@@ -696,11 +808,20 @@ function Doacoes({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<bo
   const [doador, setDoador] = useState("");
   const [valor, setValor] = useState("");
   const [tipo, setTipo] = useState<Doacao["tipo"]>("Avulsa");
+  const [data, setData] = useState(hojeISO());
   const [obs, setObs] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const n = Number(valor.replace(",", "."));
+  const [busca, setBusca] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | Doacao["tipo"]>("todos");
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [ordenacao, setOrdenacao] = useState("data");
+  const [direcao, setDirecao] = useState<DirecaoOrdenacao>("desc");
+  const n = lerDinheiro(valor);
   const valido = doador.trim() && Number.isFinite(n) && n > 0;
   const total = base.doacoes.reduce((s, d) => s + d.valor, 0);
+  const doacoes = ordenarPor(base.doacoes.filter((d) => normalizarBusca(`${d.doador} ${d.tipo} ${d.obs ?? ""}`).includes(normalizarBusca(busca))
+    && (filtroTipo === "todos" || d.tipo === filtroTipo) && (!de || d.data >= de) && (!ate || d.data <= ate)), (d) => ordenacao === "doador" ? d.doador : ordenacao === "valor" ? d.valor : d.data, direcao);
   return (
     <main className="adm-pagina">
       <h1>Doações e apadrinhamento</h1>
@@ -710,26 +831,42 @@ function Doacoes({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<bo
         <form className="adm-form" onSubmit={async (e) => {
           e.preventDefault();
           if (!valido) return;
-          if (await exec({ tipo: "doacao", doador: doador.trim(), valor: n, modo: tipo, obs: obs.trim() || undefined })) { setDoador(""); setValor(""); setObs(""); }
+          if (salvando) return;
+          setSalvando(true);
+          try {
+            if (await exec({ tipo: "doacao", doador: doador.trim(), valor: n, modo: tipo, data, obs: obs.trim() || undefined })) { setDoador(""); setValor(""); setObs(""); setData(hojeISO()); }
+          } finally { setSalvando(false); }
         }}>
           <label>Doador<input value={doador} onChange={(e) => setDoador(e.target.value)} /></label>
           <label>Valor (R$)<input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" /></label>
+          <label>Data<input type="date" value={data} onChange={(e) => setData(e.target.value)} required /></label>
           <label>Tipo
             <select value={tipo} onChange={(e) => setTipo(e.target.value as Doacao["tipo"])}>
               <option>Avulsa</option><option>Apadrinhamento de vaga</option>
             </select>
           </label>
           <label className="adm-form-largo">Observação<input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Opcional" /></label>
-          <button className="adm-btn adm-btn-primario" disabled={!valido}>Registrar</button>
+          <button className="adm-btn adm-btn-primario" disabled={!valido || salvando}>{salvando ? "Salvando…" : "Registrar doação"}</button>
         </form>
       </section>
       <section className="adm-bloco">
         <h2>Registradas</h2>
+        <div className="adm-ferramentas" role="search" aria-label="Filtrar doações">
+          <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar doador ou observação" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar doações" /></label>
+          <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value as typeof filtroTipo)} aria-label="Filtrar tipo de doação"><option value="todos">Todos os tipos</option><option>Avulsa</option><option>Apadrinhamento de vaga</option></select>
+          <label>De<input type="date" value={de} onChange={(e) => setDe(e.target.value)} aria-label="Data inicial" /></label>
+          <label>Até<input type="date" value={ate} onChange={(e) => setAte(e.target.value)} aria-label="Data final" /></label>
+          <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar doações por"><option value="data">Ordenar: data</option><option value="doador">Doador</option><option value="valor">Valor</option></select>
+          <button className="adm-btn adm-btn-fantasma" onClick={() => setDirecao((d) => d === "asc" ? "desc" : "asc")} aria-label="Inverter ordem">{direcao === "asc" ? "↑" : "↓"}</button>
+          {(busca || filtroTipo !== "todos" || de || ate) && <button className="adm-btn adm-btn-fantasma" onClick={() => { setBusca(""); setFiltroTipo("todos"); setDe(""); setAte(""); }}>Limpar filtros</button>}
+          <span className="adm-mudo">{doacoes.length} de {base.doacoes.length} doação(ões)</span>
+        </div>
         <ul className="adm-lista adm-lista-simples">
-          {base.doacoes.map((d) => (
+          {doacoes.map((d) => (
             <li key={d.id}><span>{dma(d.data)} · <strong>{d.doador}</strong> <span className="adm-mudo">· {d.tipo}{d.obs ? ` · ${d.obs}` : ""}</span></span><span className="tom-verde">{reais(d.valor)}</span></li>
           ))}
         </ul>
+        {doacoes.length === 0 && <p className="adm-vazio">Nenhuma doação corresponde a esses filtros.</p>}
       </section>
     </main>
   );
@@ -738,10 +875,38 @@ function Doacoes({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<bo
 /* ───────────────────────────── Relatórios ───────────────────────────── */
 
 function Relatorios({ base, resumo }: { base: Base; resumo: ReturnType<typeof resumirTudo> }) {
-  const t = resumoTransporte(base);
-  const c = resumoCamisetas(base);
+  const [busca, setBusca] = useState("");
+  const [classificacao, setClassificacao] = useState<ClassificacaoParticipante | "todas">("todas");
+  const [transporte, setTransporte] = useState<"todos" | "onibus" | "proprio">("todos");
+  const [situacao, setSituacao] = useState<SituacaoFamilia | "todas">("todas");
+  const [ordenacao, setOrdenacao] = useState("nome");
+  const [direcao, setDirecao] = useState<DirecaoOrdenacao>("asc");
+  const familiasFiltradas = ordenarPor(resumo.familias.filter((f) => {
+    const pessoas = f.pessoas;
+    const termo = normalizarBusca(busca);
+    const responsavelIgreja = normalizarBusca(`${f.familia.responsavel} ${f.familia.igreja}`);
+    const buscaHit = !termo || responsavelIgreja.includes(termo) || pessoas.some((p) => normalizarBusca(p.nome).includes(termo));
+    return buscaHit
+      && pessoas.some((p) => (classificacao === "todas" || p.classificacao === classificacao) && (transporte === "todos" || p.transporte === transporte))
+      && (situacao === "todas" || f.situacao === situacao);
+  }), (f) => ordenacao === "devido" ? f.devido : ordenacao === "pessoas" ? f.pessoas.length : f.familia.responsavel, direcao);
+  const ids = new Set(familiasFiltradas.map((f) => f.familia.id));
+  const termoBusca = normalizarBusca(busca);
+  const responsavelHit = (id: string) => {
+    const familia = base.familias.find((f) => f.id === id);
+    return !!termoBusca && normalizarBusca(`${familia?.responsavel ?? ""} ${familia?.igreja ?? ""}`).includes(termoBusca);
+  };
+  const pessoasNoRecorte = base.pessoas.filter((p) => ids.has(p.familiaId)
+    && (classificacao === "todas" || p.classificacao === classificacao)
+    && (transporte === "todos" || p.transporte === transporte)
+    && (!termoBusca || responsavelHit(p.familiaId) || normalizarBusca(p.nome).includes(termoBusca)));
+  const baseFiltrada: Base = { ...base, familias: base.familias.filter((f) => ids.has(f.id)), pessoas: pessoasNoRecorte, pagamentos: base.pagamentos.filter((p) => ids.has(p.familiaId)), ajustes: base.ajustes.filter((a) => ids.has(a.familiaId)) };
+  const pessoasPagantesRecorte = pessoasNoRecorte.filter((p) => p.valor > 0).length;
+  const transporteFiltrado = resumoTransporte(baseFiltrada);
+  const camisetasFiltradas = resumoCamisetas(baseFiltrada);
   const baixar = () => {
-    const blob = new Blob([csvInscritos(base, resumo)], { type: "text/csv;charset=utf-8" });
+    const resumoCsv = { ...resumo, familias: resumo.familias.filter((f) => ids.has(f.familia.id)) };
+    const blob = new Blob([csvInscritos(baseFiltrada, resumoCsv)], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `inscritos-retiro-2027-${hojeISO()}.csv`;
@@ -752,21 +917,31 @@ function Relatorios({ base, resumo }: { base: Base; resumo: ReturnType<typeof re
     <main className="adm-pagina">
       <h1>Relatórios</h1>
       <section className="adm-grade adm-grade-3">
-        <Cartao rotulo="Pessoas inscritas" valor={String(resumo.totalPessoas)} nota={`${resumo.pessoasPagantes} pagantes · ${resumo.gratuitas} gratuitas`} />
-        <Cartao rotulo="Vão de ônibus" valor={String(t.onibus)} />
-        <Cartao rotulo="Carro próprio" valor={String(t.proprio)} />
+        <Cartao rotulo="Pessoas no recorte" valor={String(pessoasNoRecorte.length)} nota={`${pessoasPagantesRecorte} pagantes · ${pessoasNoRecorte.length - pessoasPagantesRecorte} gratuitas`} />
+        <Cartao rotulo="Vão de ônibus" valor={String(transporteFiltrado.onibus)} />
+        <Cartao rotulo="Carro próprio" valor={String(transporteFiltrado.proprio)} />
       </section>
       <section className="adm-bloco">
         <h2>Camisetas</h2>
-        {c.itens.length === 0 && <p className="adm-vazio">Nenhum tamanho registrado ainda. Registre na ficha de cada família.</p>}
+        {camisetasFiltradas.itens.length === 0 && <p className="adm-vazio">Nenhum tamanho registrado neste recorte. Registre na ficha de cada família.</p>}
         <ul className="adm-lista adm-lista-simples">
-          {c.itens.map(([k, n]) => (<li key={k}><span>{k}</span><span>{n}</span></li>))}
-          <li><span className="adm-mudo">Sem tamanho informado</span><span>{c.semTamanho}</span></li>
+          {camisetasFiltradas.itens.map(([k, n]) => (<li key={k}><span>{k}</span><span>{n}</span></li>))}
+          <li><span className="adm-mudo">Sem tamanho informado</span><span>{camisetasFiltradas.semTamanho}</span></li>
         </ul>
       </section>
       <section className="adm-bloco">
-        <h2>Lista completa</h2>
-        <p className="adm-sub">Todas as pessoas com situação de pagamento, transporte e camiseta, para abrir no Excel ou Planilhas.</p>
+        <h2>Lista de inscritos</h2>
+        <p className="adm-sub">Os filtros abaixo também definem o conteúdo do CSV que será baixado.</p>
+        <div className="adm-ferramentas" role="search" aria-label="Filtrar relatório de inscritos">
+          <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar pessoa, família ou igreja" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar no relatório" /></label>
+          <select value={classificacao} onChange={(e) => setClassificacao(e.target.value as typeof classificacao)} aria-label="Filtrar classificação"><option value="todas">Todas as categorias</option>{CLASSIFICACOES.map((x) => <option key={x}>{x}</option>)}</select>
+          <select value={transporte} onChange={(e) => setTransporte(e.target.value as typeof transporte)} aria-label="Filtrar transporte"><option value="todos">Todos os transportes</option><option value="onibus">Ônibus</option><option value="proprio">Carro próprio</option></select>
+          <select value={situacao} onChange={(e) => setSituacao(e.target.value as typeof situacao)} aria-label="Filtrar situação financeira"><option value="todas">Todas as situações</option>{Object.entries(rotuloSituacao).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+          <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar relatório por"><option value="nome">Ordenar: nome</option><option value="pessoas">Número de pessoas</option><option value="devido">Valor devido</option></select>
+          <button className="adm-btn adm-btn-fantasma" onClick={() => setDirecao((d) => d === "asc" ? "desc" : "asc")} aria-label="Inverter ordem">{direcao === "asc" ? "↑" : "↓"}</button>
+          {(busca || classificacao !== "todas" || transporte !== "todos" || situacao !== "todas") && <button className="adm-btn adm-btn-fantasma" onClick={() => { setBusca(""); setClassificacao("todas"); setTransporte("todos"); setSituacao("todas"); }}>Limpar filtros</button>}
+          <span className="adm-mudo">{pessoasNoRecorte.length} pessoa(s) · {familiasFiltradas.length} família(s)</span>
+        </div>
         <button className="adm-btn adm-btn-primario" onClick={baixar}>Baixar lista (CSV)</button>
       </section>
     </main>

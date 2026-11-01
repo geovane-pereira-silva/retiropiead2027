@@ -4,7 +4,9 @@ import type { DadosBrutos } from "../adm/planilha";
 import { criarToken, lerToken } from "../adm/sessao";
 import type { Sessao } from "../adm/sessao";
 import { CATEGORIAS } from "../adm/tipos";
+import { MODELOS, TAMANHOS_POR_MODELO } from "../adm/relatorios";
 import type { Base, TipoAjuste } from "../adm/tipos";
+import { dataISOValida, hojeLocalISO } from "../adm/utilitarios";
 
 /**
  * Lógica do /adm no servidor. Fala com o Apps Script administrativo separado
@@ -116,46 +118,50 @@ export async function carregar(amb: AmbienteAdm, s: Sessao, fetchImpl: typeof fe
 
 const novoId = (p: string) =>
   `${p}-${Date.now().toString(36).toUpperCase()}${crypto.getRandomValues(new Uint8Array(2)).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "").toUpperCase()}`;
-const dinheiro = (v: unknown) => (typeof v === "number" ? v : Number(String(v ?? "").replace(",", ".")));
-const dataOk = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
+const dataOk = (v: unknown) => (dataISOValida(v) ? v : "");
 const limpo = (v: unknown, max = 200) => higienizarCelula(String(v ?? "").slice(0, max));
 
 export type Gravacao =
   | { tipo: "pagamento"; familiaId: string; valor: number; forma: string; data: string; obs?: string }
-  | { tipo: "despesa"; categoria: string; fornecedor: string; descricao?: string; orcado: number }
+  | { tipo: "despesa"; categoria: string; fornecedor: string; descricao?: string; orcado: number; pago?: number; data?: string }
   | { tipo: "despesa-status"; id: string; status: "Orçado" | "Aprovado" | "Pago" }
-  | { tipo: "doacao"; doador: string; valor: number; modo: string; obs?: string }
+  | { tipo: "doacao"; doador: string; valor: number; modo: string; data?: string; obs?: string }
   | { tipo: "ajuste"; familiaId: string; ajuste: TipoAjuste; descricao: string; valor?: number }
   | { tipo: "camiseta"; pessoaId: string; tamanho: string; modelo: string };
 
 /** Valida e converte uma operação em chamada ao script. Devolve erro de validação sem tocar na planilha. */
 export function prepararGravacao(g: Gravacao, agora = new Date()): { acao: string; corpo: Corpo } | Retorno<never> {
-  const hoje = agora.toISOString().slice(0, 10);
+  const hoje = hojeLocalISO(agora);
   switch (g.tipo) {
     case "pagamento": {
-      const valor = dinheiro(g.valor);
+      const valor = Number(g.valor);
       if (!g.familiaId || !Number.isFinite(valor) || valor === 0 || Math.abs(valor) > 100000)
         return erro("INVALIDO", "Informe a família e um valor válido.");
       if (!["Pix", "Cartão", "Dinheiro"].includes(g.forma)) return erro("INVALIDO", "Forma de pagamento inválida.");
+      if (g.data && !dataOk(g.data)) return erro("INVALIDO", "Informe uma data válida.");
       return { acao: "adm.add", corpo: { aba: "Pagamentos", valores: { id: novoId("P"), data: dataOk(g.data) || hoje, familiaId: limpo(g.familiaId, 40), valor, forma: g.forma, obs: limpo(g.obs) } } };
     }
     case "despesa": {
-      const orcado = dinheiro(g.orcado);
-      if (!(CATEGORIAS as string[]).includes(g.categoria) || !g.fornecedor?.trim() || !Number.isFinite(orcado) || orcado <= 0)
+      const orcado = Number(g.orcado);
+      const pago = Number(g.pago ?? 0);
+      if (!(CATEGORIAS as string[]).includes(g.categoria) || !g.fornecedor?.trim() || !Number.isFinite(orcado) || orcado <= 0 || orcado > 100000 || !Number.isFinite(pago) || pago < 0 || pago > 100000)
         return erro("INVALIDO", "Informe categoria, fornecedor e valor.");
-      return { acao: "adm.add", corpo: { aba: "Despesas", valores: { id: novoId("D"), data: hoje, categoria: g.categoria, fornecedor: limpo(g.fornecedor), descricao: limpo(g.descricao), orcado, pago: 0, status: "Orçado" } } };
+      if (g.data && !dataOk(g.data)) return erro("INVALIDO", "Informe uma data válida.");
+      const status = pago >= orcado ? "Pago" : pago > 0 ? "Aprovado" : "Orçado";
+      return { acao: "adm.add", corpo: { aba: "Despesas", valores: { id: novoId("D"), data: dataOk(g.data) || hoje, categoria: g.categoria, fornecedor: limpo(g.fornecedor), descricao: limpo(g.descricao), orcado, pago, status } } };
     }
     case "despesa-status":
       if (!g.id || !["Orçado", "Aprovado", "Pago"].includes(g.status)) return erro("INVALIDO", "Status inválido.");
       return { acao: "adm.despesaStatus", corpo: { id: limpo(g.id, 40), status: g.status } };
     case "doacao": {
-      const valor = dinheiro(g.valor);
+      const valor = Number(g.valor);
       if (!g.doador?.trim() || !Number.isFinite(valor) || valor <= 0) return erro("INVALIDO", "Informe doador e valor.");
       const tipo = g.modo === "Apadrinhamento de vaga" ? "Apadrinhamento de vaga" : "Avulsa";
-      return { acao: "adm.add", corpo: { aba: "Doações", valores: { id: novoId("O"), data: hoje, doador: limpo(g.doador), valor, tipo, obs: limpo(g.obs) } } };
+      if (g.data && !dataOk(g.data)) return erro("INVALIDO", "Informe uma data válida.");
+      return { acao: "adm.add", corpo: { aba: "Doações", valores: { id: novoId("O"), data: dataOk(g.data) || hoje, doador: limpo(g.doador), valor, tipo, obs: limpo(g.obs) } } };
     }
     case "ajuste": {
-      const valor = dinheiro(g.valor ?? 0);
+      const valor = Number(g.valor ?? 0);
       if (!g.familiaId || !g.descricao?.trim() || !Number.isFinite(valor) || valor < 0)
         return erro("INVALIDO", "Informe a família e a descrição.");
       if (!["Desconto", "Isenção", "Correção de dados", "Observação"].includes(g.ajuste)) return erro("INVALIDO", "Tipo de ajuste inválido.");
@@ -164,6 +170,10 @@ export function prepararGravacao(g: Gravacao, agora = new Date()): { acao: strin
     }
     case "camiseta":
       if (!g.pessoaId || !g.tamanho?.trim()) return erro("INVALIDO", "Informe a pessoa e o tamanho.");
+      if (!(MODELOS as string[]).includes(g.modelo)) return erro("INVALIDO", "Confira o modelo da camiseta.");
+      const permitidos = TAMANHOS_POR_MODELO[g.modelo as keyof typeof TAMANHOS_POR_MODELO] as readonly string[];
+      if (!permitidos.includes(g.tamanho) && (g.modelo === "Baby look" || g.tamanho.length > 80))
+        return erro("INVALIDO", "Confira modelo e tamanho da camiseta.");
       return { acao: "adm.extra", corpo: { pessoaId: limpo(g.pessoaId, 60), tamanho: limpo(g.tamanho, 10), modelo: limpo(g.modelo, 30) } };
   }
 }

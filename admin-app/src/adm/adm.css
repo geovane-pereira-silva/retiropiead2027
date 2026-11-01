@@ -51,9 +51,12 @@
   border-radius: 0.5rem; padding: 0.55rem 0.7rem; min-height: 2.5rem; width: 100%;
 }
 .adm input[type="search"] { border: 0; padding-left: 0; min-height: 2.25rem; }
-.adm-btn { font: inherit; font-weight: 600; border-radius: 0.55rem; padding: 0.6rem 1rem; min-height: 2.5rem; border: 1px solid var(--a-linha); background: #fff; color: var(--a-tinta); cursor: pointer; }
+.adm-btn { font: inherit; font-weight: 600; border-radius: 0.55rem; padding: 0.6rem 1rem; min-height: 2.5rem; border: 1px solid var(--a-linha); background: #fff; color: var(--a-tinta); cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease; }
 .adm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.adm-btn-primario { background: var(--a-tinta); color: #fff; border-color: var(--a-tinta); }
+.adm-btn-primario { background: #176b45; color: #fff; border-color: #176b45; }
+.adm-btn-primario:hover:not(:disabled) { background: #105737; border-color: #105737; }
+.adm-btn:hover:not(:disabled):not(.adm-btn-primario) { background: #f4f7f5; border-color: #c8d6ce; }
+.adm-btn:active:not(:disabled) { transform: translateY(1px); }
 .adm-btn-fantasma { padding: 0.35rem 0.7rem; min-height: 2.25rem; font-weight: 500; margin-left: 0.25rem; }
 .adm-icone { background: transparent; border: 0; padding: 0.5rem; min-width: 2.5rem; min-height: 2.5rem; border-radius: 0.5rem; cursor: pointer; color: var(--a-mudo); }
 
@@ -118,7 +121,9 @@
 /* ferramentas, alternador, quadro */
 .adm-ferramentas { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 .adm-busca { display: flex; align-items: center; gap: 0.5rem; background: #fff; border: 1px solid var(--a-linha); border-radius: 0.5rem; padding: 0 0.7rem; flex: 1 1 16rem; max-width: 26rem; }
+.adm-busca:focus-within { border-color: var(--a-verde); box-shadow: 0 0 0 3px rgb(22 121 76 / 0.12); }
 .adm-ferramentas select { width: auto; }
+.adm-ferramentas > label:not(.adm-busca) { min-width: 8.5rem; }
 .adm-alternar { display: inline-flex; background: #efeeec; border-radius: 0.55rem; padding: 0.2rem; }
 .adm-alternar button { font: inherit; border: 0; background: transparent; padding: 0.4rem 0.9rem; border-radius: 0.4rem; cursor: pointer; min-height: 2.25rem; color: var(--a-mudo); }
 .adm-alternar button.ativo { background: #fff; color: var(--a-tinta); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
@@ -136,6 +141,7 @@
 .adm-pessoa { flex-wrap: wrap; }
 .adm-camiseta { display: flex; gap: 0.3rem; flex-basis: 100%; align-items: center; }
 .adm-camiseta select { width: auto; min-height: 2.25rem; padding: 0.3rem 0.5rem; font-size: 0.85rem; }
+.adm-camiseta-medida { flex: 1 1 9rem; min-width: 8rem; min-height: 2.25rem !important; padding: 0.3rem 0.5rem !important; font-size: 0.85rem !important; }
 .adm-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.7rem; align-items: end; }
 .adm-form-largo { grid-column: 1 / -1; }
 .adm-paleta { position: fixed; z-index: 50; top: 12vh; left: 50%; transform: translateX(-50%); width: min(92vw, 34rem); background: #fff; border-radius: 0.9rem; box-shadow: 0 20px 60px rgb(0 0 0 / 0.25); padding: 0.75rem; display: grid; gap: 0.5rem; }
@@ -153,14 +159,25 @@
   .adm-nav { flex-direction: column; gap: 0.1rem; font-size: 0.68rem; padding: 0.4rem 0.55rem; min-width: 3.6rem; align-items: center; justify-content: center; text-align: center; }
   .adm-pagina { padding: 1rem; }
   .adm-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .adm-grade-3 { grid-template-columns: 1fr; }
+  .adm-grade-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .adm-cartao-valor { font-size: 1.25rem; }
   .adm-duas { grid-template-columns: 1fr; }
   .adm-faixa { padding: 0.5rem 1rem; }
   .adm-gaveta { padding: 1rem; }
   .adm-toast { bottom: 5rem; left: 1rem; right: 1rem; }
+  .adm-ferramentas { align-items: stretch; }
+  .adm-ferramentas > label:not(.adm-busca) { flex: 1 1 8rem; }
+  .adm-ferramentas select { flex: 1 1 9rem; }
+  .adm-busca { max-width: none; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .adm-gaveta { animation: adm-entra 0.18s ease-out; }
   @keyframes adm-entra { from { transform: translateX(1.5rem); opacity: 0; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adm-btn { transition: none; }
+}
+@media (max-width: 24rem) {
+  .adm-grade, .adm-grade-3 { grid-template-columns: 1fr; }
+  .adm-cartao-valor { white-space: normal; }
 }

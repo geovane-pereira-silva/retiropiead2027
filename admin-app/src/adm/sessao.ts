@@ -24,14 +24,14 @@ async function chave(segredo: string): Promise<CryptoKey> {
 }
 
 export async function criarToken(s: Omit<Sessao, "exp">, segredo: string, agora = Date.now()): Promise<string> {
-  if (!segredo || segredo.length < 16) throw new Error("ADM_SESSION_SECRET ausente ou curto demais");
+  if (!segredo || segredo.length < 32) throw new Error("ADM_SESSION_SECRET ausente ou com menos de 32 caracteres");
   const corpo = b64url(enc.encode(JSON.stringify({ ...s, exp: agora + DURACAO_MS })));
   const assinatura = await crypto.subtle.sign("HMAC", await chave(segredo), enc.encode(corpo));
   return `${corpo}.${b64url(assinatura)}`;
 }
 
 export async function lerToken(token: string | undefined, segredo: string | undefined, agora = Date.now()): Promise<Sessao | null> {
-  if (!token || !segredo || segredo.length < 16) return null;
+  if (!token || !segredo || segredo.length < 32) return null;
   const [corpo, assin] = token.split(".");
   if (!corpo || !assin) return null;
   try {

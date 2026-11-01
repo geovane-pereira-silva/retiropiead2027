@@ -1,4 +1,5 @@
 import type { Base, FaixaId, Familia, Pagamento, Pessoa, Transporte } from "./tipos";
+import { hojeLocalISO } from "./utilitarios";
 
 /**
  * DADOS DE DEMONSTRAÇÃO (fictícios). Servem só para mostrar a interface no Preview.
@@ -27,7 +28,7 @@ const SEMENTES: Semente[] = [
 function dia(offset: number): string {
   const d = new Date();
   d.setDate(d.getDate() - offset);
-  return d.toISOString().slice(0, 10);
+  return hojeLocalISO(d);
 }
 
 export function criarDemo(): Base {

@@ -2,8 +2,12 @@ import { rotuloSituacao } from "./calculos";
 import type { ResumoGeral } from "./calculos";
 import type { Base } from "./tipos";
 
-export const TAMANHOS = ["2", "4", "6", "8", "10", "12", "14", "P", "M", "G", "GG", "XG"];
 export const MODELOS = ["Infantil", "Baby look", "Normal"];
+export const TAMANHOS_POR_MODELO = {
+  Infantil: ["6", "8", "10", "12", "14", "Medida especial"],
+  "Baby look": ["P", "M", "G", "GG", "XG"],
+  Normal: ["P", "M", "G", "GG", "XG", "Medida especial"],
+} as const;
 
 export function resumoTransporte(b: Base) {
   const onibus = b.pessoas.filter((p) => p.transporte === "onibus").length;
@@ -29,16 +33,17 @@ const celula = (v: string | number) => {
 
 /** CSV (separador ";" para abrir direto no Excel/Sheets em português). */
 export function csvInscritos(b: Base, r: ResumoGeral): string {
-  const linhas = [["Família", "Pessoa", "Papel", "Classificação interna", "Idade", "Valor", "Transporte", "Camiseta", "Situação da família", "Pago pela família", "Devido pela família", "Telefone", "Igreja"]];
+  const linhas = [["Família", "Pessoa", "Papel", "Classificação interna", "Idade", "Valor individual", "Transporte", "Camiseta", "Situação da família", "Pago pela família (preencher só na 1ª linha)", "Devido pela família (preencher só na 1ª linha)", "Telefone", "Igreja"]];
   for (const f of r.familias) {
-    for (const p of b.pessoas.filter((x) => x.familiaId === f.familia.id)) {
+    const pessoas = b.pessoas.filter((x) => x.familiaId === f.familia.id);
+    pessoas.forEach((p, indice) => {
       linhas.push([
         f.familia.responsavel, p.nome, p.papel, p.classificacao, p.idade === null ? "" : String(p.idade), String(p.valor),
         p.transporte === "onibus" ? "Ônibus" : "Carro próprio",
         p.tamanho ? `${p.modelo ?? ""} ${p.tamanho}`.trim() : "",
-        rotuloSituacao[f.situacao], String(f.pago), String(f.devido), f.familia.telefone, f.familia.igreja,
+        rotuloSituacao[f.situacao], indice === 0 ? String(f.pago) : "", indice === 0 ? String(f.devido) : "", f.familia.telefone, f.familia.igreja,
       ]);
-    }
+    });
   }
   return "﻿" + linhas.map((l) => l.map(celula).join(";")).join("\r\n");
 }

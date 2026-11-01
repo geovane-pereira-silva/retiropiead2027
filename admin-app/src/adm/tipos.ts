@@ -28,7 +28,7 @@ export type Familia = {
   igreja: string;
   cidade: string;
   /** "Pix" ou "Cartão", como a família escolheu pagar */
-  formaPrevista: "Pix" | "Cartão";
+  formaPrevista: FormaPagamento;
   observacao?: string;
 };
 

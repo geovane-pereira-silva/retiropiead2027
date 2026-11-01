@@ -1,4 +1,4 @@
-import { carregar, entrar, gravar, sessaoDe, type AmbienteAdm, type Gravacao } from "./adm.server";
+import { admReal, carregar, entrar, gravar, sessaoDe, type AmbienteAdm, type Gravacao } from "./adm.server";
 import { cookieLimpo, cookieSessao, lerCookie } from "../adm/sessao";
 
 const json = (dados: unknown, status = 200, headers: HeadersInit = {}) =>
@@ -11,7 +11,7 @@ const ambiente = (): AmbienteAdm => ({
   url: process.env.ADM_APPS_SCRIPT_URL,
   token: process.env.ADM_TOKEN,
   segredo: process.env.ADM_SESSION_SECRET,
-  real: process.env.VERCEL_ENV === "production",
+  real: admReal({ VERCEL_ENV: process.env.VERCEL_ENV, ADM_REAL: process.env.ADM_REAL }),
 });
 
 export async function atenderAdmin(request: Request): Promise<Response> {
@@ -24,7 +24,7 @@ export async function atenderAdmin(request: Request): Promise<Response> {
 
   if (request.method === "GET" && acao === "state") {
     if (amb.real) {
-      const pronto = !!(amb.url && amb.token && amb.segredo && amb.segredo.length >= 16);
+      const pronto = !!(amb.url && amb.token && amb.segredo && amb.segredo.length >= 32);
       if (!pronto) return json({ modo: "fechado" });
       return json(sessao ? { modo: "dentro", nome: sessao.nome } : { modo: "login" });
     }

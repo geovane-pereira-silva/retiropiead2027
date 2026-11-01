@@ -16,6 +16,7 @@ import type {
   Transporte,
 } from "./tipos";
 import { CATEGORIAS } from "./tipos";
+import { lerDinheiro } from "./utilitarios";
 
 /**
  * Estrutura das abas criadas pelo sistema. A MESMA lista existe em apps-script/Code.gs
@@ -43,12 +44,7 @@ export type DadosBrutos = {
 const txt = (v: unknown): string => (v === undefined || v === null ? "" : String(v).trim());
 /** Aceita número, "1234.5" ou "R$ 1.234,50". */
 export function numero(v: unknown): number {
-  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  let s = txt(v).replace(/[^\d,.-]/g, "");
-  if (!s) return 0;
-  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
+  return lerDinheiro(v);
 }
 /** Datas da planilha podem chegar como "2026-11-25", ISO completo ou Date serializada. */
 export function dataISO(v: unknown): string {
@@ -151,6 +147,13 @@ export function montarBase(d: DadosBrutos): Base {
       data: dataISO(r.data) || undefined,
     }))
     .filter((x) => x.id);
+
+  // Se já houver lançamentos só por cartão/dinheiro, não sinalize vencimentos do calendário Pix.
+  for (const familia of familias.values()) {
+    const formas = pagamentos.filter((p) => p.familiaId === familia.id).map((p) => p.forma);
+    if (formas.length && formas.every((forma) => forma === "Cartão")) familia.formaPrevista = "Cartão";
+    else if (formas.length && formas.every((forma) => forma === "Dinheiro")) familia.formaPrevista = "Dinheiro";
+  }
 
   const doacoes: Doacao[] = d.doacoes
     .map((r): Doacao => ({

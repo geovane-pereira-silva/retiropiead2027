@@ -10,7 +10,9 @@ const ADM_ABAS = {
 const ADM_ESCRITA = ["Pagamentos", "Despesas", "Doações", "Ajustes"];
 const ADM_MAX_ERROS = 5;
 const ADM_BLOQUEIO_S = 900;
-const ADM_COLUNAS_CADASTRO = ["familiaId", "nome", "papel", "cpf", "email", "idadeNaDataDoRetiro", "faixa", "valor", "valorTexto", "transporte", "responsavelNome", "telefone", "igreja", "cidade"];
+// Campos mínimos necessários ao painel. CPF, e-mail, nascimento, contato de emergência e necessidades
+// permanecem no Sheets e nunca são enviados ao navegador.
+const ADM_COLUNAS_CADASTRO = ["familiaId", "ordem", "nome", "papel", "idadeNaDataDoRetiro", "faixa", "valor", "valorTexto", "transporte", "responsavelNome", "telefone", "igreja", "cidade", "statusPagamento", "statusInterno"];
 
 function admSaida(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -118,7 +120,7 @@ function admHistorico(usuario, acao, detalhe) {
   aba.appendRow([new Date(), usuario || "", acao, String(detalhe || "").slice(0, 500)]);
 }
 
-function admObjetos(aba, remover) {
+function admObjetos(aba, remover, permitido) {
   if (!aba || aba.getLastRow() < 2) return [];
   const valores = aba.getRange(1, 1, aba.getLastRow(), aba.getLastColumn()).getValues();
   const cab = valores[0].map(function (v) { return String(v).trim(); });
@@ -126,7 +128,7 @@ function admObjetos(aba, remover) {
   return valores.slice(1).map(function (linha) {
     const obj = {};
     cab.forEach(function (nome, i) {
-      if (nome && fora.indexOf(nome) === -1) obj[nome] = linha[i] instanceof Date
+      if (nome && fora.indexOf(nome) === -1 && (!permitido || permitido.indexOf(nome) !== -1)) obj[nome] = linha[i] instanceof Date
         ? Utilities.formatDate(linha[i], Session.getScriptTimeZone(), "yyyy-MM-dd")
         : linha[i] == null ? "" : linha[i];
     });
@@ -186,7 +188,7 @@ function admLer() {
   admSincronizarStatus(inscricoes, cab);
   const por = function (nome, remover) { return admObjetos(planilha.getSheetByName(nome), remover); };
   return admSaida({ ok: true, dados: {
-    inscricoes: admObjetos(inscricoes, ["cpf", "acesso_sistema", "idempotencyKey", "emergenciaTelefone"]),
+    inscricoes: admObjetos(inscricoes, [], ADM_COLUNAS_CADASTRO),
     pagamentos: por("Pagamentos"), despesas: por("Despesas"), doacoes: por("Doações"),
     ajustes: por("Ajustes"), extras: por("Extras"),
   }});
@@ -202,6 +204,20 @@ function admAdd(d) {
   if (aba.getLastRow() > 1) {
     const ids = aba.getRange(2, 1, aba.getLastRow() - 1, 1).getDisplayValues().map(function (l) { return String(l[0]); });
     if (ids.indexOf(String(v.id)) !== -1) return admSaida({ ok: true, jaExiste: true });
+  }
+  if (d.aba === "Pagamentos") {
+    const familiaId = String(v.familiaId || "").trim();
+    const valor = Number(v.valor);
+    if (!familiaId || !Number.isFinite(valor) || valor === 0 || Math.abs(valor) > 100000)
+      return admSaida({ ok: false, code: "INVALIDO", message: "Família ou valor do pagamento inválido." });
+    const ixFamilia = cols.indexOf("familiaId");
+    const ixValor = cols.indexOf("valor");
+    const anteriores = aba.getLastRow() > 1 ? aba.getRange(2, 1, aba.getLastRow() - 1, cols.length).getValues() : [];
+    const saldo = anteriores.reduce(function (s, linha) {
+      return String(linha[ixFamilia]) === familiaId ? s + (Number(linha[ixValor]) || 0) : s;
+    }, 0);
+    if (valor < 0 && saldo + valor < -0.005)
+      return admSaida({ ok: false, code: "INVALIDO", message: "O estorno não pode superar o valor líquido já recebido desta família." });
   }
   const todos = Object.assign({}, v, { lancadoPor: d.usuario || "", lancadoEm: new Date() });
   aba.getRange(aba.getLastRow() + 1, 1, 1, cols.length).setValues([cols.map(function (c) { return todos[c] == null ? "" : todos[c]; })]);

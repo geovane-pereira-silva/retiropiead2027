@@ -49,10 +49,10 @@ export function resumirFamilia(
   else situacao = "pendente";
 
   // Distribui o já pago pelas parcelas, da mais antiga para a mais nova.
-  const parcela = devido / VENCIMENTOS_PIX.length;
+  const parcela = familia.formaPrevista === "Pix" ? devido / VENCIMENTOS_PIX.length : 0;
   let restantePago = pago;
   const parcelasAbertas: { data: string; valor: number }[] = [];
-  for (const data of VENCIMENTOS_PIX) {
+  for (const data of familia.formaPrevista === "Pix" ? VENCIMENTOS_PIX : []) {
     const coberto = Math.min(parcela, Math.max(0, restantePago));
     restantePago -= coberto;
     const aberto = arred(parcela - coberto);
@@ -79,7 +79,7 @@ export type ResumoGeral = {
   saldoAtual: number; // recebido + doações - despesas pagas
   saldoProjetado: number; // devido + doações - orçado
   ticketMedio: number;
-  pontoEquilibrio: number; // pessoas pagantes necessárias para cobrir o orçado
+  pontoEquilibrio: number | null; // estimativa depende da média observada dos pagantes
   atrasadas: ResumoFamilia[];
   porSituacao: Record<SituacaoFamilia, number>;
 };
@@ -96,7 +96,7 @@ export function resumirTudo(base: Base, hoje: string): ResumoGeral {
   const despesasPagas = arred(base.despesas.reduce((s, d) => s + d.pago, 0));
   const despesasAPagar = Math.max(0, arred(orcado - despesasPagas));
   const ticketMedio = pessoasPagantes ? arred(devido / pessoasPagantes) : 0;
-  const pontoEquilibrio = ticketMedio ? Math.ceil(Math.max(0, orcado - doacoes) / ticketMedio) : 0;
+  const pontoEquilibrio = ticketMedio ? Math.ceil(Math.max(0, orcado - doacoes) / ticketMedio) : null;
   const porSituacao: Record<SituacaoFamilia, number> = { pre: 0, pendente: 0, parcial: 0, quitado: 0, isento: 0 };
   for (const f of familias) porSituacao[f.situacao]++;
   return {

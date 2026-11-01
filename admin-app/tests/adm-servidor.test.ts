@@ -4,8 +4,9 @@ import assert from "node:assert/strict";
 import { admDemo, admReal, entrar, carregar, gravar, prepararGravacao } from "../src/api/adm.server";
 import { criarToken, lerCookie, lerToken } from "../src/adm/sessao";
 import { dataISO, montarBase, numero } from "../src/adm/planilha";
+import { atenderAdmin } from "../src/api/adm.route";
 
-const SEGREDO = "segredo-de-teste-com-mais-de-16";
+const SEGREDO = "segredo-de-teste-com-mais-de-32-caracteres";
 const amb = { url: "https://exemplo/exec", token: "adm", segredo: SEGREDO, real: true };
 const resp = (o: unknown): typeof fetch => (async () => new Response(JSON.stringify(o))) as typeof fetch;
 
@@ -58,9 +59,33 @@ test("validação das gravações", () => {
     assert.match(String(v.id), /^P-/);
   }
   assert.ok(!("ok" in prepararGravacao({ tipo: "pagamento", familiaId: "F1", valor: -50, forma: "Pix", data: "" }))); // estorno
+  assert.ok("ok" in prepararGravacao({ tipo: "pagamento", familiaId: "F1", valor: 50, forma: "Pix", data: "2026-02-30" }));
+  assert.ok(!("ok" in prepararGravacao({ tipo: "pagamento", familiaId: "F1", valor: 50, forma: "Pix", data: "2026-11-01" })));
   assert.ok("ok" in prepararGravacao({ tipo: "despesa", categoria: "Inventada", fornecedor: "x", orcado: 10 }));
   assert.ok("ok" in prepararGravacao({ tipo: "ajuste", familiaId: "F1", ajuste: "Desconto", descricao: "x", valor: 0 }));
   assert.ok(!("ok" in prepararGravacao({ tipo: "ajuste", familiaId: "F1", ajuste: "Observação", descricao: "ligou", valor: 0 })));
+});
+
+test("despesa salva data, pagamento parcial e status coerente", () => {
+  const r = prepararGravacao({ tipo: "despesa", categoria: "Transporte", fornecedor: "Viação", orcado: 1000, pago: 250, data: "2026-11-01" });
+  assert.ok(!("ok" in r));
+  if (!("ok" in r)) {
+    const valores = r.corpo.valores as Record<string, unknown>;
+    assert.equal(valores.pago, 250);
+    assert.equal(valores.status, "Aprovado");
+    assert.equal(valores.data, "2026-11-01");
+  }
+  const paga = prepararGravacao({ tipo: "despesa", categoria: "Transporte", fornecedor: "Viação", orcado: 1000, pago: 1000, data: "2026-02-30" });
+  assert.ok("ok" in paga);
+});
+
+test("doação guarda data informada e camiseta valida modelo e tamanho", () => {
+  const doacao = prepararGravacao({ tipo: "doacao", doador: "Igreja", valor: 50, modo: "Avulsa", data: "2026-11-01" });
+  assert.ok(!("ok" in doacao));
+  if (!("ok" in doacao)) assert.equal((doacao.corpo.valores as Record<string, unknown>).data, "2026-11-01");
+  assert.ok(!("ok" in prepararGravacao({ tipo: "camiseta", pessoaId: "F1-1", tamanho: "M", modelo: "Normal" })));
+  assert.ok("ok" in prepararGravacao({ tipo: "camiseta", pessoaId: "F1-1", tamanho: "14", modelo: "Baby look" }));
+  assert.ok("ok" in prepararGravacao({ tipo: "camiseta", pessoaId: "F1-1", tamanho: "M", modelo: "Inventado" }));
 });
 
 test("gravar repassa usuário da sessão e erros da planilha", async () => {
@@ -130,4 +155,59 @@ test("classificação privada preserva status e visitante sem inventar idade", (
   ]);
   assert.equal(b.pessoas[5].idade, null);
   assert.equal(b.pessoas[5].faixa, "visitante");
+});
+
+test("rotas: preview é demonstração e produção sem segredos fica fechada", async () => {
+  const anteriores = { env: process.env.VERCEL_ENV, real: process.env.ADM_REAL, url: process.env.ADM_APPS_SCRIPT_URL, token: process.env.ADM_TOKEN, segredo: process.env.ADM_SESSION_SECRET };
+  try {
+    process.env.VERCEL_ENV = "preview";
+    delete process.env.ADM_REAL; delete process.env.ADM_APPS_SCRIPT_URL; delete process.env.ADM_TOKEN; delete process.env.ADM_SESSION_SECRET;
+    assert.deepEqual(await (await atenderAdmin(new Request("https://example.test/adm/api?action=state"))).json(), { modo: "demo" });
+    process.env.VERCEL_ENV = "production";
+    assert.deepEqual(await (await atenderAdmin(new Request("https://example.test/adm/api?action=state"))).json(), { modo: "fechado" });
+  } finally {
+    if (anteriores.env === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = anteriores.env;
+    if (anteriores.real === undefined) delete process.env.ADM_REAL; else process.env.ADM_REAL = anteriores.real;
+    if (anteriores.url === undefined) delete process.env.ADM_APPS_SCRIPT_URL; else process.env.ADM_APPS_SCRIPT_URL = anteriores.url;
+    if (anteriores.token === undefined) delete process.env.ADM_TOKEN; else process.env.ADM_TOKEN = anteriores.token;
+    if (anteriores.segredo === undefined) delete process.env.ADM_SESSION_SECRET; else process.env.ADM_SESSION_SECRET = anteriores.segredo;
+  }
+});
+
+test("rotas: login entrega cookie HttpOnly e gravação passa pela sessão", async () => {
+  const anteriores = { env: process.env.VERCEL_ENV, real: process.env.ADM_REAL, url: process.env.ADM_APPS_SCRIPT_URL, token: process.env.ADM_TOKEN, segredo: process.env.ADM_SESSION_SECRET };
+  const fetchAnterior = globalThis.fetch;
+  const chamadas: Record<string, unknown>[] = [];
+  try {
+    process.env.VERCEL_ENV = "production";
+    delete process.env.ADM_REAL;
+    process.env.ADM_APPS_SCRIPT_URL = "https://example.test/exec";
+    process.env.ADM_TOKEN = "token-de-integracao";
+    process.env.ADM_SESSION_SECRET = SEGREDO;
+    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      chamadas.push(JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>);
+      const acao = chamadas.at(-1)?.acao;
+      return new Response(JSON.stringify(acao === "adm.login" ? { ok: true, nome: "Ana" } : { ok: true }));
+    }) as typeof fetch;
+    const login = await atenderAdmin(new Request("https://example.test/adm/api?action=login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "ana@example.com", senha: "1234" }) }));
+    assert.equal(login.status, 200);
+    const cookie = login.headers.get("set-cookie") ?? "";
+    assert.match(cookie, /HttpOnly; SameSite=Lax; Max-Age=28800; Secure/);
+    assert.equal((await login.json() as { dados: { nome: string } }).dados.nome, "Ana");
+    const valorCookie = cookie.split(";")[0];
+    const estado = await atenderAdmin(new Request("https://example.test/adm/api?action=state", { headers: { cookie: valorCookie } }));
+    assert.deepEqual(await estado.json(), { modo: "dentro", nome: "Ana" });
+    const salvar = await atenderAdmin(new Request("https://example.test/adm/api?action=write", { method: "POST", headers: { "content-type": "application/json", cookie: valorCookie }, body: JSON.stringify({ tipo: "pagamento", familiaId: "F-1", valor: 50, forma: "Pix", data: "2026-11-01" }) }));
+    assert.equal(salvar.status, 200);
+    assert.equal(chamadas.at(-1)?.acao, "adm.add");
+    assert.equal(chamadas.at(-1)?.admToken, "token-de-integracao");
+    assert.equal(chamadas.at(-1)?.usuario, "ana@example.com");
+  } finally {
+    globalThis.fetch = fetchAnterior;
+    if (anteriores.env === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = anteriores.env;
+    if (anteriores.real === undefined) delete process.env.ADM_REAL; else process.env.ADM_REAL = anteriores.real;
+    if (anteriores.url === undefined) delete process.env.ADM_APPS_SCRIPT_URL; else process.env.ADM_APPS_SCRIPT_URL = anteriores.url;
+    if (anteriores.token === undefined) delete process.env.ADM_TOKEN; else process.env.ADM_TOKEN = anteriores.token;
+    if (anteriores.segredo === undefined) delete process.env.ADM_SESSION_SECRET; else process.env.ADM_SESSION_SECRET = anteriores.segredo;
+  }
 });

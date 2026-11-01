@@ -2,7 +2,12 @@
   "name": "retiro2027-admin",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "vite dev", "build": "vite build", "preview": "vite preview" },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --import ./tests/register.mjs --test tests/*.test.ts"
+  },
   "dependencies": {
     "@tanstack/react-router": "^1.170.16",
     "@tanstack/react-start": "^1.168.60",

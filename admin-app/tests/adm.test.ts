@@ -37,6 +37,15 @@ test("parcelas Pix: pago cobre as mais antigas e atraso conta só vencidas", () 
   assert.equal(r.proximoVencimento?.data, "2026-12-25");
 });
 
+test("cartão e dinheiro não recebem alertas automáticos do calendário Pix", () => {
+  const b = baseMinima([]);
+  b.familias[0].formaPrevista = "Cartão";
+  const r = resumirFamilia(b.familias[0], b, "2026-12-10");
+  assert.equal(r.atrasado, 0);
+  assert.equal(r.parcelasAbertas.length, 0);
+  assert.equal(r.aReceber, 400);
+});
+
 test("totais, saldo e ponto de equilíbrio", () => {
   const b = baseMinima([400]);
   const t = resumirTudo(b, HOJE);
@@ -47,6 +56,10 @@ test("totais, saldo e ponto de equilíbrio", () => {
   assert.equal(t.ticketMedio, 400);
   assert.equal(t.pontoEquilibrio, Math.ceil((800 - 100) / 400));
   assert.equal(t.gratuitas, 1);
+  const baseSemPagantes = baseMinima([]);
+  baseSemPagantes.pessoas.forEach((p) => { p.valor = 0; });
+  const semPagantes = resumirTudo(baseSemPagantes, HOJE);
+  assert.equal(semPagantes.pontoEquilibrio, null);
 });
 
 test("previsão por vencimento soma o que falta", () => {
