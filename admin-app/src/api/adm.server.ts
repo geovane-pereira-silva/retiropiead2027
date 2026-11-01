@@ -1,4 +1,4 @@
-import { higienizarCelula } from "../lib/inscricao";
+import { higienizarCelula } from "../lib/seguranca";
 import { montarBase } from "../adm/planilha";
 import type { DadosBrutos } from "../adm/planilha";
 import { criarToken, lerToken } from "../adm/sessao";
@@ -7,8 +7,8 @@ import { CATEGORIAS } from "../adm/tipos";
 import type { Base, TipoAjuste } from "../adm/tipos";
 
 /**
- * Lógica do /adm no servidor. Fala com o MESMO Apps Script do site (APPS_SCRIPT_URL),
- * mas com outra senha (ADM_TOKEN), e nunca expõe CPF ao navegador: a conferência da senha
+ * Lógica do /adm no servidor. Fala com o Apps Script administrativo separado
+ * (ADM_APPS_SCRIPT_URL), ligado à mesma planilha, e nunca expõe CPF ao navegador: a conferência da senha
  * (4 primeiros dígitos do CPF) acontece dentro do Apps Script.
  */
 export type AmbienteAdm = {

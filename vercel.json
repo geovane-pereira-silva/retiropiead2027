@@ -1,3 +1,13 @@
 {
-  "installCommand": "bun install"
+  "installCommand": "bun install",
+  "rewrites": [
+    {
+      "destination": "https://retiro2027-admin.vercel.app/adm",
+      "source": "/adm"
+    },
+    {
+      "destination": "https://retiro2027-admin.vercel.app/adm/:path*",
+      "source": "/adm/:path*"
+    }
+  ]
 }

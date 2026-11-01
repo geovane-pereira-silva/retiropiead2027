@@ -14,7 +14,6 @@ import { Route as InscricaoRouteImport } from './routes/inscricao'
 import { Route as DeckIndexRouteImport } from './routes/deck.index'
 import { Route as DeckPrintRouteImport } from './routes/deck.print'
 import { Route as DeckSlugRouteImport } from './routes/deck.$slug'
-import { Route as AdmRouteImport } from './routes/adm'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,11 +40,6 @@ const DeckSlugRoute = DeckSlugRouteImport.update({
   path: '/deck/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdmRoute = AdmRouteImport.update({
-  id: '/adm',
-  path: '/adm',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -53,7 +47,6 @@ export interface FileRoutesByFullPath {
   '/deck/': typeof DeckIndexRoute
   '/deck/$slug': typeof DeckSlugRoute
   '/deck/print': typeof DeckPrintRoute
-  '/adm': typeof AdmRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -61,7 +54,6 @@ export interface FileRoutesByTo {
   '/deck': typeof DeckIndexRoute
   '/deck/$slug': typeof DeckSlugRoute
   '/deck/print': typeof DeckPrintRoute
-  '/adm': typeof AdmRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,18 +62,16 @@ export interface FileRoutesById {
   '/deck/': typeof DeckIndexRoute
   '/deck/$slug': typeof DeckSlugRoute
   '/deck/print': typeof DeckPrintRoute
-  '/adm': typeof AdmRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/inscricao' | '/deck/' | '/deck/$slug' | '/deck/print' | '/adm'
+  fullPaths: '/' | '/inscricao' | '/deck/' | '/deck/$slug' | '/deck/print'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inscricao' | '/deck' | '/deck/$slug' | '/deck/print' | '/adm'
-  id: '__root__' | '/' | '/inscricao' | '/deck/' | '/deck/$slug' | '/deck/print' | '/adm'
+  to: '/' | '/inscricao' | '/deck' | '/deck/$slug' | '/deck/print'
+  id: '__root__' | '/' | '/inscricao' | '/deck/' | '/deck/$slug' | '/deck/print'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AdmRoute: typeof AdmRoute
   IndexRoute: typeof IndexRoute
   InscricaoRoute: typeof InscricaoRoute
   DeckIndexRoute: typeof DeckIndexRoute
@@ -119,13 +109,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeckPrintRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/adm': {
-      id: '/adm'
-      path: '/adm'
-      fullPath: '/adm'
-      preLoaderRoute: typeof AdmRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/deck/$slug': {
       id: '/deck/$slug'
       path: '/deck/$slug'
@@ -142,7 +125,6 @@ const rootRouteChildren: RootRouteChildren = {
   DeckIndexRoute: DeckIndexRoute,
   DeckSlugRoute: DeckSlugRoute,
   DeckPrintRoute: DeckPrintRoute,
-  AdmRoute: AdmRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

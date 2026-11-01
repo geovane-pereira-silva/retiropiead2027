@@ -55,6 +55,6 @@ export function lerCookie(cabecalho: string | null | undefined, nome = NOME_COOK
 }
 
 export const cookieSessao = (token: string, producao: boolean): string =>
-  `${NOME_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${DURACAO_MS / 1000}${producao ? "; Secure" : ""}`;
+  `${NOME_COOKIE}=${token}; Path=/adm; HttpOnly; SameSite=Lax; Max-Age=${DURACAO_MS / 1000}${producao ? "; Secure" : ""}`;
 export const cookieLimpo = (producao: boolean): string =>
-  `${NOME_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${producao ? "; Secure" : ""}`;
+  `${NOME_COOKIE}=; Path=/adm; HttpOnly; SameSite=Lax; Max-Age=0${producao ? "; Secure" : ""}`;

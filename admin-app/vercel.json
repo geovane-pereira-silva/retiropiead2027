@@ -1,0 +1,6 @@
+{
+  "installCommand": "bun install",
+  "rewrites": [
+    { "source": "/adm/assets/:path*", "destination": "/assets/:path*" }
+  ]
+}

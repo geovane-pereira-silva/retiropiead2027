@@ -1,4 +1,4 @@
-import { evento } from "../content/evento";
+import { faixas } from "../content/evento";
 import type {
   Ajuste,
   Base,
@@ -18,7 +18,7 @@ import type {
 import { CATEGORIAS } from "./tipos";
 
 /**
- * Estrutura das abas criadas pelo sistema. A MESMA lista existe em docs/apps-script/Code.gs
+ * Estrutura das abas criadas pelo sistema. A MESMA lista existe em apps-script/Code.gs
  * (função prepararPlanilha). A aba "Inscrições" é do site e nunca é alterada por aqui.
  */
 export const ABAS = {
@@ -61,7 +61,7 @@ export function dataISO(v: unknown): string {
 
 function faixaId(rotulo: string, idade: number | null, valor: number): FaixaId {
   if (/visitante/i.test(rotulo)) return "visitante";
-  const f = evento.faixas.find((x) => x.rotulo === rotulo);
+  const f = faixas.find((x) => x.rotulo === rotulo);
   if (f && (f.id === "menor-5" || f.id === "5-9" || f.id === "10-mais")) return f.id;
   if (idade !== null) return idade < 5 ? "menor-5" : idade < 10 ? "5-9" : "10-mais";
   return valor === 0 ? "menor-5" : valor <= 200 ? "5-9" : "10-mais";
