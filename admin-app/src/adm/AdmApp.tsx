@@ -229,7 +229,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
         {(!base || !resumo) && <main className="adm-pagina"><p className="adm-sub">{carregando ? "Carregando a planilha…" : "Sem dados."}</p></main>}
         {base && resumo && (
           <>
-            {tela === "painel" && <Painel resumo={resumo} hoje={hoje} abrir={(id) => { setTela("inscritos"); setAberta(id); }} />}
+            {tela === "painel" && <Painel resumo={resumo} hoje={hoje} abrir={(id) => { setTela("inscritos"); setAberta(id); }} navegar={setTela} />}
             {tela === "inscritos" && <Inscritos resumo={resumo} aberta={aberta} setAberta={setAberta} hoje={hoje} base={base} lancar={lancarPagamento} exec={exec} />}
             {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} />}
             {tela === "despesas" && <Despesas base={base} exec={exec} />}
@@ -281,7 +281,7 @@ function Cartao({ rotulo, valor, nota, tom }: { rotulo: string; valor: string; n
   );
 }
 
-function Painel({ resumo, hoje, abrir }: { resumo: ReturnType<typeof resumirTudo>; hoje: string; abrir: (id: string) => void }) {
+function Painel({ resumo, hoje, abrir, navegar }: { resumo: ReturnType<typeof resumirTudo>; hoje: string; abrir: (id: string) => void; navegar: (tela: Tela) => void }) {
   const fluxo = fluxoPrevisto(resumo, hoje);
   const maximo = Math.max(1, ...fluxo.map((f) => f.valor));
   const proximos = resumo.familias
@@ -291,7 +291,18 @@ function Painel({ resumo, hoje, abrir }: { resumo: ReturnType<typeof resumirTudo
   const falta = resumo.pontoEquilibrio === null ? null : Math.max(0, resumo.pontoEquilibrio - resumo.pessoasPagantes);
   return (
     <main className="adm-pagina">
-      <h1>Visão geral</h1>
+      <header className="adm-cabecalho">
+        <div>
+          <p className="adm-eyebrow">CENTRAL FINANCEIRA <span aria-hidden="true">·</span> RETIRO 2027</p>
+          <h1>Visão geral</h1>
+          <p className="adm-cabecalho-sub">Inscrições, recebimentos e custos em uma visão clara.</p>
+        </div>
+        <div className="adm-cabecalho-acoes">
+          <span className="adm-data-chip">Atualizado em {dma(hoje)}</span>
+          <button className="adm-btn adm-btn-secundario" onClick={() => navegar("despesas")}><Receipt size={16} aria-hidden /> Nova despesa</button>
+          <button className="adm-btn adm-btn-primario" onClick={() => navegar("pagamentos")}><BadgeDollarSign size={17} aria-hidden /> Lançar recebimento</button>
+        </div>
+      </header>
       <section className="adm-grade" aria-label="Resumo financeiro">
         <Cartao rotulo="Recebido" valor={reais(resumo.recebido)} tom="verde" nota={`de ${reais(resumo.devido)} previstos`} />
         <Cartao rotulo="A receber" valor={reais(resumo.aReceber)} tom="ambar" nota={`${resumo.atrasadas.length} família(s) em atraso`} />
