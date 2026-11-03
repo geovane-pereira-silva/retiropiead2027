@@ -181,3 +181,305 @@
   .adm-grade, .adm-grade-3 { grid-template-columns: 1fr; }
   .adm-cartao-valor { white-space: normal; }
 }
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Direção visual 2027 · sala de controle calma, clara e humana.
+   Escopada em .adm: não altera a identidade nem os estilos da landing pública.
+   ────────────────────────────────────────────────────────────────────────── */
+.adm {
+  --a-bg: #f4f5ef;
+  --a-card: #fffefa;
+  --a-tinta: #18312a;
+  --a-mudo: #64766e;
+  --a-linha: #e2e8df;
+  --a-verde: #16734e;
+  --a-verde-fundo: #e5f2e9;
+  --a-ambar: #96600d;
+  --a-ambar-fundo: #fff3d9;
+  --a-vermelho: #ad4438;
+  --a-vermelho-fundo: #ffebe6;
+  --a-azul: #315e86;
+  --a-azul-fundo: #e7eff7;
+  --a-foco: #245e49;
+  --a-sombra: 0 14px 38px rgb(29 57 44 / 0.055);
+  background:
+    radial-gradient(ellipse at 88% 2%, rgb(220 235 212 / .4), transparent 31rem),
+    var(--a-bg);
+  color: var(--a-tinta);
+  letter-spacing: -0.008em;
+}
+.adm h1 { font-size: clamp(1.65rem, 2.2vw, 2.15rem); font-weight: 690; letter-spacing: -0.045em; }
+.adm h2 { letter-spacing: -0.025em; }
+.adm-sub { line-height: 1.65; }
+.adm :focus-visible { outline: 3px solid #a9cb68; outline-offset: 3px; }
+
+/* Navegação com contraste e hierarquia de produto */
+.adm-lateral {
+  background: linear-gradient(175deg, #103b30 0%, #0d3028 74%, #102b25 100%);
+  color: #f5f4e9;
+  border-right: 0;
+  padding: 1.25rem 0.85rem;
+  box-shadow: 8px 0 30px rgb(19 49 39 / .06);
+}
+.adm-logo {
+  color: #fbf9ef;
+  padding: 0.55rem 0.7rem 1.4rem;
+  font-size: 0.94rem;
+  letter-spacing: -0.025em;
+}
+.adm-logo::before {
+  content: "RCJ";
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.8rem;
+  border-radius: 0.7rem;
+  background: #d9ed83;
+  color: #163d31;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+}
+.adm-lateral nav { gap: 0.3rem; }
+.adm-nav {
+  color: #b8cbc1;
+  padding: 0.7rem 0.75rem;
+  border-radius: 0.75rem;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.adm-nav:hover { background: rgb(255 255 255 / .075); color: #fff; transform: translateX(2px); }
+.adm-nav.ativo {
+  color: #163d31;
+  background: #d9ed83;
+  font-weight: 700;
+  box-shadow: 0 5px 18px rgb(0 0 0 / .12);
+}
+.adm-usuario { border-top-color: rgb(255 255 255 / .15); }
+.adm-usuario .adm-mudo { color: #b8cbc1; }
+.adm-usuario .adm-nav:hover { color: white; }
+.adm-atalho { color: #b8cbc1; }
+.adm-atalho:hover { color: #fff; }
+
+/* Espaço de trabalho */
+.adm-pagina {
+  width: min(100%, 94rem);
+  padding: clamp(1.25rem, 3.2vw, 2.75rem) clamp(1rem, 3.4vw, 3.25rem) 3rem;
+  gap: 1.35rem;
+}
+.adm-pagina > h1 { margin-bottom: .15rem; }
+.adm-bloco, .adm-cartao {
+  border-color: var(--a-linha);
+  border-radius: 1.05rem;
+  box-shadow: var(--a-sombra);
+}
+.adm-bloco { padding: clamp(1rem, 2vw, 1.4rem); }
+.adm-grade { gap: 0.9rem; }
+.adm-cartao {
+  position: relative;
+  overflow: hidden;
+  padding: 1.15rem 1.2rem 1.1rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+.adm-cartao::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #d9e1d7;
+}
+.adm-cartao:nth-child(1)::before { background: #27865b; }
+.adm-cartao:nth-child(2)::before { background: #e3ad42; }
+.adm-cartao:nth-child(3)::before { background: #cd7864; }
+.adm-cartao:nth-child(4)::before { background: #a9c85c; }
+.adm-cartao-rotulo {
+  color: #63786d;
+  font-size: .78rem;
+  font-weight: 650;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+.adm-cartao-valor { margin-top: .55rem; font-size: clamp(1.35rem, 2vw, 1.8rem); letter-spacing: -.045em; }
+.adm-cartao-nota { margin-top: .35rem; font-size: .8rem; }
+.adm-duas { gap: 1rem; }
+
+/* O equilíbrio como leitura principal do painel */
+.adm-pagina > .adm-bloco[aria-label="Ponto de equilíbrio"] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(1.3rem, 3vw, 2rem);
+  color: #f4f5e9;
+  background:
+    radial-gradient(circle at 92% 10%, rgb(217 237 131 / .16), transparent 17rem),
+    linear-gradient(115deg, #123b30, #174a38 67%, #1b523b);
+  border: 0;
+  box-shadow: 0 18px 45px rgb(20 61 46 / .15);
+}
+.adm-pagina > .adm-bloco[aria-label="Ponto de equilíbrio"]::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 17rem;
+  height: 17rem;
+  right: -6rem;
+  bottom: -12rem;
+  border: 1px solid rgb(244 245 233 / .16);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.8rem rgb(244 245 233 / .035), 0 0 0 3.6rem rgb(244 245 233 / .025);
+}
+.adm-pagina > .adm-bloco[aria-label="Ponto de equilíbrio"] h2 { color: #f4f5e9; font-size: 1.15rem; }
+.adm-pagina > .adm-bloco[aria-label="Ponto de equilíbrio"] .adm-sub { color: #d2e1d6; max-width: 58rem; }
+.adm-pagina > .adm-bloco[aria-label="Ponto de equilíbrio"] .adm-barra {
+  height: .75rem;
+  margin-top: 1rem;
+  background: rgb(255 255 255 / .18);
+}
+.adm-pagina > .adm-bloco[aria-label="Ponto de equilíbrio"] .adm-barra span {
+  background: linear-gradient(90deg, #b9d66c, #e2f394);
+  box-shadow: 0 0 18px rgb(217 237 131 / .28);
+}
+.adm-pagina > .adm-duas > .adm-bloco:first-child {
+  background: linear-gradient(155deg, #fffefa, #f7f8f1);
+}
+.adm-colunas { height: 13rem; margin-top: 1rem; }
+.adm-coluna-barra {
+  max-width: 4rem;
+  border-radius: .55rem .55rem .18rem .18rem;
+  background: linear-gradient(180deg, #83ad60, #287451);
+  box-shadow: 0 4px 12px rgb(37 111 75 / .16);
+}
+.adm-colunas .vencido .adm-coluna-barra { background: linear-gradient(180deg, #df927b, #af4539); }
+.adm-coluna-valor { font-size: .78rem; font-weight: 600; color: #566b60; }
+.adm-coluna-rotulo { color: #40574c; }
+
+/* Atenção: leitura rápida, sem alarmismo */
+.adm-pagina > .adm-duas > .adm-bloco:last-child {
+  background: #fffdf7;
+  border-color: #eee4cf;
+}
+.adm-pagina > .adm-duas > .adm-bloco:last-child h2::before {
+  content: "";
+  display: inline-block;
+  width: .55rem;
+  height: .55rem;
+  margin: 0 .55rem .08rem 0;
+  border-radius: 50%;
+  background: #e1ac40;
+  box-shadow: 0 0 0 4px #fff2d4;
+}
+.adm-lista li > button { padding: .72rem .55rem; border-radius: .65rem; }
+.adm-lista li > button:hover { background: #f4f6ef; }
+.adm-selo { padding: .24rem .65rem; font-size: .74rem; letter-spacing: .005em; }
+.adm-selo-verde { background: #e5f2e9; color: #176542; }
+.adm-selo-ambar { background: #fff1cf; color: #80500c; }
+.adm-selo-vermelho { background: #ffebe6; color: #9e382f; }
+.adm-selo-azul { background: #e6eff8; color: #315a7b; }
+
+/* Formulários e ações: toque confortável e estados reconhecíveis */
+.adm input, .adm select {
+  border-color: #dce4da;
+  border-radius: .7rem;
+  min-height: 2.8rem;
+  background-color: #fffefa;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.adm input:focus, .adm select:focus {
+  border-color: #568c69;
+  box-shadow: 0 0 0 3px rgb(86 140 105 / .14);
+  outline: 0;
+}
+.adm-btn {
+  min-height: 2.8rem;
+  border-radius: .72rem;
+  padding-inline: 1rem;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+.adm-btn-primario {
+  background: #176b49;
+  border-color: #176b49;
+  box-shadow: 0 4px 10px rgb(23 107 73 / .14);
+}
+.adm-btn-primario:hover:not(:disabled) {
+  background: #10563b;
+  border-color: #10563b;
+  box-shadow: 0 7px 16px rgb(23 107 73 / .2);
+  transform: translateY(-1px);
+}
+.adm-btn-fantasma { min-height: 2.55rem; }
+.adm-busca { border-radius: .72rem; background: #fffefa; }
+
+/* Tabelas, fichas e quadros */
+.adm-tabela { border-spacing: 0; }
+.adm-tabela th {
+  padding: .75rem .85rem;
+  color: #65776d;
+  background: #f5f7f1;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  font-size: .68rem;
+}
+.adm-tabela td { padding: .85rem; }
+.adm-tabela tbody tr:last-child td { border-bottom: 0; }
+.adm-tabela tbody tr[tabindex]:hover { background: #f2f6ef; }
+.adm-quadro-col { border: 1px solid #e5e9df; background: #edf0e8; border-radius: .95rem; padding: .85rem; }
+.adm-ficha { border-radius: .78rem; padding: .85rem; box-shadow: 0 2px 8px rgb(28 50 39 / .035); }
+.adm-ficha:hover { border-color: #a8c19b; box-shadow: 0 8px 20px rgb(28 50 39 / .08); transform: translateY(-1px); }
+.adm-gaveta {
+  background: #fffefa;
+  box-shadow: -18px 0 55px rgb(20 49 37 / .2);
+}
+.adm-paleta { border: 1px solid var(--a-linha); border-radius: 1rem; box-shadow: 0 24px 80px rgb(20 49 37 / .24); }
+.adm-faixa { background: #fff1cf; color: #694a14; padding-block: .65rem; }
+.adm-toast { border: 1px solid rgb(24 49 42 / .08); border-radius: .8rem; }
+
+/* Entrada */
+.adm-login-fundo {
+  background:
+    radial-gradient(ellipse at 20% 15%, rgb(216 235 201 / .58), transparent 26rem),
+    radial-gradient(ellipse at 90% 90%, rgb(230 239 212 / .55), transparent 24rem),
+    #f4f5ef;
+}
+.adm-login {
+  border: 1px solid #e4e9df;
+  border-radius: 1.25rem;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  box-shadow: 0 22px 70px rgb(21 59 44 / .11);
+}
+.adm-marca { color: #63836b; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .68rem; }
+.adm-login h1 { font-size: 1.8rem; }
+.adm-aviso { border: 1px solid #f0dcae; border-radius: .8rem; line-height: 1.6; }
+
+/* Responsivo: menu acessível, sem comprimir os indicadores */
+@media (max-width: 52rem) {
+  .adm-lateral {
+    background: rgb(15 54 43 / .97);
+    border-top: 1px solid rgb(255 255 255 / .13);
+    box-shadow: 0 -8px 24px rgb(17 47 37 / .16);
+    padding: .35rem .25rem calc(.35rem + env(safe-area-inset-bottom));
+  }
+  .adm-nav { color: #c5d4ca; min-height: 3.35rem; min-width: 3.55rem; border-radius: .65rem; }
+  .adm-nav.ativo { color: #173f32; background: #d9ed83; }
+  .adm-usuario .adm-nav { color: #d3ded7; }
+  .adm-app { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+  .adm-pagina { gap: 1rem; padding-bottom: 1.5rem; }
+  .adm-grade { gap: .65rem; }
+  .adm-cartao { padding: .95rem .9rem .9rem 1rem; border-radius: .9rem; }
+  .adm-cartao-valor { font-size: clamp(1.12rem, 5vw, 1.45rem); }
+  .adm-pagina > .adm-bloco[aria-label="Ponto de equilíbrio"] { padding: 1.2rem; }
+  .adm-colunas { height: 11rem; gap: .45rem; }
+  .adm-coluna-valor { font-size: .68rem; }
+  .adm-tabela { min-width: 42rem; }
+  .adm-ferramentas select { min-height: 2.8rem; }
+  .adm-fundo { background: rgb(11 35 28 / .48); }
+  .adm-toast { bottom: calc(5.25rem + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 24rem) {
+  .adm-grade, .adm-grade-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-cartao-valor { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adm-nav, .adm-cartao, .adm-ficha, .adm-btn { transition: none; }
+  .adm-nav:hover, .adm-ficha:hover, .adm-btn:hover:not(:disabled) { transform: none; }
+}
