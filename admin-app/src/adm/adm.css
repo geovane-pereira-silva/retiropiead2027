@@ -544,3 +544,96 @@
   .adm-cabecalho-acoes { grid-template-columns: 1fr; }
   .adm-data-chip { grid-column: auto; }
 }
+
+/* Tabelas de gestão: leitura densa, sem aparência de planilha crua */
+.adm-pagina { width: min(100%, 88rem); margin-inline: auto; }
+.adm-tabela th { padding: .58rem .7rem; }
+.adm-tabela td { padding: .58rem .7rem; line-height: 1.32; }
+.adm-tabela tbody tr { transition: background-color 130ms ease; }
+.adm-tabela tbody tr[tabindex] { cursor: pointer; }
+.adm-td-nome {
+  min-width: 11rem;
+  background: linear-gradient(100deg, #eef4e9, #f6f8f1);
+  border-right: 1px solid #e5ebdf;
+  color: #214a38;
+}
+.adm-td-nome strong { font-weight: 700; letter-spacing: -.015em; }
+.adm-abrir-cadastro { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
+.adm-abrir-cadastro span { font-size: 1rem; }
+.adm-pagamento-sticky {
+  position: sticky;
+  top: .75rem;
+  z-index: 12;
+  border-color: #cbd8c3;
+  box-shadow: 0 14px 36px rgb(24 57 42 / .13);
+}
+.adm-pagamento-cab { align-items: center; margin-bottom: .8rem; }
+.adm-pagamento-cab h2 { margin: .15rem 0 .25rem; font-size: 1.15rem; }
+.adm-pagamento-cab .adm-sub { margin: 0; font-size: .82rem; }
+.adm-pagamento-selo {
+  border-radius: 999px;
+  padding: .42rem .75rem;
+  background: #edf4e6;
+  color: #4c6c4e;
+  font-size: .72rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.adm-tabela-caixa { border: 1px solid var(--a-linha); border-radius: .85rem; }
+.adm-tabela { border-radius: inherit; overflow: hidden; }
+@media (min-width: 80rem) and (orientation: landscape) {
+  .adm-app { grid-template-columns: 15rem minmax(0, 1fr); }
+  .adm-pagina { width: min(100%, 84rem); }
+  .adm-grade { gap: 1rem; }
+}
+@media (max-width: 52rem) {
+  .adm-pagina { width: 100%; }
+  .adm-pagamento-sticky { top: 0; box-shadow: 0 10px 24px rgb(24 57 42 / .18); }
+}
+@media (max-width: 40rem) {
+  .adm-tabela-caixa { overflow: visible; border: 0; }
+  .adm-tabela, .adm-tabela tbody { display: block; width: 100%; min-width: 0; background: transparent; }
+  .adm-tabela thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .adm-tabela tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .1rem .6rem;
+    margin-bottom: .65rem;
+    padding: .45rem;
+    border: 1px solid #e1e8dd;
+    border-radius: .85rem;
+    background: #fffefa;
+    box-shadow: 0 4px 14px rgb(30 56 43 / .045);
+  }
+  .adm-tabela tbody td {
+    display: grid;
+    align-content: start;
+    gap: .15rem;
+    min-width: 0;
+    padding: .48rem .55rem;
+    border: 0;
+    font-size: .82rem;
+    overflow-wrap: anywhere;
+  }
+  .adm-tabela tbody td::before {
+    content: attr(data-label);
+    color: #7b897e;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .055em;
+    text-transform: uppercase;
+  }
+  .adm-tabela tbody td.adm-td-nome {
+    grid-column: 1 / -1;
+    min-width: 0;
+    border: 0;
+    border-radius: .55rem;
+    padding: .65rem .7rem;
+    margin-bottom: .1rem;
+  }
+  .adm-tabela tbody td[data-label="Cadastro"] { grid-column: 1 / -1; }
+  .adm-tabela tbody td[data-label="Cadastro"] .adm-btn { width: 100%; }
+  .adm-tabela tbody td[colspan] { grid-column: 1 / -1; }
+  .adm-pagamento-sticky { max-height: 68svh; overflow-y: auto; overscroll-behavior: contain; }
+  .adm-pagamento-selo { white-space: normal; text-align: center; }
+}

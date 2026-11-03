@@ -231,7 +231,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
           <>
             {tela === "painel" && <Painel resumo={resumo} hoje={hoje} abrir={(id) => { setTela("inscritos"); setAberta(id); }} navegar={setTela} />}
             {tela === "inscritos" && <Inscritos resumo={resumo} aberta={aberta} setAberta={setAberta} hoje={hoje} base={base} lancar={lancarPagamento} exec={exec} />}
-            {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} />}
+            {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} abrirFamilia={(id) => { setTela("inscritos"); setAberta(id); }} />}
             {tela === "despesas" && <Despesas base={base} exec={exec} />}
             {tela === "doacoes" && <Doacoes base={base} exec={exec} />}
             {tela === "relatorios" && <Relatorios base={base} resumo={resumo} />}
@@ -447,20 +447,21 @@ function Inscritos({
         <div className="adm-tabela-caixa">
           <table className="adm-tabela">
             <thead>
-              <tr><th>Responsável</th><th>Pessoas</th><th>Devido</th><th>Pago</th><th>Situação</th><th>Próximo vencimento</th></tr>
+              <tr><th>Responsável</th><th>Pessoas</th><th>Devido</th><th>Pago</th><th>Situação</th><th>Próximo vencimento</th><th>Cadastro</th></tr>
             </thead>
             <tbody>
               {lista.map((f) => (
                 <tr key={f.familia.id} onClick={() => setAberta(f.familia.id)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && setAberta(f.familia.id)}>
-                  <td><strong>{f.familia.responsavel}</strong><span className="adm-mudo adm-bloco-sub">{f.familia.igreja}</span></td>
-                  <td>{f.pessoas.length}</td>
-                  <td>{reais(f.devido)}</td>
-                  <td>{reais(f.pago)}</td>
-                  <td><Selo situacao={f.situacao} />{f.atrasado > 0 && <span className="adm-selo adm-selo-vermelho">atraso</span>}</td>
-                  <td className="adm-mudo">{f.proximoVencimento ? `${dm(f.proximoVencimento.data)} · ${reais(f.proximoVencimento.valor)}` : "—"}</td>
+                  <td className="adm-td-nome" data-label="Responsável"><strong>{f.familia.responsavel}</strong><span className="adm-mudo adm-bloco-sub">{f.familia.igreja}</span></td>
+                  <td data-label="Pessoas">{f.pessoas.length}</td>
+                  <td data-label="Devido">{reais(f.devido)}</td>
+                  <td data-label="Pago">{reais(f.pago)}</td>
+                  <td data-label="Situação"><Selo situacao={f.situacao} />{f.atrasado > 0 && <span className="adm-selo adm-selo-vermelho">atraso</span>}</td>
+                  <td className="adm-mudo" data-label="Próximo vencimento">{f.proximoVencimento ? `${dm(f.proximoVencimento.data)} · ${reais(f.proximoVencimento.valor)}` : "—"}</td>
+                  <td data-label="Cadastro"><button className="adm-btn adm-btn-fantasma adm-abrir-cadastro" onClick={(e) => { e.stopPropagation(); setAberta(f.familia.id); }}>Abrir cadastro <span aria-hidden="true">↗</span></button></td>
                 </tr>
               ))}
-              {lista.length === 0 && (<tr><td colSpan={6} className="adm-vazio">Nenhuma família encontrada.</td></tr>)}
+              {lista.length === 0 && (<tr><td colSpan={7} className="adm-vazio">Nenhuma família encontrada.</td></tr>)}
             </tbody>
           </table>
         </div>
@@ -536,7 +537,7 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
             </ul>
           </>
         )}
-        <h3>Lançar pagamento</h3>
+        <h3>Recebimentos e histórico</h3>
         <FormPagamento familias={[atual.familia]} fixa lancar={lancar} limiteEstorno={() => Math.max(0, atual.pago)} />
         <h3>Ajustes</h3>
         {base.ajustes.filter((a) => a.familiaId === atual.familia.id).length === 0 && <p className="adm-vazio">Nenhum ajuste.</p>}
@@ -649,7 +650,7 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno }: { familias: { 
   );
 }
 
-function Pagamentos({ base, resumo, lancar }: { base: Base; resumo: ReturnType<typeof resumirTudo>; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean> }) {
+function Pagamentos({ base, resumo, lancar, abrirFamilia }: { base: Base; resumo: ReturnType<typeof resumirTudo>; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>; abrirFamilia: (id: string) => void }) {
   const nome = (id: string) => base.familias.find((f) => f.id === id)?.responsavel ?? id;
   const [busca, setBusca] = useState("");
   const [forma, setForma] = useState<"todas" | FormaPagamento>("todas");
@@ -681,13 +682,13 @@ function Pagamentos({ base, resumo, lancar }: { base: Base; resumo: ReturnType<t
         <Cartao rotulo="A receber" valor={reais(resumo.aReceber)} tom="ambar" />
         <Cartao rotulo="Lançamentos" valor={String(base.pagamentos.length)} />
       </section>
-      <section className="adm-bloco">
-        <h2>Novo lançamento</h2>
+      <section className="adm-bloco adm-pagamento-sticky">
+        <div className="adm-topo adm-pagamento-cab"><div><p className="adm-eyebrow">RECEBIMENTOS</p><h2>Lançar parcela do inscrito</h2><p className="adm-sub">Escolha o cadastro principal e registre o valor recebido.</p></div><span className="adm-pagamento-selo">Histórico da pessoa no cadastro</span></div>
         <FormPagamento familias={base.familias} lancar={lancar} limiteEstorno={(id) => Math.max(0, resumo.familias.find((f) => f.familia.id === id)?.pago ?? 0)} />
       </section>
       <section className="adm-bloco">
         <h2>Histórico</h2>
-        <p className="adm-sub">Pagamentos não são editados. Para corrigir um erro, lance um estorno.</p>
+        <p className="adm-sub">O histórico completo e a ação de estorno ficam dentro do cadastro principal do inscrito.</p>
         <div className="adm-ferramentas" role="search" aria-label="Filtrar lançamentos de pagamento">
           <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar família ou observação" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar pagamento" /></label>
           <select value={forma} onChange={(e) => setForma(e.target.value as typeof forma)} aria-label="Filtrar por forma de pagamento"><option value="todas">Todas as formas</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select>
@@ -701,17 +702,15 @@ function Pagamentos({ base, resumo, lancar }: { base: Base; resumo: ReturnType<t
         </div>
         <div className="adm-tabela-caixa">
           <table className="adm-tabela">
-            <thead><tr><th>Data</th><th>Família</th><th>Forma</th><th>Valor</th><th></th></tr></thead>
+            <thead><tr><th>Data</th><th>Família</th><th>Forma</th><th>Valor recebido</th><th>Cadastro</th></tr></thead>
             <tbody>
               {ordenados.map((p) => (
-                <tr key={p.id}>
-                  <td>{dma(p.data)}</td><td>{nome(p.familiaId)}{p.obs && <span className="adm-mudo adm-bloco-sub">{p.obs}</span>}</td><td>{p.forma}</td>
-                  <td className={p.valor < 0 ? "tom-vermelho" : "tom-verde"}>{reais(p.valor)}</td>
-                  <td>{p.valor > 0 && Math.max(0, resumo.familias.find((f) => f.familia.id === p.familiaId)?.pago ?? 0) > 0 && (<button className="adm-btn adm-btn-fantasma" onClick={() => {
-                    const disponivel = Math.max(0, resumo.familias.find((f) => f.familia.id === p.familiaId)?.pago ?? 0);
-                    const valorEstorno = Math.min(p.valor, disponivel);
-                    if (valorEstorno > 0 && window.confirm(`Estornar ${reais(valorEstorno)} para ${nome(p.familiaId)}?`)) void lancar({ familiaId: p.familiaId, valor: -valorEstorno, forma: p.forma, data: hojeISO(), obs: `Estorno de ${dma(p.data)}` });
-                  }}>Estornar até {reais(Math.min(p.valor, Math.max(0, resumo.familias.find((f) => f.familia.id === p.familiaId)?.pago ?? 0)))}</button>)}</td>
+                <tr key={p.id} onClick={() => abrirFamilia(p.familiaId)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && abrirFamilia(p.familiaId)}>
+                  <td data-label="Data">{dma(p.data)}</td>
+                  <td className="adm-td-nome" data-label="Família"><strong>{nome(p.familiaId)}</strong>{p.obs && <span className="adm-mudo adm-bloco-sub">{p.obs}</span>}</td>
+                  <td data-label="Forma">{p.forma}</td>
+                  <td data-label="Valor recebido" className={p.valor < 0 ? "tom-vermelho" : "tom-verde"}>{reais(p.valor)}</td>
+                  <td data-label="Cadastro"><button className="adm-btn adm-btn-fantasma adm-abrir-cadastro" onClick={(e) => { e.stopPropagation(); abrirFamilia(p.familiaId); }}>Ver histórico <span aria-hidden="true">↗</span></button></td>
                 </tr>
               ))}
               {ordenados.length === 0 && <tr><td colSpan={5} className="adm-vazio">Nenhum lançamento corresponde a esses filtros.</td></tr>}
