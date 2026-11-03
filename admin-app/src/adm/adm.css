@@ -637,3 +637,38 @@
   .adm-pagamento-sticky { max-height: 68svh; overflow-y: auto; overscroll-behavior: contain; }
   .adm-pagamento-selo { white-space: normal; text-align: center; }
 }
+
+/* Marca no menu e gráfico com navegação contextual */
+.adm-brand { display: flex; align-items: center; gap: .7rem; min-height: 3rem; color: #f8f8ef; line-height: 1.2; font-size: .82rem; }
+.adm-brand::before { display: none; }
+.adm-brand img { display: block; width: 2.75rem; height: 2.75rem; object-fit: contain; }
+.adm-brand span { display: block; font-weight: 720; letter-spacing: -.015em; }
+.adm-coluna-link {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .35rem;
+  padding: .2rem .2rem 0;
+  border: 0;
+  border-radius: .65rem .65rem .25rem .25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.adm-coluna-link:hover { background: #edf3e8; }
+.adm-coluna-link:focus-visible { outline: 2px solid var(--a-foco); outline-offset: 2px; }
+.adm-coluna-link .adm-coluna-barra { flex: 0 0 auto; transition: filter 150ms ease, transform 150ms ease; }
+.adm-coluna-link:hover .adm-coluna-barra { filter: saturate(1.25); transform: scaleX(1.06); }
+.adm-grafico-hint { color: var(--a-mudo); font-size: .75rem; margin-top: -.35rem !important; }
+.adm-colunas li { min-width: 0; }
+@media (max-width: 52rem) {
+  .adm-brand { display: none; }
+  .adm-colunas { height: 10rem; }
+}
+@media (prefers-reduced-motion: reduce) { .adm-coluna-link .adm-coluna-barra { transition: none; } }

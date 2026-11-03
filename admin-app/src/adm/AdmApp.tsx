@@ -140,6 +140,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
   const [aviso, setAviso] = useState<{ tom: "ok" | "erro"; texto: string } | null>(null);
   const [carregando, setCarregando] = useState(real);
   const [paleta, setPaleta] = useState(false);
+  const [filtroDataPainel, setFiltroDataPainel] = useState<string | null>(null);
   const gravacaoEmAndamento = useRef(false);
   const hoje = hojeISO();
 
@@ -207,7 +208,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
   return (
     <div className="adm adm-app">
       <aside className="adm-lateral" aria-label="Menu">
-        <p className="adm-logo">Gestão · Retiro 2027</p>
+        <div className="adm-logo adm-brand"><img src="/adm/logo-conexao-jovem-branca.png" alt="Conexão Jovem" /><span>Gestão<br />Retiro 2027</span></div>
         <nav>
           {TELAS.map((t) => (
             <button key={t.id} className={`adm-nav ${tela === t.id ? "ativo" : ""}`} aria-current={tela === t.id ? "page" : undefined} onClick={() => setTela(t.id)}>
@@ -229,9 +230,9 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
         {(!base || !resumo) && <main className="adm-pagina"><p className="adm-sub">{carregando ? "Carregando a planilha…" : "Sem dados."}</p></main>}
         {base && resumo && (
           <>
-            {tela === "painel" && <Painel resumo={resumo} hoje={hoje} abrir={(id) => { setTela("inscritos"); setAberta(id); }} navegar={setTela} />}
+            {tela === "painel" && <Painel resumo={resumo} hoje={hoje} abrir={(id) => { setTela("inscritos"); setAberta(id); }} navegar={setTela} abrirData={(data) => { setFiltroDataPainel(data); setTela("pagamentos"); }} />}
             {tela === "inscritos" && <Inscritos resumo={resumo} aberta={aberta} setAberta={setAberta} hoje={hoje} base={base} lancar={lancarPagamento} exec={exec} />}
-            {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} abrirFamilia={(id) => { setTela("inscritos"); setAberta(id); }} />}
+            {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} abrirFamilia={(id) => { setTela("inscritos"); setAberta(id); }} dataFiltro={filtroDataPainel} />}
             {tela === "despesas" && <Despesas base={base} exec={exec} />}
             {tela === "doacoes" && <Doacoes base={base} exec={exec} />}
             {tela === "relatorios" && <Relatorios base={base} resumo={resumo} />}
@@ -281,7 +282,7 @@ function Cartao({ rotulo, valor, nota, tom }: { rotulo: string; valor: string; n
   );
 }
 
-function Painel({ resumo, hoje, abrir, navegar }: { resumo: ReturnType<typeof resumirTudo>; hoje: string; abrir: (id: string) => void; navegar: (tela: Tela) => void }) {
+function Painel({ resumo, hoje, abrir, navegar, abrirData }: { resumo: ReturnType<typeof resumirTudo>; hoje: string; abrir: (id: string) => void; navegar: (tela: Tela) => void; abrirData: (data: string) => void }) {
   const fluxo = fluxoPrevisto(resumo, hoje);
   const maximo = Math.max(1, ...fluxo.map((f) => f.valor));
   const proximos = resumo.familias
@@ -324,14 +325,16 @@ function Painel({ resumo, hoje, abrir, navegar }: { resumo: ReturnType<typeof re
 
       <div className="adm-duas">
         <section className="adm-bloco" aria-label="Entradas previstas">
-          <h2>Entradas previstas por vencimento</h2>
+          <h2>Entradas previstas por vencimento</h2><p className="adm-grafico-hint">Selecione uma coluna para abrir os lançamentos desse vencimento.</p>
           <p className="adm-sub">Alertas e previsão de vencimentos consideram o calendário Pix. Cartão e dinheiro entram no saldo conforme os pagamentos são registrados.</p>
           <ul className="adm-colunas">
             {fluxo.map((f) => (
               <li key={f.data} className={f.vencido ? "vencido" : ""}>
-                <span className="adm-coluna-valor">{reais(f.valor)}</span>
-                <span className="adm-coluna-barra" style={{ height: `${Math.max(4, (f.valor / maximo) * 100)}%` }} />
-                <span className="adm-coluna-rotulo">{dm(f.data)}</span>
+                <button className="adm-coluna-link" type="button" onClick={() => abrirData(f.data)} aria-label={`Ver recebimentos de ${dma(f.data)}: ${reais(f.valor)}`}>
+                  <span className="adm-coluna-valor">{reais(f.valor)}</span>
+                  <span className="adm-coluna-barra" style={{ height: `${Math.max(4, (f.valor / maximo) * 100)}%` }} />
+                  <span className="adm-coluna-rotulo">{dm(f.data)}</span>
+                </button>
               </li>
             ))}
           </ul>
@@ -650,7 +653,7 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno }: { familias: { 
   );
 }
 
-function Pagamentos({ base, resumo, lancar, abrirFamilia }: { base: Base; resumo: ReturnType<typeof resumirTudo>; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>; abrirFamilia: (id: string) => void }) {
+function Pagamentos({ base, resumo, lancar, abrirFamilia, dataFiltro }: { base: Base; resumo: ReturnType<typeof resumirTudo>; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>; abrirFamilia: (id: string) => void; dataFiltro: string | null }) {
   const nome = (id: string) => base.familias.find((f) => f.id === id)?.responsavel ?? id;
   const [busca, setBusca] = useState("");
   const [forma, setForma] = useState<"todas" | FormaPagamento>("todas");
@@ -659,6 +662,7 @@ function Pagamentos({ base, resumo, lancar, abrirFamilia }: { base: Base; resumo
   const [ate, setAte] = useState("");
   const [ordenacao, setOrdenacao] = useState("data");
   const [direcao, setDirecao] = useState<DirecaoOrdenacao>("desc");
+  useEffect(() => { if (dataFiltro) { setDe(dataFiltro); setAte(dataFiltro); } }, [dataFiltro]);
   const filtrados = base.pagamentos.filter((p) => {
     const texto = `${nome(p.familiaId)} ${p.forma} ${p.obs ?? ""}`;
     return normalizarBusca(texto).includes(normalizarBusca(busca))
