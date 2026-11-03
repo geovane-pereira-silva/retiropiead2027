@@ -65,6 +65,9 @@ export function criarDemo(): Base {
         familiaId,
         data: dia(20 - i * 6),
         valor,
+        valorBruto: valor,
+        taxaCartao: 0,
+        valorLiquido: valor,
         forma: s.forma,
       }),
     );
@@ -74,11 +77,11 @@ export function criarDemo(): Base {
     pessoas,
     pagamentos,
     despesas: [
-      { id: "D-1", categoria: "Espaço e hospedagem", fornecedor: "Sítio de Retiro", descricao: "Diárias e uso do espaço", orcado: 4200, pago: 1500, status: "Aprovado" },
-      { id: "D-2", categoria: "Alimentação e cozinha", fornecedor: "Cozinha do retiro", descricao: "Refeições dos 5 dias", orcado: 3000, pago: 0, status: "Orçado" },
-      { id: "D-3", categoria: "Transporte", fornecedor: "Viação Serra", descricao: "Ônibus ida e volta", orcado: 1400, pago: 700, status: "Aprovado" },
-      { id: "D-4", categoria: "Estrutura (som, luz, tendas)", fornecedor: "Som e Luz", descricao: "Equipamento dos cultos", orcado: 800, pago: 800, status: "Pago" },
-      { id: "D-5", categoria: "Material de apoio", fornecedor: "Gráfica", descricao: "Crachás e material", orcado: 250, pago: 0, status: "Orçado" },
+      { id: "D-1", categoria: "Espaço e hospedagem", fornecedor: "Sítio de Retiro", responsavelCompra: "Geovane Pereira", descricao: "Diárias e uso do espaço", orcado: 4200, pago: 1500, status: "Aprovado" },
+      { id: "D-2", categoria: "Alimentação e cozinha", fornecedor: "Cozinha do retiro", responsavelCompra: "Ana Paula de Souza", descricao: "Refeições dos 5 dias", orcado: 3000, pago: 0, status: "Orçado" },
+      { id: "D-3", categoria: "Transporte", fornecedor: "Viação Serra", responsavelCompra: "Geovane Pereira", descricao: "Ônibus ida e volta", orcado: 1400, pago: 700, status: "Aprovado" },
+      { id: "D-4", categoria: "Estrutura (som, luz, tendas)", fornecedor: "Som e Luz", responsavelCompra: "Ricardo Ribeiro", descricao: "Equipamento dos cultos", orcado: 800, pago: 800, status: "Pago" },
+      { id: "D-5", categoria: "Material de apoio", fornecedor: "Gráfica", responsavelCompra: "Ana Paula de Souza", descricao: "Crachás e material", orcado: 250, pago: 0, status: "Orçado" },
     ],
     ajustes: [
       { id: "A-1", data: dia(8), familiaId: "F-005", tipo: "Desconto", descricao: "Bolsa parcial concedida pela liderança", valor: 100 },

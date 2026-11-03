@@ -5,9 +5,9 @@ import type { Base } from "./tipos";
 export function aplicarLocal(b: Base, g: Gravacao, hoje: string, id: string): Base {
   switch (g.tipo) {
     case "pagamento":
-      return { ...b, pagamentos: [...b.pagamentos, { id, familiaId: g.familiaId, data: g.data || hoje, valor: g.valor, forma: g.forma as "Pix" | "Cartão" | "Dinheiro", obs: g.obs }] };
+      return { ...b, pagamentos: [...b.pagamentos, { id, familiaId: g.familiaId, data: g.data || hoje, valor: g.valor, valorBruto: g.valorBruto, taxaCartao: g.taxaCartao, valorLiquido: g.valorLiquido ?? g.valor, forma: g.forma as "Pix" | "Cartão" | "Dinheiro", obs: g.obs }] };
     case "despesa":
-      return { ...b, despesas: [...b.despesas, { id, categoria: g.categoria as Base["despesas"][number]["categoria"], fornecedor: g.fornecedor, descricao: g.descricao ?? "", orcado: g.orcado, pago: g.pago ?? 0, status: (g.pago ?? 0) >= g.orcado ? "Pago" : (g.pago ?? 0) > 0 ? "Aprovado" : "Orçado", data: g.data || hoje }] };
+      return { ...b, despesas: [...b.despesas, { id, categoria: g.categoria as Base["despesas"][number]["categoria"], fornecedor: g.fornecedor, descricao: g.descricao ?? "", orcado: g.orcado, pago: g.pago ?? 0, status: (g.pago ?? 0) >= g.orcado ? "Pago" : (g.pago ?? 0) > 0 ? "Aprovado" : "Orçado", data: g.data || hoje, responsavelCompra: g.responsavelCompra }] };
     case "despesa-status":
       return { ...b, despesas: b.despesas.map((d) => d.id === g.id ? { ...d, status: g.status, pago: g.status === "Pago" ? d.orcado : g.status === "Orçado" ? 0 : d.pago } : d) };
     case "doacao":

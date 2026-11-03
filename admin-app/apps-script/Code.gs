@@ -1,13 +1,14 @@
 /** Apps Script EXCLUSIVO do painel administrativo. Não substitui o script de inscrições. */
 const ADM_ABAS = {
-  "Pagamentos": ["id", "data", "familiaId", "valor", "forma", "obs", "lancadoPor", "lancadoEm"],
-  "Despesas": ["id", "data", "categoria", "fornecedor", "descricao", "orcado", "pago", "status", "lancadoPor", "atualizadoEm"],
+  "Pagamentos": ["id", "data", "familiaId", "valor", "forma", "obs", "lancadoPor", "lancadoEm", "valorBruto", "taxaCartao", "valorLiquido"],
+  "Despesas": ["id", "data", "categoria", "fornecedor", "descricao", "orcado", "pago", "status", "lancadoPor", "atualizadoEm", "responsavelCompra"],
   "Doações": ["id", "data", "doador", "valor", "tipo", "obs", "lancadoPor"],
   "Ajustes": ["id", "data", "familiaId", "tipo", "descricao", "valor", "lancadoPor"],
   "Extras": ["pessoaId", "tamanho", "modelo", "atualizadoPor", "atualizadoEm"],
   "Histórico": ["quando", "usuario", "acao", "detalhe"],
 };
 const ADM_ESCRITA = ["Pagamentos", "Despesas", "Doações", "Ajustes"];
+const ADM_COLUNAS_NOVAS = { "Pagamentos": ["valorBruto", "taxaCartao", "valorLiquido"], "Despesas": ["responsavelCompra"] };
 const ADM_MAX_ERROS = 5;
 const ADM_BLOQUEIO_S = 900;
 // Campos mínimos necessários ao painel. CPF, e-mail, nascimento, contato de emergência e necessidades
@@ -92,6 +93,14 @@ function prepararPlanilha() {
     const cols = ADM_ABAS[nome];
     let aba = planilha.getSheetByName(nome);
     if (!aba) aba = planilha.insertSheet(nome);
+    if (aba.getLastRow() > 0 && ADM_COLUNAS_NOVAS[nome]) {
+      const existentes = aba.getRange(1, 1, 1, Math.max(aba.getLastColumn(), 1)).getDisplayValues()[0].map(function (v) { return String(v).trim(); });
+      ADM_COLUNAS_NOVAS[nome].forEach(function (coluna) {
+        if (existentes.indexOf(coluna) !== -1) return;
+        aba.getRange(1, aba.getLastColumn() + 1).setValue(coluna).setFontWeight("bold");
+        existentes.push(coluna);
+      });
+    }
     if (aba.getLastRow() === 0) {
       aba.appendRow(cols);
       aba.setFrozenRows(1);

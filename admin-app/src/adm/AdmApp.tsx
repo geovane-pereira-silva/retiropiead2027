@@ -527,7 +527,7 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
         {atual.pagamentos.length === 0 && <p className="adm-vazio">Nenhum pagamento lançado.</p>}
         <ul className="adm-lista adm-lista-simples">
           {atual.pagamentos.map((p) => (
-            <li key={p.id}><span>{dma(p.data)} · {p.forma}{p.obs ? ` · ${p.obs}` : ""}</span><span className={p.valor < 0 ? "tom-vermelho" : "tom-verde"}>{reais(p.valor)}</span></li>
+            <li key={p.id}><span>{dma(p.data)} · {p.forma}{p.obs ? ` · ${p.obs}` : ""}{p.forma === "Cartão" && p.valor >= 0 && <span className="adm-mudo adm-bloco-sub">Cobrado {reais(p.valorBruto ?? p.valor)} · taxa {reais(p.taxaCartao ?? 0)} · líquido {reais(p.valorLiquido ?? p.valor)}</span>}</span><span className={p.valor < 0 ? "tom-vermelho" : "tom-verde"}>{reais(p.valorLiquido ?? p.valor)}</span></li>
           ))}
         </ul>
         {atual.parcelasAbertas.length > 0 && (
@@ -541,7 +541,7 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
           </>
         )}
         <h3>Recebimentos e histórico</h3>
-        <FormPagamento familias={[atual.familia]} fixa lancar={lancar} limiteEstorno={() => Math.max(0, atual.pago)} />
+        <FormPagamento familias={[atual.familia]} fixa lancar={lancar} estornoPermitido limiteEstorno={() => Math.max(0, atual.pago)} />
         <h3>Ajustes</h3>
         {base.ajustes.filter((a) => a.familiaId === atual.familia.id).length === 0 && <p className="adm-vazio">Nenhum ajuste.</p>}
         <ul className="adm-lista adm-lista-simples">
@@ -609,16 +609,21 @@ function FormAjuste({ familiaId, exec }: { familiaId: string; exec: (g: Gravacao
 
 /* ───────────────────────────── Pagamentos ───────────────────────────── */
 
-function FormPagamento({ familias, fixa, lancar, limiteEstorno }: { familias: { id: string; responsavel: string }[]; fixa?: boolean; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>; limiteEstorno?: (familiaId: string) => number }) {
+function FormPagamento({ familias, fixa, lancar, limiteEstorno, estornoPermitido = false }: { familias: { id: string; responsavel: string }[]; fixa?: boolean; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>; limiteEstorno?: (familiaId: string) => number; estornoPermitido?: boolean }) {
   const [familiaId, setFamiliaId] = useState(familias[0]?.id ?? "");
   const [valor, setValor] = useState("");
+  const [valorLiquido, setValorLiquido] = useState("");
   const [forma, setForma] = useState<FormaPagamento>("Pix");
   const [data, setData] = useState(hojeISO());
   const [obs, setObs] = useState("");
   const [salvando, setSalvando] = useState(false);
   const n = lerDinheiro(valor);
+  const liquidoCartao = lerDinheiro(valorLiquido);
+  const taxaCartao = Number((n - liquidoCartao).toFixed(2));
   const maximoEstorno = limiteEstorno?.(familiaId) ?? 0;
-  const valido = familiaId && Number.isFinite(n) && n !== 0 && (n > 0 || Math.abs(n) <= maximoEstorno);
+  const estorno = n < 0;
+  const cartaoValido = forma !== "Cartão" || estorno || (Number.isFinite(liquidoCartao) && liquidoCartao > 0 && liquidoCartao <= n);
+  const valido = familiaId && Number.isFinite(n) && n !== 0 && cartaoValido && (!estorno || (estornoPermitido && Math.abs(n) <= maximoEstorno));
   return (
     <form className="adm-form" onSubmit={async (e) => {
       e.preventDefault();
@@ -626,8 +631,11 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno }: { familias: { 
       if (n < 0 && !window.confirm(`Confirmar estorno de ${reais(Math.abs(n))}? O valor será abatido do total recebido desta família.`)) return;
       setSalvando(true);
       try {
-        const ok = await lancar({ familiaId, valor: n, forma, data, obs: obs.trim() || undefined });
-        if (ok) { setValor(""); setObs(""); }
+        const liquido = forma === "Cartão" && !estorno ? liquidoCartao : n;
+        const bruto = n;
+        const taxa = forma === "Cartão" && !estorno ? taxaCartao : 0;
+        const ok = await lancar({ familiaId, valor: liquido, valorBruto: bruto, taxaCartao: taxa, valorLiquido: liquido, forma, data, obs: obs.trim() || undefined });
+        if (ok) { setValor(""); setValorLiquido(""); setObs(""); }
       } finally {
         setSalvando(false);
       }
@@ -639,7 +647,8 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno }: { familias: { 
           </select>
         </label>
       )}
-      <label>Valor (R$)<input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" /></label>
+      <label>{forma === "Cartão" && !estorno ? "Valor cobrado (R$)" : "Valor (R$)"}<input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" /></label>
+      {forma === "Cartão" && !estorno && <label>Valor líquido recebido (R$)<input inputMode="decimal" value={valorLiquido} onChange={(e) => setValorLiquido(e.target.value)} placeholder="Após as taxas" /></label>}
       <label>Forma
         <select value={forma} onChange={(e) => setForma(e.target.value as FormaPagamento)}>
           <option>Pix</option><option>Cartão</option><option>Dinheiro</option>
@@ -647,7 +656,8 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno }: { familias: { 
       </label>
       <label>Data<input type="date" value={data} onChange={(e) => setData(e.target.value)} required /></label>
       <label className="adm-form-largo">Observação<input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Opcional" /></label>
-      {n < 0 && <p className="adm-mudo adm-form-largo">Disponível para estorno: {reais(maximoEstorno)}.</p>}
+      {forma === "Cartão" && !estorno && n > 0 && liquidoCartao > 0 && <p className="adm-mudo adm-form-largo">Taxa descontada: <strong>{reais(Math.max(0, taxaCartao))}</strong> · Líquido no caixa: <strong>{reais(liquidoCartao)}</strong>.</p>}
+      {estorno && <p className="adm-mudo adm-form-largo">Disponível para estorno: {reais(maximoEstorno)}.</p>}
       <button className="adm-btn adm-btn-primario" disabled={!valido || salvando}>{salvando ? "Salvando…" : n < 0 ? "Registrar estorno" : "Lançar pagamento"}</button>
     </form>
   );
@@ -713,7 +723,7 @@ function Pagamentos({ base, resumo, lancar, abrirFamilia, dataFiltro }: { base: 
                   <td data-label="Data">{dma(p.data)}</td>
                   <td className="adm-td-nome" data-label="Família"><strong>{nome(p.familiaId)}</strong>{p.obs && <span className="adm-mudo adm-bloco-sub">{p.obs}</span>}</td>
                   <td data-label="Forma">{p.forma}</td>
-                  <td data-label="Valor recebido" className={p.valor < 0 ? "tom-vermelho" : "tom-verde"}>{reais(p.valor)}</td>
+                  <td data-label="Valor recebido" className={p.valor < 0 ? "tom-vermelho" : "tom-verde"}>{p.forma === "Cartão" && p.valor >= 0 ? <span className="adm-pagamento-valores"><strong>Líquido {reais(p.valorLiquido ?? p.valor)}</strong><small>Cobrado {reais(p.valorBruto ?? p.valor)} · taxa {reais(p.taxaCartao ?? 0)}</small></span> : reais(p.valorLiquido ?? p.valor)}</td>
                   <td data-label="Cadastro"><button className="adm-btn adm-btn-fantasma adm-abrir-cadastro" onClick={(e) => { e.stopPropagation(); abrirFamilia(p.familiaId); }}>Ver histórico <span aria-hidden="true">↗</span></button></td>
                 </tr>
               ))}
@@ -734,6 +744,7 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
   const [descricao, setDescricao] = useState("");
   const [orcado, setOrcado] = useState("");
   const [pago, setPago] = useState("");
+  const [responsavelCompra, setResponsavelCompra] = useState("");
   const [data, setData] = useState(hojeISO());
   const [salvando, setSalvando] = useState(false);
   const [busca, setBusca] = useState("");
@@ -743,7 +754,7 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
   const [direcao, setDirecao] = useState<DirecaoOrdenacao>("desc");
   const n = lerDinheiro(orcado);
   const valorPago = lerDinheiro(pago);
-  const valido = fornecedor.trim() && Number.isFinite(n) && n > 0 && Number.isFinite(valorPago) && valorPago >= 0;
+  const valido = fornecedor.trim() && responsavelCompra.trim() && Number.isFinite(n) && n > 0 && Number.isFinite(valorPago) && valorPago >= 0;
   const filtradas = base.despesas.filter((d) => normalizarBusca(`${d.fornecedor} ${d.descricao} ${d.categoria} ${d.status}`).includes(normalizarBusca(busca))
     && (filtroCategoria === "todas" || d.categoria === filtroCategoria) && (filtroStatus === "todos" || d.status === filtroStatus));
   const despesas = ordenarPor(filtradas, (d) => {
@@ -775,7 +786,7 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
           if (!valido || salvando) return;
           setSalvando(true);
           try {
-            if (await exec({ tipo: "despesa", categoria, fornecedor: fornecedor.trim(), descricao: descricao.trim(), orcado: n, pago: valorPago, data })) { setFornecedor(""); setDescricao(""); setOrcado(""); setPago(""); setData(hojeISO()); }
+            if (await exec({ tipo: "despesa", categoria, fornecedor: fornecedor.trim(), responsavelCompra: responsavelCompra.trim(), descricao: descricao.trim(), orcado: n, pago: valorPago, data })) { setFornecedor(""); setResponsavelCompra(""); setDescricao(""); setOrcado(""); setPago(""); setData(hojeISO()); }
           } finally { setSalvando(false); }
         }}>
           <label>Categoria
@@ -783,7 +794,8 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
               {CATEGORIAS.map((c) => (<option key={c}>{c}</option>))}
             </select>
           </label>
-          <label>Fornecedor<input value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} /></label>
+          <label>Fornecedor<input value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} required /></label>
+          <label>Quem fez a compra<input value={responsavelCompra} onChange={(e) => setResponsavelCompra(e.target.value)} required placeholder="Nome da pessoa responsável" /></label>
           <label>Valor orçado (R$)<input inputMode="decimal" value={orcado} onChange={(e) => setOrcado(e.target.value)} placeholder="0,00" /></label>
           <label>Valor já pago (R$)<input inputMode="decimal" value={pago} onChange={(e) => setPago(e.target.value)} placeholder="0,00" /></label>
           <label>Data<input type="date" value={data} onChange={(e) => setData(e.target.value)} required /></label>
@@ -804,7 +816,7 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
         <div className="adm-tabela-caixa">
           <table className="adm-tabela"><thead><tr><th>Data</th><th>Categoria</th><th>Fornecedor / descrição</th><th>Orçado</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody>{despesas.map((d) => <tr key={d.id}>
-              <td>{d.data ? dma(d.data) : "—"}</td><td>{d.categoria}</td><td><strong>{d.fornecedor}</strong><span className="adm-mudo adm-bloco-sub">{d.descricao}</span></td>
+              <td>{d.data ? dma(d.data) : "—"}</td><td>{d.categoria}</td><td><strong>{d.fornecedor}</strong><span className="adm-mudo adm-bloco-sub">{d.descricao}</span><span className="adm-mudo adm-bloco-sub">Compra feita por: {d.responsavelCompra || "não informado"}</span></td>
               <td>{reais(d.orcado)}</td><td className="tom-vermelho">{reais(d.pago)}</td>
               <td><span className={`adm-selo adm-selo-${d.status === "Pago" ? "verde" : d.status === "Aprovado" ? "azul" : "neutro"}`}>{d.status}</span></td>
               <td>{d.status === "Orçado" && <button className="adm-btn adm-btn-fantasma" onClick={() => void mudarStatus(d.id, "Aprovado")}>Aprovar</button>}{d.status !== "Pago" && <button className="adm-btn adm-btn-fantasma" onClick={() => void mudarStatus(d.id, "Pago")}>Marcar pago</button>}</td>

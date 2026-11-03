@@ -23,8 +23,8 @@ import { lerDinheiro } from "./utilitarios";
  * (função prepararPlanilha). A aba "Inscrições" é do site e nunca é alterada por aqui.
  */
 export const ABAS = {
-  pagamentos: ["id", "data", "familiaId", "valor", "forma", "obs", "lancadoPor", "lancadoEm"],
-  despesas: ["id", "data", "categoria", "fornecedor", "descricao", "orcado", "pago", "status", "lancadoPor", "atualizadoEm"],
+  pagamentos: ["id", "data", "familiaId", "valor", "forma", "obs", "lancadoPor", "lancadoEm", "valorBruto", "taxaCartao", "valorLiquido"],
+  despesas: ["id", "data", "categoria", "fornecedor", "descricao", "orcado", "pago", "status", "lancadoPor", "atualizadoEm", "responsavelCompra"],
   doacoes: ["id", "data", "doador", "valor", "tipo", "obs", "lancadoPor"],
   ajustes: ["id", "data", "familiaId", "tipo", "descricao", "valor", "lancadoPor"],
   extras: ["pessoaId", "tamanho", "modelo", "atualizadoPor", "atualizadoEm"],
@@ -129,7 +129,10 @@ export function montarBase(d: DadosBrutos): Base {
       id: txt(r.id),
       familiaId: txt(r.familiaId),
       data: dataISO(r.data),
-      valor: numero(r.valor),
+      valor: numero(r.valorLiquido) || numero(r.valor),
+      valorBruto: numero(r.valorBruto) || numero(r.valor),
+      taxaCartao: numero(r.taxaCartao),
+      valorLiquido: numero(r.valorLiquido) || numero(r.valor),
       forma: (FORMAS.find((f) => f === txt(r.forma)) ?? "Pix") as FormaPagamento,
       obs: txt(r.obs) || undefined,
     }))
@@ -145,6 +148,7 @@ export function montarBase(d: DadosBrutos): Base {
       pago: numero(r.pago),
       status: (STATUS.find((s) => s === txt(r.status)) ?? "Orçado") as StatusDespesa,
       data: dataISO(r.data) || undefined,
+      responsavelCompra: txt(r.responsavelCompra),
     }))
     .filter((x) => x.id);
 

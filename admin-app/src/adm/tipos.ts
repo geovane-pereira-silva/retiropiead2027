@@ -38,7 +38,10 @@ export type Pagamento = {
   id: string;
   familiaId: string;
   data: string; // AAAA-MM-DD
-  valor: number; // positivo; estorno = valor negativo
+  valor: number; // líquido recebido; estorno = valor negativo
+  valorBruto?: number;
+  taxaCartao?: number;
+  valorLiquido?: number;
   forma: FormaPagamento;
   obs?: string;
 };
@@ -61,6 +64,7 @@ export type Despesa = {
   pago: number;
   status: StatusDespesa;
   data?: string;
+  responsavelCompra?: string;
 };
 
 export type Doacao = {

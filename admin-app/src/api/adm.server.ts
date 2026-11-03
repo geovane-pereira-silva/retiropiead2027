@@ -122,8 +122,8 @@ const dataOk = (v: unknown) => (dataISOValida(v) ? v : "");
 const limpo = (v: unknown, max = 200) => higienizarCelula(String(v ?? "").slice(0, max));
 
 export type Gravacao =
-  | { tipo: "pagamento"; familiaId: string; valor: number; forma: string; data: string; obs?: string }
-  | { tipo: "despesa"; categoria: string; fornecedor: string; descricao?: string; orcado: number; pago?: number; data?: string }
+  | { tipo: "pagamento"; familiaId: string; valor: number; valorBruto?: number; taxaCartao?: number; valorLiquido?: number; forma: string; data: string; obs?: string }
+  | { tipo: "despesa"; categoria: string; fornecedor: string; responsavelCompra: string; descricao?: string; orcado: number; pago?: number; data?: string }
   | { tipo: "despesa-status"; id: string; status: "Orçado" | "Aprovado" | "Pago" }
   | { tipo: "doacao"; doador: string; valor: number; modo: string; data?: string; obs?: string }
   | { tipo: "ajuste"; familiaId: string; ajuste: TipoAjuste; descricao: string; valor?: number }
@@ -135,20 +135,27 @@ export function prepararGravacao(g: Gravacao, agora = new Date()): { acao: strin
   switch (g.tipo) {
     case "pagamento": {
       const valor = Number(g.valor);
+      const bruto = Number(g.valorBruto ?? valor);
+      const taxa = Number(g.taxaCartao ?? 0);
+      const liquido = Number(g.valorLiquido ?? valor);
       if (!g.familiaId || !Number.isFinite(valor) || valor === 0 || Math.abs(valor) > 100000)
         return erro("INVALIDO", "Informe a família e um valor válido.");
       if (!["Pix", "Cartão", "Dinheiro"].includes(g.forma)) return erro("INVALIDO", "Forma de pagamento inválida.");
+      if (g.forma === "Cartão" && valor > 0 && (!Number.isFinite(bruto) || !Number.isFinite(taxa) || !Number.isFinite(liquido) || bruto <= 0 || taxa < 0 || liquido <= 0 || Math.abs(bruto - taxa - liquido) > 0.01 || Math.abs(liquido - valor) > 0.01))
+        return erro("INVALIDO", "Confira valor cobrado, taxa e valor líquido do cartão.");
+      if (g.forma !== "Cartão" && (Math.abs(bruto - valor) > 0.01 || Math.abs(liquido - valor) > 0.01 || taxa !== 0))
+        return erro("INVALIDO", "Valores de taxa só podem ser informados para cartão.");
       if (g.data && !dataOk(g.data)) return erro("INVALIDO", "Informe uma data válida.");
-      return { acao: "adm.add", corpo: { aba: "Pagamentos", valores: { id: novoId("P"), data: dataOk(g.data) || hoje, familiaId: limpo(g.familiaId, 40), valor, forma: g.forma, obs: limpo(g.obs) } } };
+      return { acao: "adm.add", corpo: { aba: "Pagamentos", valores: { id: novoId("P"), data: dataOk(g.data) || hoje, familiaId: limpo(g.familiaId, 40), valor, valorBruto: bruto, taxaCartao: taxa, valorLiquido: liquido, forma: g.forma, obs: limpo(g.obs) } } };
     }
     case "despesa": {
       const orcado = Number(g.orcado);
       const pago = Number(g.pago ?? 0);
-      if (!(CATEGORIAS as string[]).includes(g.categoria) || !g.fornecedor?.trim() || !Number.isFinite(orcado) || orcado <= 0 || orcado > 100000 || !Number.isFinite(pago) || pago < 0 || pago > 100000)
+      if (!(CATEGORIAS as string[]).includes(g.categoria) || !g.fornecedor?.trim() || !g.responsavelCompra?.trim() || !Number.isFinite(orcado) || orcado <= 0 || orcado > 100000 || !Number.isFinite(pago) || pago < 0 || pago > 100000)
         return erro("INVALIDO", "Informe categoria, fornecedor e valor.");
       if (g.data && !dataOk(g.data)) return erro("INVALIDO", "Informe uma data válida.");
       const status = pago >= orcado ? "Pago" : pago > 0 ? "Aprovado" : "Orçado";
-      return { acao: "adm.add", corpo: { aba: "Despesas", valores: { id: novoId("D"), data: dataOk(g.data) || hoje, categoria: g.categoria, fornecedor: limpo(g.fornecedor), descricao: limpo(g.descricao), orcado, pago, status } } };
+      return { acao: "adm.add", corpo: { aba: "Despesas", valores: { id: novoId("D"), data: dataOk(g.data) || hoje, categoria: g.categoria, fornecedor: limpo(g.fornecedor), descricao: limpo(g.descricao), orcado, pago, status, responsavelCompra: limpo(g.responsavelCompra) } } };
     }
     case "despesa-status":
       if (!g.id || !["Orçado", "Aprovado", "Pago"].includes(g.status)) return erro("INVALIDO", "Status inválido.");

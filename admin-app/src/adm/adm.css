@@ -672,3 +672,8 @@
   .adm-colunas { height: 10rem; }
 }
 @media (prefers-reduced-motion: reduce) { .adm-coluna-link .adm-coluna-barra { transition: none; } }
+
+.adm-pagamento-valores { display: grid; gap: .12rem; }
+.adm-pagamento-valores strong { color: #176542; font-weight: 750; }
+.adm-pagamento-valores small { color: #6c7d72; font-size: .7rem; white-space: nowrap; }
+@media (max-width: 40rem) { .adm-pagamento-valores small { white-space: normal; } }
