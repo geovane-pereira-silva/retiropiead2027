@@ -140,6 +140,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
   const [aviso, setAviso] = useState<{ tom: "ok" | "erro"; texto: string } | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [paleta, setPaleta] = useState(false);
+  const [faixaVisivel, setFaixaVisivel] = useState(true);
   const [filtroDataPainel, setFiltroDataPainel] = useState<string | null>(null);
   const gravacaoEmAndamento = useRef(false);
   const hoje = hojeISO();
@@ -235,13 +236,13 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
         </div>
       </aside>
       <div className="adm-conteudo">
-        {!real && <div className="adm-faixa" role="status">Cópia das planilhas para avaliação — nenhum lançamento altera os dados originais.</div>}
+        {!real && faixaVisivel && <div className="adm-faixa" role="status"><span>Cópia das planilhas para avaliação — nenhum lançamento altera os dados originais.</span><button type="button" className="adm-faixa-fechar" aria-label="Fechar aviso" onClick={() => setFaixaVisivel(false)}><X size={16} aria-hidden /></button></div>}
         {aviso && <div className={`adm-toast adm-toast-${aviso.tom}`} role="status">{aviso.texto}</div>}
         {(!base || !resumo) && <main className="adm-pagina"><p className="adm-sub">{carregando ? "Carregando a planilha…" : "Sem dados."}</p></main>}
         {base && resumo && (
           <>
             {tela === "painel" && <Painel resumo={resumo} hoje={hoje} abrir={(id) => { setTela("inscritos"); setAberta(id); }} navegar={setTela} abrirData={(data) => { setFiltroDataPainel(data); setTela("pagamentos"); }} />}
-            {tela === "inscritos" && <Inscritos resumo={resumo} aberta={aberta} setAberta={setAberta} hoje={hoje} base={base} lancar={lancarPagamento} exec={exec} />}
+            {tela === "inscritos" && <Inscritos resumo={resumo} aberta={aberta} setAberta={setAberta} hoje={hoje} base={base} lancar={lancarPagamento} exec={exec} irParaPagamentos={() => setTela("pagamentos")} />}
             {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} abrirFamilia={(id) => { setTela("inscritos"); setAberta(id); }} dataFiltro={filtroDataPainel} />}
             {tela === "despesas" && <Despesas base={base} exec={exec} />}
             {tela === "doacoes" && <Doacoes base={base} exec={exec} />}
@@ -388,7 +389,7 @@ const COLUNAS_QUADRO: SituacaoFamilia[] = ["pendente", "parcial", "quitado", "is
 const CLASSIFICACOES: ClassificacaoParticipante[] = ["Organizador (paga meia)", "Apoio (não pagante)", "Não pagante (0–4 anos)", "Participante inteira", "Participante meia", "Visitante"];
 
 function Inscritos({
-  resumo, aberta, setAberta, hoje, base, lancar, exec,
+  resumo, aberta, setAberta, hoje, base, lancar, exec, irParaPagamentos,
 }: {
   resumo: ReturnType<typeof resumirTudo>;
   aberta: string | null;
@@ -397,6 +398,7 @@ function Inscritos({
   base: Base;
   lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>;
   exec: (g: Gravacao) => Promise<boolean>;
+  irParaPagamentos: () => void;
 }) {
   const [visao, setVisao] = useState<"tabela" | "quadro">("tabela");
   const [busca, setBusca] = useState("");
@@ -427,8 +429,9 @@ function Inscritos({
 
   return (
     <main className="adm-pagina">
-      <div className="adm-topo">
+      <div className="adm-topo adm-topo-inscritos">
         <h1>Inscritos</h1>
+        <button className="adm-btn adm-btn-primario" type="button" onClick={irParaPagamentos}><BadgeDollarSign size={17} aria-hidden /> Lançar recebimento</button>
         <div className="adm-alternar" role="group" aria-label="Visualização">
           <button className={visao === "tabela" ? "ativo" : ""} onClick={() => setVisao("tabela")}>Tabela</button>
           <button className={visao === "quadro" ? "ativo" : ""} onClick={() => setVisao("quadro")}>Quadro</button>
@@ -459,7 +462,7 @@ function Inscritos({
 
       {visao === "tabela" ? (
         <div className="adm-tabela-caixa">
-          <table className="adm-tabela">
+          <table className="adm-tabela adm-tabela-inscritos">
             <thead>
               <tr><th>Responsável</th><th>Pessoas</th><th>Devido</th><th>Pago</th><th>Situação</th><th>Próximo vencimento</th><th>Cadastro</th></tr>
             </thead>
@@ -726,7 +729,7 @@ function Pagamentos({ base, resumo, lancar, abrirFamilia, dataFiltro }: { base: 
           <span className="adm-mudo">{ordenados.length} de {base.pagamentos.length} lançamento(s)</span>
         </div>
         <div className="adm-tabela-caixa">
-          <table className="adm-tabela">
+          <table className="adm-tabela adm-tabela-pagamentos">
             <thead><tr><th>Data</th><th>Família</th><th>Forma</th><th>Valor recebido</th><th>Cadastro</th></tr></thead>
             <tbody>
               {ordenados.map((p) => (
@@ -792,7 +795,7 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
       </section>
       <section className="adm-bloco">
         <h2>Nova despesa</h2>
-        <form className="adm-form" onSubmit={async (e) => {
+        <form id="adm-nova-despesa" className="adm-form" onSubmit={async (e) => {
           e.preventDefault();
           if (!valido || salvando) return;
           setSalvando(true);
@@ -825,13 +828,13 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
           {(busca || filtroCategoria !== "todas" || filtroStatus !== "todos") && <button className="adm-btn adm-btn-fantasma" onClick={() => { setBusca(""); setFiltroCategoria("todas"); setFiltroStatus("todos"); }}>Limpar filtros</button>}
         </div>
         <div className="adm-tabela-caixa">
-          <table className="adm-tabela"><thead><tr><th>Data</th><th>Categoria</th><th>Fornecedor / descrição</th><th>Orçado</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead>
+          <table className="adm-tabela adm-tabela-despesas"><thead><tr><th>Data</th><th>Categoria</th><th>Fornecedor / descrição</th><th>Orçado</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody>{despesas.map((d) => <tr key={d.id}>
               <td>{d.data ? dma(d.data) : "—"}</td><td>{d.categoria}</td><td><strong>{d.fornecedor}</strong><span className="adm-mudo adm-bloco-sub">{d.descricao}</span><span className="adm-mudo adm-bloco-sub">Compra feita por: {d.responsavelCompra || "não informado"}</span></td>
               <td>{reais(d.orcado)}</td><td className="tom-vermelho">{reais(d.pago)}</td>
               <td><span className={`adm-selo adm-selo-${d.status === "Pago" ? "verde" : d.status === "Aprovado" ? "azul" : "neutro"}`}>{d.status}</span></td>
               <td>{d.status === "Orçado" && <button className="adm-btn adm-btn-fantasma" onClick={() => void mudarStatus(d.id, "Aprovado")}>Aprovar</button>}{d.status !== "Pago" && <button className="adm-btn adm-btn-fantasma" onClick={() => void mudarStatus(d.id, "Pago")}>Marcar pago</button>}</td>
-            </tr>)}{despesas.length === 0 && <tr><td colSpan={7} className="adm-vazio">Nenhuma despesa corresponde a esses filtros.</td></tr>}</tbody>
+            </tr>)}{despesas.length === 0 && <tr><td colSpan={7}><div className="adm-estado-vazio"><span>{base.despesas.length === 0 ? "Ainda não há despesas lançadas nesta prévia." : "Nenhuma despesa corresponde aos filtros atuais."}</span><button className="adm-btn adm-btn-fantasma" type="button" onClick={() => { const form = document.getElementById("adm-nova-despesa"); form?.scrollIntoView({ behavior: "smooth", block: "center" }); (form?.querySelector("input,select") as HTMLElement | null)?.focus({ preventScroll: true }); }}>Abrir formulário de despesa</button></div></td></tr>}</tbody>
           </table>
         </div>
       </section>
@@ -865,7 +868,7 @@ function Doacoes({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<bo
       <section className="adm-grade adm-grade-3"><Cartao rotulo="Total arrecadado" valor={reais(total)} tom="verde" /></section>
       <section className="adm-bloco">
         <h2>Nova doação</h2>
-        <form className="adm-form" onSubmit={async (e) => {
+        <form id="adm-nova-doacao" className="adm-form" onSubmit={async (e) => {
           e.preventDefault();
           if (!valido) return;
           if (salvando) return;
@@ -882,7 +885,7 @@ function Doacoes({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<bo
               <option>Avulsa</option><option>Apadrinhamento de vaga</option>
             </select>
           </label>
-          <label className="adm-form-largo">Observação<input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Opcional" /></label>
+          <label>Observação<input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Opcional" /></label>
           <button className="adm-btn adm-btn-primario" disabled={!valido || salvando}>{salvando ? "Salvando…" : "Registrar doação"}</button>
         </form>
       </section>
@@ -903,7 +906,7 @@ function Doacoes({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<bo
             <li key={d.id}><span>{dma(d.data)} · <strong>{d.doador}</strong> <span className="adm-mudo">· {d.tipo}{d.obs ? ` · ${d.obs}` : ""}</span></span><span className="tom-verde">{reais(d.valor)}</span></li>
           ))}
         </ul>
-        {doacoes.length === 0 && <p className="adm-vazio">Nenhuma doação corresponde a esses filtros.</p>}
+        {doacoes.length === 0 && <div className="adm-estado-vazio"><span>{base.doacoes.length === 0 ? "Ainda não há doações lançadas nesta prévia." : "Nenhuma doação corresponde aos filtros atuais."}</span><button className="adm-btn adm-btn-fantasma" type="button" onClick={() => { const form = document.getElementById("adm-nova-doacao"); form?.scrollIntoView({ behavior: "smooth", block: "center" }); (form?.querySelector("input,select") as HTMLElement | null)?.focus({ preventScroll: true }); }}>Abrir formulário de doação</button></div>}
       </section>
     </main>
   );
