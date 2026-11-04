@@ -529,7 +529,7 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
           {atual.pessoas.map((p) => (
             <li key={p.id} className="adm-pessoa">
               <span>{p.nome} <span className="adm-mudo">· {p.idade === null ? "idade não informada" : `${p.idade} anos`} · {p.classificacao} · {p.transporte === "onibus" ? "ônibus" : p.transporte === "proprio" ? "carro próprio" : "transporte não informado"}</span></span>
-              <span>{p.valor === 0 ? "Gratuito" : reais(p.valor)}</span>
+              <span>{p.valorInformado === false ? "A confirmar" : p.valor === 0 ? "Gratuito" : reais(p.valor)}</span>
               <Camiseta key={`${p.id}-${p.tamanho}-${p.modelo}`} p={p} exec={exec} />
             </li>
           ))}
@@ -955,6 +955,7 @@ function Relatorios({ base, resumo }: { base: Base; resumo: ReturnType<typeof re
       <h1>Relatórios</h1>
       <section className="adm-grade adm-grade-3">
         <Cartao rotulo="Pessoas no recorte" valor={String(pessoasNoRecorte.length)} nota={`${pessoasPagantesRecorte} pagantes · ${pessoasNoRecorte.length - pessoasPagantesRecorte} gratuitas`} />
+        <Cartao rotulo="Valores a confirmar" valor={String(pessoasNoRecorte.filter((p) => p.valorInformado === false).length)} nota="Sem valor definido na planilha" />
         <Cartao rotulo="Vão de ônibus" valor={String(transporteFiltrado.onibus)} />
         <Cartao rotulo="Carro próprio" valor={String(transporteFiltrado.proprio)} />
         <Cartao rotulo="Transporte não informado" valor={String(pessoasNoRecorte.filter((p) => p.transporte === "nao-informado").length)} />
