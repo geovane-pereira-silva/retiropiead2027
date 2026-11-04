@@ -242,6 +242,11 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
         </div>
       </aside>
       <div className="adm-conteudo">
+        <header className="adm-topbar">
+          <div className="adm-topbar-identidade">Conexão Jovem<small>Gestão do Retiro 2027</small></div>
+          <button type="button" className="adm-topbar-busca" onClick={() => setPaleta(true)}><Search size={16} aria-hidden /><span>Buscar cadastros, recebimentos e relatórios…</span><kbd>Ctrl K</kbd></button>
+          <div className="adm-topbar-status">Prévia</div>
+        </header>
         {!real && faixaVisivel && <div className="adm-faixa" role="status"><span>Cópia das planilhas para avaliação — nenhum lançamento altera os dados originais.</span><button type="button" className="adm-faixa-fechar" aria-label="Fechar aviso" onClick={() => setFaixaVisivel(false)}><X size={16} aria-hidden /></button></div>}
         {aviso && <div className={`adm-toast adm-toast-${aviso.tom}`} role="status">{aviso.texto}</div>}
         {(!base || !resumo) && <main className="adm-pagina"><p className="adm-sub">{carregando ? "Carregando a planilha…" : "Sem dados."}</p></main>}
