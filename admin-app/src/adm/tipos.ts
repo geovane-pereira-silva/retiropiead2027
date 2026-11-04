@@ -15,6 +15,8 @@ export type Pessoa = {
   faixa: FaixaId;
   /** valor devido por esta pessoa (R$) */
   valor: number;
+  /** false quando a fonte não confirma a faixa/valor; excluído dos totais. */
+  valorInformado?: boolean;
   transporte: Transporte;
   /** camiseta (aba Extras) */
   tamanho?: string;
