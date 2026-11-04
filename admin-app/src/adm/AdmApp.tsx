@@ -400,7 +400,7 @@ function Inscritos({
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<SituacaoFamilia | "todas">("todas");
   const [classificacao, setClassificacao] = useState<ClassificacaoParticipante | "todas">("todas");
-  const [transporte, setTransporte] = useState<"todos" | "onibus" | "proprio">("todos");
+  const [transporte, setTransporte] = useState<"todos" | "onibus" | "proprio" | "nao-informado">("todos");
   const [ordenacao, setOrdenacao] = useState("nome");
   const [direcao, setDirecao] = useState<DirecaoOrdenacao>("asc");
 
@@ -445,7 +445,7 @@ function Inscritos({
           <option value="todas">Todas as categorias</option>{CLASSIFICACOES.map((x) => <option key={x}>{x}</option>)}
         </select>
         <select value={transporte} onChange={(e) => setTransporte(e.target.value as typeof transporte)} aria-label="Filtrar por transporte">
-          <option value="todos">Todos os transportes</option><option value="onibus">Ônibus</option><option value="proprio">Carro próprio</option>
+          <option value="todos">Todos os transportes</option><option value="onibus">Ônibus</option><option value="proprio">Carro próprio</option><option value="nao-informado">Não informado</option>
         </select>
         <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar inscritos por">
           <option value="nome">Ordenar: nome</option><option value="pessoas">Número de pessoas</option><option value="devido">Valor devido</option><option value="pago">Valor pago</option><option value="situacao">Situação</option><option value="vencimento">Próximo vencimento</option>
@@ -526,7 +526,7 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
         <ul className="adm-lista adm-lista-simples">
           {atual.pessoas.map((p) => (
             <li key={p.id} className="adm-pessoa">
-              <span>{p.nome} <span className="adm-mudo">· {p.idade === null ? "idade não informada" : `${p.idade} anos`} · {p.classificacao} · {p.transporte === "onibus" ? "ônibus" : "carro próprio"}</span></span>
+              <span>{p.nome} <span className="adm-mudo">· {p.idade === null ? "idade não informada" : `${p.idade} anos`} · {p.classificacao} · {p.transporte === "onibus" ? "ônibus" : p.transporte === "proprio" ? "carro próprio" : "transporte não informado"}</span></span>
               <span>{p.valor === 0 ? "Gratuito" : reais(p.valor)}</span>
               <Camiseta key={`${p.id}-${p.tamanho}-${p.modelo}`} p={p} exec={exec} />
             </li>
@@ -955,6 +955,7 @@ function Relatorios({ base, resumo }: { base: Base; resumo: ReturnType<typeof re
         <Cartao rotulo="Pessoas no recorte" valor={String(pessoasNoRecorte.length)} nota={`${pessoasPagantesRecorte} pagantes · ${pessoasNoRecorte.length - pessoasPagantesRecorte} gratuitas`} />
         <Cartao rotulo="Vão de ônibus" valor={String(transporteFiltrado.onibus)} />
         <Cartao rotulo="Carro próprio" valor={String(transporteFiltrado.proprio)} />
+        <Cartao rotulo="Transporte não informado" valor={String(pessoasNoRecorte.filter((p) => p.transporte === "nao-informado").length)} />
       </section>
       <section className="adm-bloco">
         <h2>Camisetas</h2>
@@ -970,7 +971,7 @@ function Relatorios({ base, resumo }: { base: Base; resumo: ReturnType<typeof re
         <div className="adm-ferramentas" role="search" aria-label="Filtrar relatório de inscritos">
           <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar pessoa, família ou igreja" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar no relatório" /></label>
           <select value={classificacao} onChange={(e) => setClassificacao(e.target.value as typeof classificacao)} aria-label="Filtrar classificação"><option value="todas">Todas as categorias</option>{CLASSIFICACOES.map((x) => <option key={x}>{x}</option>)}</select>
-          <select value={transporte} onChange={(e) => setTransporte(e.target.value as typeof transporte)} aria-label="Filtrar transporte"><option value="todos">Todos os transportes</option><option value="onibus">Ônibus</option><option value="proprio">Carro próprio</option></select>
+          <select value={transporte} onChange={(e) => setTransporte(e.target.value as typeof transporte)} aria-label="Filtrar transporte"><option value="todos">Todos os transportes</option><option value="onibus">Ônibus</option><option value="proprio">Carro próprio</option><option value="nao-informado">Não informado</option></select>
           <select value={situacao} onChange={(e) => setSituacao(e.target.value as typeof situacao)} aria-label="Filtrar situação financeira"><option value="todas">Todas as situações</option>{Object.entries(rotuloSituacao).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar relatório por"><option value="nome">Ordenar: nome</option><option value="pessoas">Número de pessoas</option><option value="devido">Valor devido</option></select>
           <button className="adm-btn adm-btn-fantasma" onClick={() => setDirecao((d) => d === "asc" ? "desc" : "asc")} aria-label="Inverter ordem">{direcao === "asc" ? "↑" : "↓"}</button>
