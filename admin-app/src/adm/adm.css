@@ -677,3 +677,19 @@
 .adm-pagamento-valores strong { color: #176542; font-weight: 750; }
 .adm-pagamento-valores small { color: #6c7d72; font-size: .7rem; white-space: nowrap; }
 @media (max-width: 40rem) { .adm-pagamento-valores small { white-space: normal; } }
+
+
+/* Usuários: cadastro compacto que se reorganiza bem em telas estreitas. */
+.adm-usuario-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 0.8rem;
+}
+.adm-usuario-form label { display: grid; gap: 0.35rem; font-size: 0.82rem; color: var(--a-mudo); }
+.adm-usuario-form input,
+.adm-usuario-form select { min-width: 0; width: 100%; }
+@media (max-width: 760px) {
+  .adm-usuario-form { grid-template-columns: 1fr; }
+  .adm-usuario-form .adm-btn { width: 100%; }
+}
