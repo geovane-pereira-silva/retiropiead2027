@@ -883,3 +883,199 @@
   .adm-analise-ia .adm-btn { width: 100%; }
   .adm-fluxo-grafico { min-height: 10rem; }
 }
+
+
+/* Direção visual do painel: superfícies frias, acentos azuis e hierarquia financeira */
+.adm {
+  --a-bg: #eef3f8;
+  --a-card: #fff;
+  --a-tinta: #18253a;
+  --a-mudo: #74839a;
+  --a-linha: #e2e9f1;
+  --a-verde: #13845b;
+  --a-verde-fundo: #e8f6ef;
+  --a-ambar: #9b6800;
+  --a-ambar-fundo: #fff5dc;
+  --a-vermelho: #c94747;
+  --a-vermelho-fundo: #fff0ef;
+  --a-azul: #4b63e7;
+  --a-azul-fundo: #e9edff;
+  --a-foco: #4b63e7;
+  background: #eef3f8;
+  color: #18253a;
+}
+.adm-app { grid-template-columns: 15rem minmax(0,1fr); }
+.adm-lateral {
+  background: #f9fbfd;
+  border-right-color: #e5ebf2;
+  padding: 1.1rem .8rem;
+}
+.adm-brand { color: #20304a; padding: .35rem .45rem .9rem; }
+.adm-brand img { padding: .15rem; border-radius: 50%; background: #0e5342; }
+.adm-brand span { color: #25334a; }
+.adm-nav { color: #677891; border-radius: .5rem; min-height: 2.45rem; }
+.adm-nav svg { color: #8798b0; }
+.adm-nav:hover { background: #edf2f8; color: #293b59; }
+.adm-nav.ativo {
+  background: #e8edff;
+  color: #354cc7;
+  box-shadow: inset 3px 0 #5368ed;
+  font-weight: 700;
+}
+.adm-nav.ativo svg { color: #5368ed; }
+.adm-conteudo { background: #eef3f8; }
+.adm-topbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(11rem, 1fr) minmax(17rem, min(36vw, 26rem)) minmax(9rem,1fr);
+  align-items: center;
+  gap: 1rem;
+  min-height: 3.7rem;
+  padding: .45rem 1.5rem;
+  background: rgb(249 251 253 / .94);
+  border-bottom: 1px solid #e4eaf2;
+  backdrop-filter: blur(12px);
+}
+.adm-topbar-identidade { color: #344761; font-size: .82rem; font-weight: 700; }
+.adm-topbar-identidade small { display: block; color: #8794a7; font-size: .68rem; font-weight: 500; }
+.adm-topbar-busca {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0 .55rem;
+  border: 1px solid #dfe6ef;
+  border-radius: .45rem;
+  background: #fff;
+  color: #7a899e;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.adm-topbar-busca kbd { margin-left: auto; padding: .05rem .3rem; border: 1px solid #e5e9ef; border-radius: .25rem; color: #9aa5b4; font-size: .66rem; }
+.adm-topbar-status { justify-self: end; color: #75849a; font-size: .75rem; }
+.adm-topbar-status::before { content: ""; display: inline-block; width: .45rem; height: .45rem; margin-right: .4rem; border-radius: 50%; background: #4baf82; }
+.adm-pagina { max-width: 100rem; padding: 1.4rem clamp(1rem,2.3vw,2rem); gap: 1rem; }
+.adm-bloco,.adm-cartao { border-color: #e2e9f1; border-radius: .65rem; box-shadow: 0 2px 7px rgb(36 55 84 / .07); }
+.adm-bloco { padding: 1rem 1.1rem; }
+.adm-grade { gap: .65rem; }
+.adm-cartao { padding: .95rem 1rem; }
+.adm-btn { border-radius: .45rem; border-color: #dbe3ed; color: #31425d; }
+.adm-btn-primario { background: #5268ed; border-color: #5268ed; color: #fff; box-shadow: 0 2px 4px rgb(63 83 202 / .14); }
+.adm-btn-primario:hover:not(:disabled) { background: #4259dc; border-color: #4259dc; }
+.adm-btn:hover:not(:disabled):not(.adm-btn-primario) { background: #f3f6fb; border-color: #cdd9e8; }
+.adm-input:focus,.adm input:focus,.adm select:focus { border-color: #7e91f2; box-shadow: 0 0 0 3px rgb(82 104 237 / .12); outline: none; }
+.adm-coluna-barra { background: #6279f2; }
+.adm-colunas .vencido .adm-coluna-barra { background: #ec7c7a; }
+.adm-coluna-valor { color: #74839a; }
+.adm-selo-azul { background: #edf0ff; color: #5364d5; }
+.adm-tabela { border-radius: .5rem; overflow: hidden; }
+.adm-tabela th { background: #f6f8fb; color: #75849a; }
+.adm-tabela td { border-color: #edf0f4; }
+.adm-td-nome { background: #f2f6fc; border-right-color: #e7edf4; color: #29415f; }
+.adm-faixa { background: #eaf0ff; color: #334a91; border-color: #dce4ff; }
+.adm-cartao-link { box-shadow: 0 2px 7px rgb(36 55 84 / .07); }
+
+/* Fluxo financeiro compacto e extrato acionável */
+.adm-pagina-fluxo { gap: .75rem; }
+.adm-pagina-fluxo .adm-cabecalho { align-items: center; }
+.adm-fluxo-resumo {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  overflow: hidden;
+  border-radius: .55rem;
+  background: linear-gradient(110deg,#5366e9,#7795fa);
+  box-shadow: 0 3px 9px rgb(44 65 150 / .16);
+}
+.adm-fluxo-resumo > * {
+  display: grid;
+  align-content: center;
+  gap: .12rem;
+  min-height: 5.25rem;
+  padding: .75rem 1.1rem;
+  border: 0;
+  border-right: 1px solid rgb(255 255 255 / .19);
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  font: inherit;
+}
+.adm-fluxo-resumo > button { cursor: pointer; }
+.adm-fluxo-resumo > button:hover { background: rgb(255 255 255 / .1); }
+.adm-fluxo-resumo > *:last-child { border-right: 0; }
+.adm-fluxo-resumo span { color: rgb(255 255 255 / .83); font-size: .66rem; font-weight: 750; letter-spacing: .055em; }
+.adm-fluxo-resumo strong { color: #fff; font-size: 1.45rem; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.adm-fluxo-resumo small { color: rgb(255 255 255 / .82); font-size: .68rem; }
+.adm-provisoes-linha { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; padding: .1rem .2rem; color: #78869b; font-size: .76rem; }
+.adm-provisoes-linha span { display: flex; align-items: center; gap: .35rem; }
+.adm-provisoes-linha strong { color: #35445c; font-variant-numeric: tabular-nums; }
+.adm-contas-min { padding: .65rem .85rem; border: 1px solid #e2e9f1; border-radius: .6rem; background: #fff; box-shadow: 0 1px 4px rgb(36 55 84 / .04); }
+.adm-contas-min > summary { display: flex; align-items: center; gap: .6rem; color: #344761; font-size: .87rem; font-weight: 700; cursor: pointer; list-style: none; }
+.adm-contas-min > summary::-webkit-details-marker { display: none; }
+.adm-contas-min > summary::before { content: "▣"; color: #6278e9; }
+.adm-contas-min > summary > span { color: #8190a5; font-size: .73rem; font-weight: 500; }
+.adm-contas-min > summary .adm-btn { margin-left: auto; }
+.adm-caixas { grid-template-columns: repeat(auto-fit,minmax(13rem,1fr)); gap: .45rem; margin-top: .6rem; }
+.adm-caixa { padding: .58rem .65rem; border-color: #ebeff5; border-radius: .5rem; box-shadow: none; }
+.adm-caixa-icone { width: 2rem; height: 2rem; background: #eff2ff; color: #5368d9; }
+.adm-caixa .adm-selo { font-size: .62rem; }
+.adm-fluxo-meses { padding: .9rem 1rem; }
+.adm-mes-item + .adm-mes-item { border-top: 1px solid #edf0f4; }
+.adm-mes-resumo { display: grid; grid-template-columns: minmax(7rem,1fr) minmax(7rem,.7fr) minmax(7rem,.7fr) 1.5rem; align-items: center; gap: .75rem; width: 100%; padding: .7rem .35rem; border: 0; background: transparent; color: #43536c; text-align: left; font: inherit; cursor: pointer; }
+.adm-mes-resumo:hover { background: #f6f8fc; }
+.adm-mes-resumo > span:first-child { display: grid; gap: .1rem; }
+.adm-mes-resumo small { color: #8390a3; font-size: .68rem; }
+.adm-mes-resumo > span:nth-child(2),.adm-mes-resumo > span:nth-child(3) { text-align: right; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.adm-mes-resumo > span:last-child { text-align: center; color: #7183d9; font-size: 1.1rem; }
+.adm-mes-conteudo { padding: .1rem .3rem .65rem; }
+.adm-mes-barras { display: flex; gap: .35rem; height: .42rem; margin: .2rem 0 .55rem; overflow: hidden; border-radius: 99px; background: #f1f3f6; }
+.adm-mes-barras i { display: block; height: 100%; border-radius: inherit; }
+.adm-mes-barras .entrada { background: #168b61; }
+.adm-mes-barras .saida { background: #d65353; }
+.adm-mes-linha { display: flex; justify-content: space-between; gap: .75rem; width: 100%; padding: .45rem .35rem; border: 0; border-bottom: 1px solid #f0f2f5; background: transparent; color: #52627a; text-align: left; font: inherit; font-size: .78rem; cursor: pointer; }
+.adm-mes-linha:hover { background: #f7f9fc; }
+.adm-mes-linha strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-fluxo-cenarios { align-items: start; gap: .7rem; }
+.adm-fluxo-cenarios .adm-bloco { box-shadow: 0 1px 5px rgb(36 55 84 / .05); }
+.adm-extrato { display: grid; gap: .75rem; }
+.adm-filtros-extrato { display: grid; grid-template-columns: repeat(6,minmax(8rem,1fr)); align-items: end; gap: .55rem; padding: .7rem; border-radius: .55rem; background: #f6f8fb; }
+.adm-filtros-extrato label { min-width: 0; }
+.adm-filtros-extrato input,.adm-filtros-extrato select { min-width: 0; min-height: 2.25rem; padding: .42rem .55rem; font-size: .78rem; }
+.adm-extrato-form { padding: .85rem; border: 1px solid #dfe6f1; border-radius: .6rem; background: #f9fbfe; }
+.adm-extrato-form label { color: #65748a; }
+.adm-form-acoes { display: flex; align-items: end; gap: .45rem; }
+.adm-tabela-fluxo td:last-child { white-space: nowrap; }
+.adm-tabela-fluxo td:last-child .adm-btn { min-height: 2rem; padding: .25rem .55rem; font-size: .72rem; }
+@media (max-width: 64rem) {
+  .adm-filtros-extrato { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 48rem) {
+  .adm-app { grid-template-columns: 1fr; }
+  .adm-lateral { position: sticky; top: 0; z-index: 30; height: auto; padding: .45rem .55rem; border-right: 0; border-bottom: 1px solid #e2e9f1; }
+  .adm-brand { display: none; }
+  .adm-lateral nav { display: flex; gap: .25rem; overflow-x: auto; }
+  .adm-nav { flex: 0 0 auto; width: auto; min-height: 2.15rem; padding: .35rem .55rem; font-size: .75rem; }
+  .adm-nav.ativo { box-shadow: inset 0 -2px #5368ed; }
+  .adm-usuario { display: none; }
+  .adm-topbar { grid-template-columns: 1fr auto; min-height: 3rem; padding: .35rem .7rem; gap: .5rem; }
+  .adm-topbar-identidade small { display: none; }
+  .adm-topbar-busca { grid-column: 1/-1; grid-row: 2; }
+  .adm-topbar-status { font-size: .68rem; }
+  .adm-pagina { padding: 1rem .75rem; }
+  .adm-fluxo-resumo strong { font-size: 1rem; }
+  .adm-fluxo-resumo > * { min-height: 4.3rem; padding: .5rem .6rem; }
+  .adm-fluxo-resumo small { font-size: .58rem; }
+  .adm-mes-resumo { grid-template-columns: 1fr 1fr 1fr 1rem; gap: .25rem; padding-inline: .1rem; }
+  .adm-mes-resumo > span:nth-child(2),.adm-mes-resumo > span:nth-child(3) { font-size: .68rem; }
+  .adm-filtros-extrato { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .adm-extrato-form { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .adm-form-acoes { grid-column: 1/-1; }
+  .adm-form-acoes .adm-btn { flex: 1; }
+  .adm-mes-linha { align-items: start; font-size: .72rem; }
+  .adm-mes-linha span { max-width: 65%; }
+  .adm-contas-min > summary > span { margin-left: auto; }
+  .adm-contas-min > summary .adm-btn { width: auto; min-height: 2rem; margin-left: 0; }
+}
