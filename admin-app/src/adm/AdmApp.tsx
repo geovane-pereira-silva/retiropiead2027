@@ -529,7 +529,7 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
           {atual.pessoas.map((p) => (
             <li key={p.id} className="adm-pessoa">
               <span>{p.nome} <span className="adm-mudo">· {p.idade === null ? "idade não informada" : `${p.idade} anos`} · {p.classificacao} · {p.transporte === "onibus" ? "ônibus" : p.transporte === "proprio" ? "carro próprio" : "transporte não informado"}</span></span>
-              <span>{p.valorInformado === false ? "A confirmar" : p.valor === 0 ? "Gratuito" : reais(p.valor)}</span>
+              <span>{p.valorInformado === false ? <span className="adm-selo adm-selo-ambar">A confirmar</span> : p.valor === 0 ? "Gratuito" : reais(p.valor)}</span>
               <Camiseta key={`${p.id}-${p.tamanho}-${p.modelo}`} p={p} exec={exec} />
             </li>
           ))}
