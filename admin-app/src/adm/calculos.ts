@@ -43,6 +43,7 @@ export function resumirFamilia(
 
   let situacao: SituacaoFamilia;
   if (pessoas.length === 0) situacao = "pre";
+  else if (devido === 0 && pessoas.some((p) => p.valorInformado === false)) situacao = "pre";
   else if (devido === 0) situacao = "isento";
   else if (pago >= devido) situacao = "quitado";
   else if (pago > 0) situacao = "parcial";
