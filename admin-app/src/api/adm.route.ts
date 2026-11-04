@@ -1,5 +1,6 @@
 import { admReal, carregar, entrar, gravar, sessaoDe, type AmbienteAdm, type Gravacao } from "./adm.server";
 import type { Base } from "../adm/tipos";
+import { gunzipSync } from "node:zlib";
 import { cookieLimpo, cookieSessao, lerCookie } from "../adm/sessao";
 
 const json = (dados: unknown, status = 200, headers: HeadersInit = {}) =>
@@ -25,10 +26,10 @@ export async function atenderAdmin(request: Request): Promise<Response> {
 
   // Prévia isolada: snapshot privado importado das planilhas, apenas leitura.
   if (request.method === "GET" && acao === "preview-data" && !amb.real) {
-    const snapshot = process.env.ADM_PREVIEW_DATA;
+    const snapshot = process.env.ADM_PREVIEW_DATA_GZIP;
     if (!snapshot) return json({ ok: false, codigo: "PREVIEW_SEM_DADOS", mensagem: "O conjunto de dados da prévia ainda não foi carregado." }, 503);
     try {
-      const dados = JSON.parse(snapshot) as Base;
+      const dados = JSON.parse(gunzipSync(Buffer.from(snapshot, "base64")).toString("utf8")) as Base;
       return json({ ok: true, dados });
     } catch {
       return json({ ok: false, codigo: "PREVIEW_INVALIDA", mensagem: "Os dados importados para a prévia estão inválidos." }, 503);
