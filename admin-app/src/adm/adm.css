@@ -807,3 +807,6 @@
   .adm-estado-vazio { align-items: stretch; }
   .adm-estado-vazio .adm-btn { width: 100%; }
 }
+
+.adm-pagamento-rapido { justify-self: start; color: #245a40; background: #edf5ef; border-color: #cfe0d2; }
+.adm-pagamento-rapido:hover:not(:disabled) { color: #174d36; background: #e1eee4; border-color: #b8d2be; }
