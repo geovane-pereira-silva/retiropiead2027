@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   BadgeDollarSign,
   FileText,
@@ -39,7 +39,7 @@ const dma = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice
 const hojeISO = () => hojeLocalISO();
 const novoId = (p: string) => `${p}-${Date.now().toString(36)}${Math.floor(Math.random() * 1e3)}`;
 
-type Tela = "painel" | "inscritos" | "pagamentos" | "despesas" | "doacoes" | "relatorios";
+type Tela = "painel" | "inscritos" | "pagamentos" | "despesas" | "doacoes" | "relatorios" | "usuarios";
 const TELAS: { id: Tela; rotulo: string; icone: typeof Users }[] = [
   { id: "painel", rotulo: "Painel", icone: LayoutDashboard },
   { id: "inscritos", rotulo: "Inscritos", icone: Users },
@@ -47,6 +47,7 @@ const TELAS: { id: Tela; rotulo: string; icone: typeof Users }[] = [
   { id: "despesas", rotulo: "Despesas", icone: Receipt },
   { id: "doacoes", rotulo: "Doações", icone: Gift },
   { id: "relatorios", rotulo: "Relatórios", icone: FileText },
+  { id: "usuarios", rotulo: "Usuários", icone: Users },
 ];
 
 const COR_SITUACAO: Record<SituacaoFamilia, string> = {
@@ -245,6 +246,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
             {tela === "despesas" && <Despesas base={base} exec={exec} />}
             {tela === "doacoes" && <Doacoes base={base} exec={exec} />}
             {tela === "relatorios" && <Relatorios base={base} resumo={resumo} />}
+            {tela === "usuarios" && <Usuarios />}
           </>
         )}
         {paleta && base && <Paleta base={base} fechar={() => setPaleta(false)} ir={(t, id) => { setTela(t); if (id) setAberta(id); setPaleta(false); }} />}
@@ -983,3 +985,80 @@ function Relatorios({ base, resumo }: { base: Base; resumo: ReturnType<typeof re
     </main>
   );
 }
+
+
+type FuncaoUsuario = "Administrador" | "Líder financeiro" | "Líder";
+type UsuarioPreview = { id: string; nome: string; email: string; funcao: FuncaoUsuario };
+
+function Usuarios() {
+  const [usuarios, setUsuarios] = useState<UsuarioPreview[]>([
+    { id: "admin", nome: "Administrador principal", email: "Acesso administrativo", funcao: "Administrador" },
+    { id: "financeiro", nome: "Liderança financeira", email: "Acesso financeiro", funcao: "Líder financeiro" },
+  ]);
+  const [adicionando, setAdicionando] = useState(false);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [funcao, setFuncao] = useState<FuncaoUsuario>("Líder");
+  const [avisoLocal, setAvisoLocal] = useState("");
+  const salvar = (e: FormEvent) => {
+    e.preventDefault();
+    const normalizado = email.trim().toLowerCase();
+    if (!nome.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizado)) {
+      setAvisoLocal("Informe um nome e um e-mail válido.");
+      return;
+    }
+    if (usuarios.some((u) => u.email.toLowerCase() === normalizado)) {
+      setAvisoLocal("Esse e-mail já tem acesso.");
+      return;
+    }
+    setUsuarios((lista) => [...lista, { id: `usr-${Date.now()}`, nome: nome.trim(), email: normalizado, funcao }]);
+    setNome(""); setEmail(""); setFuncao("Líder"); setAvisoLocal("Acesso incluído nesta prévia; a alteração não foi salva.");
+    setAdicionando(false);
+  };
+  const acesso: Record<FuncaoUsuario, string> = {
+    "Administrador": "Acesso completo, incluindo usuários e financeiro.",
+    "Líder financeiro": "Consulta geral e lançamento de recebimentos e despesas.",
+    "Líder": "Consulta e relatórios, sem permissão para alterar registros.",
+  };
+  return (
+    <main className="adm-pagina">
+      <div className="adm-topo">
+        <div><h1>Usuários</h1><p className="adm-sub">Defina o que cada liderança pode consultar ou registrar.</p></div>
+        <button className="adm-btn adm-btn-primario" onClick={() => { setAdicionando((v) => !v); setAvisoLocal(""); }}>
+          {adicionando ? "Cancelar" : "Adicionar usuário"}
+        </button>
+      </div>
+      <div className="adm-faixa" role="status">Demonstração de permissões: alterações temporárias, sem mudança de acessos reais.</div>
+      {avisoLocal && <p className="adm-toast adm-toast-ok" role="status">{avisoLocal}</p>}
+      {adicionando && (
+        <form className="adm-bloco adm-usuario-form" onSubmit={salvar}>
+          <label>Nome<input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" required /></label>
+          <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /></label>
+          <label>Função<select value={funcao} onChange={(e) => setFuncao(e.target.value as FuncaoUsuario)}>
+            <option>Administrador</option><option>Líder financeiro</option><option>Líder</option>
+          </select></label>
+          <button className="adm-btn adm-btn-primario" type="submit">Adicionar acesso</button>
+        </form>
+      )}
+      <section className="adm-bloco">
+        <div className="adm-tabela-rolagem">
+          <table className="adm-tabela">
+            <thead><tr><th>Nome de acesso</th><th>Identificação</th><th>Função</th><th>Permissões</th></tr></thead>
+            <tbody>{usuarios.map((u) => (
+              <tr key={u.id}><th scope="row">{u.nome}</th><td>{u.email}</td><td><span className="adm-selo adm-selo-verde">{u.funcao}</span></td><td>{acesso[u.funcao]}</td></tr>
+            ))}</tbody>
+          </table>
+        </div>
+        {usuarios.length === 0 && <p className="adm-vazio">Nenhum usuário cadastrado.</p>}
+      </section>
+      <section className="adm-grade adm-grade-3" aria-label="Resumo das permissões">
+        {(Object.keys(acesso) as FuncaoUsuario[]).map((papel) => (
+          <article className="adm-bloco" key={papel}><h2>{papel}</h2><p className="adm-sub">{acesso[papel]}</p>
+            <strong>{usuarios.filter((u) => u.funcao === papel).length} usuário(s)</strong>
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}
+
