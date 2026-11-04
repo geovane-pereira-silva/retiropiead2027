@@ -1116,6 +1116,7 @@ function Usuarios() {
   const [usuarios, setUsuarios] = useState<UsuarioPreview[]>([
     { id: "admin", nome: "Administrador principal", email: "Acesso administrativo", funcao: "Administrador" },
     { id: "financeiro", nome: "Liderança financeira", email: "Acesso financeiro", funcao: "Líder financeiro" },
+    { id: "lider", nome: "Liderança de congregação", email: "Acesso de consulta", funcao: "Líder" },
   ]);
   const [adicionando, setAdicionando] = useState(false);
   const [nome, setNome] = useState("");
@@ -1138,9 +1139,9 @@ function Usuarios() {
     setAdicionando(false);
   };
   const acesso: Record<FuncaoUsuario, string> = {
-    "Administrador": "Acesso completo, incluindo usuários e financeiro.",
-    "Líder financeiro": "Consulta geral e lançamento de recebimentos e despesas.",
-    "Líder": "Consulta e relatórios, sem permissão para alterar registros.",
+    "Administrador": "Acesso total, gestão de usuários e consulta aos logs de auditoria.",
+    "Líder financeiro": "Registra recebimentos, despesas e doações; edita dados financeiros.",
+    "Líder": "Consulta o sistema e edita dados pessoais e anotações de cadastros, sem acesso financeiro.",
   };
   return (
     <main className="adm-pagina">
