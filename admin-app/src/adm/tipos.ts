@@ -2,7 +2,7 @@
 // descrevem as linhas das abas Inscrições, Pagamentos, Despesas e Doações.
 
 export type FaixaId = "menor-5" | "5-9" | "10-mais" | "visitante";
-export type Transporte = "onibus" | "proprio";
+export type Transporte = "onibus" | "proprio" | "nao-informado";
 export type ClassificacaoParticipante = "Organizador (paga meia)" | "Apoio (não pagante)" | "Não pagante (0–4 anos)" | "Participante inteira" | "Participante meia" | "Visitante";
 
 export type Pessoa = {
@@ -32,7 +32,7 @@ export type Familia = {
   observacao?: string;
 };
 
-export type FormaPagamento = "Pix" | "Cartão" | "Dinheiro";
+export type FormaPagamento = "Pix" | "Cartão" | "Dinheiro" | "Não informado";
 
 export type Pagamento = {
   id: string;
