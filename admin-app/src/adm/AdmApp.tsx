@@ -344,7 +344,7 @@ function Painel({ resumo, hoje, abrir, navegar, abrirData }: { resumo: ReturnTyp
       <div className="adm-duas">
         <section className="adm-bloco" aria-label="Entradas previstas">
           <h2>Entradas previstas por vencimento</h2><p className="adm-grafico-hint">Selecione uma coluna para abrir os lançamentos desse vencimento.</p>
-          <p className="adm-sub">Alertas e previsão de vencimentos consideram o calendário Pix. Cartão e dinheiro entram no saldo conforme os pagamentos são registrados.</p>
+          <p className="adm-sub">Alertas e previsão de vencimentos consideram o calendário Pix. Cartão e dinheiro entram no saldo conforme os recebimentos são registrados.</p>
           <ul className="adm-colunas">
             {fluxo.map((f) => (
               <li key={f.data} className={f.vencido ? "vencido" : ""}>
@@ -543,8 +543,8 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
             </li>
           ))}
         </ul>
-        <h3>Pagamentos</h3>
-        {atual.pagamentos.length === 0 && <p className="adm-vazio">Nenhum pagamento lançado.</p>}
+        <h3>Recebimentos</h3>
+        {atual.pagamentos.length === 0 && <p className="adm-vazio">Nenhum recebimento lançado.</p>}
         <ul className="adm-lista adm-lista-simples">
           {atual.pagamentos.map((p) => (
             <li key={p.id}><span>{dma(p.data)} · {p.forma}{p.obs ? ` · ${p.obs}` : ""}{p.forma === "Cartão" && p.valor >= 0 && <span className="adm-mudo adm-bloco-sub">Cobrado {reais(p.valorBruto ?? p.valor)} · taxa {reais(p.taxaCartao ?? 0)} · líquido {reais(p.valorLiquido ?? p.valor)}</span>}</span><span className={p.valor < 0 ? "tom-vermelho" : "tom-verde"}>{reais(p.valorLiquido ?? p.valor)}</span></li>
@@ -633,6 +633,7 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno, estornoPermitido
   const [familiaId, setFamiliaId] = useState(familias[0]?.id ?? "");
   const [valor, setValor] = useState("");
   const [valorLiquido, setValorLiquido] = useState("");
+  const [buscaFamilia, setBuscaFamilia] = useState("");
   const [forma, setForma] = useState<FormaPagamento>("Pix");
   const [data, setData] = useState(hojeISO());
   const [obs, setObs] = useState("");
@@ -640,6 +641,8 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno, estornoPermitido
   const n = lerDinheiro(valor);
   const liquidoCartao = lerDinheiro(valorLiquido);
   const taxaCartao = Number((n - liquidoCartao).toFixed(2));
+  const familiasOrdenadas = useMemo(() => [...familias].sort((a, b) => a.responsavel.localeCompare(b.responsavel, "pt-BR")), [familias]);
+  const familiasFiltradas = familiasOrdenadas.filter((f) => normalizarBusca(f.responsavel).includes(normalizarBusca(buscaFamilia)));
   const maximoEstorno = limiteEstorno?.(familiaId) ?? 0;
   const estorno = n < 0;
   const cartaoValido = forma !== "Cartão" || estorno || (Number.isFinite(liquidoCartao) && liquidoCartao > 0 && liquidoCartao <= n);
@@ -661,11 +664,14 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno, estornoPermitido
       }
     }}>
       {!fixa && (
-        <label>Família
-          <select value={familiaId} onChange={(e) => setFamiliaId(e.target.value)}>
-            {familias.map((f) => (<option key={f.id} value={f.id}>{f.responsavel}</option>))}
-          </select>
-        </label>
+        <>
+          <label>Buscar família<input type="search" value={buscaFamilia} onChange={(e) => setBuscaFamilia(e.target.value)} placeholder="Digite um nome" /></label>
+          <label>Família
+            <select value={familiaId} onChange={(e) => setFamiliaId(e.target.value)}>
+              {familiasFiltradas.map((f) => (<option key={f.id} value={f.id}>{f.responsavel}</option>))}
+            </select>
+          </label>
+        </>
       )}
       <label>{forma === "Cartão" && !estorno ? "Valor cobrado (R$)" : "Valor (R$)"}<input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" /></label>
       {forma !== "Cartão" && !estorno && (sugestao?.(familiaId) ?? 0) > 0 && <button type="button" className="adm-btn adm-btn-fantasma adm-pagamento-rapido" onClick={() => setValor((sugestao?.(familiaId) ?? 0).toFixed(2).replace(".", ","))}>Preencher saldo em aberto · {reais(sugestao?.(familiaId) ?? 0)}</button>}
@@ -679,7 +685,7 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno, estornoPermitido
       <label className="adm-form-largo">Observação<input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Opcional" /></label>
       {forma === "Cartão" && !estorno && n > 0 && liquidoCartao > 0 && <p className="adm-mudo adm-form-largo">Taxa descontada: <strong>{reais(Math.max(0, taxaCartao))}</strong> · Líquido no caixa: <strong>{reais(liquidoCartao)}</strong>.</p>}
       {estorno && <p className="adm-mudo adm-form-largo">Disponível para estorno: {reais(maximoEstorno)}.</p>}
-      <button className="adm-btn adm-btn-primario" disabled={!valido || salvando}>{salvando ? "Salvando…" : n < 0 ? "Registrar estorno" : "Lançar pagamento"}</button>
+      <button className="adm-btn adm-btn-primario" disabled={!valido || salvando}>{salvando ? "Salvando…" : n < 0 ? "Registrar estorno" : "Registrar recebimento"}</button>
     </form>
   );
 }
@@ -711,26 +717,26 @@ function Pagamentos({ base, resumo, lancar, abrirFamilia, dataFiltro }: { base: 
   }, direcao);
   return (
     <main className="adm-pagina">
-      <h1>Pagamentos</h1>
+      <h1>Recebimentos</h1>
       <section className="adm-grade adm-grade-3">
         <Cartao rotulo="Recebido" valor={reais(resumo.recebido)} tom="verde" />
         <Cartao rotulo="A receber" valor={reais(resumo.aReceber)} tom="ambar" />
         <Cartao rotulo="Lançamentos" valor={String(base.pagamentos.length)} />
       </section>
       <section className="adm-bloco adm-pagamento-sticky">
-        <div className="adm-topo adm-pagamento-cab"><div><p className="adm-eyebrow">RECEBIMENTOS</p><h2>Lançar parcela do inscrito</h2><p className="adm-sub">Escolha o cadastro principal e registre o valor recebido.</p></div><span className="adm-pagamento-selo">Histórico da pessoa no cadastro</span></div>
+        <div className="adm-topo adm-pagamento-cab"><div><p className="adm-eyebrow">RECEBIMENTOS</p><h2>Registrar recebimento do inscrito</h2><p className="adm-sub">Escolha o cadastro principal e registre o valor recebido.</p></div><span className="adm-pagamento-selo">Histórico da pessoa no cadastro</span></div>
         <FormPagamento familias={base.familias} lancar={lancar} limiteEstorno={(id) => Math.max(0, resumo.familias.find((f) => f.familia.id === id)?.pago ?? 0)} sugestao={(id) => Math.max(0, resumo.familias.find((f) => f.familia.id === id)?.devido ?? 0)} />
       </section>
       <section className="adm-bloco">
         <h2>Histórico</h2>
         <p className="adm-sub">O histórico completo e a ação de estorno ficam dentro do cadastro principal do inscrito.</p>
-        <div className="adm-ferramentas" role="search" aria-label="Filtrar lançamentos de pagamento">
-          <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar família ou observação" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar pagamento" /></label>
-          <select value={forma} onChange={(e) => setForma(e.target.value as typeof forma)} aria-label="Filtrar por forma de pagamento"><option value="todas">Todas as formas</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select>
+        <div className="adm-ferramentas" role="search" aria-label="Filtrar recebimentos">
+          <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar família ou observação" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar recebimento" /></label>
+          <select value={forma} onChange={(e) => setForma(e.target.value as typeof forma)} aria-label="Filtrar por forma de recebimento"><option value="todas">Todas as formas</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select>
           <select value={tipo} onChange={(e) => setTipo(e.target.value as typeof tipo)} aria-label="Filtrar entradas e estornos"><option value="todos">Entradas e estornos</option><option value="entrada">Entradas</option><option value="estorno">Estornos</option></select>
           <label>De<input type="date" value={de} onChange={(e) => setDe(e.target.value)} aria-label="Data inicial" /></label>
           <label>Até<input type="date" value={ate} onChange={(e) => setAte(e.target.value)} aria-label="Data final" /></label>
-          <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar pagamentos por"><option value="data">Ordenar: data</option><option value="familia">Família</option><option value="forma">Forma</option><option value="valor">Valor</option></select>
+          <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar recebimentos por"><option value="data">Ordenar: data</option><option value="familia">Família</option><option value="forma">Forma</option><option value="valor">Valor</option></select>
           <button className="adm-btn adm-btn-fantasma" onClick={() => setDirecao((d) => d === "asc" ? "desc" : "asc")} aria-label="Inverter ordem">{direcao === "asc" ? "↑" : "↓"}</button>
           {(busca || forma !== "todas" || tipo !== "todos" || de || ate) && <button className="adm-btn adm-btn-fantasma" onClick={() => { setBusca(""); setForma("todas"); setTipo("todos"); setDe(""); setAte(""); }}>Limpar filtros</button>}
           <span className="adm-mudo">{ordenados.length} de {base.pagamentos.length} lançamento(s)</span>
@@ -827,7 +833,7 @@ function Despesas({ base, exec, categoriasExtras, onAdicionarCategoria }: { base
         <div className="adm-topo"><h2>Lançamentos</h2><span className="adm-mudo">{despesas.length} de {base.despesas.length}</span></div>
         <div className="adm-ferramentas" role="search" aria-label="Filtrar despesas">
           <label className="adm-busca"><Search size={16} aria-hidden /><input type="search" placeholder="Buscar fornecedor, descrição ou categoria" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar despesas" /></label>
-          <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value as typeof filtroCategoria)} aria-label="Filtrar categoria"><option value="todas">Todas as categorias</option>{CATEGORIAS.map((c) => <option key={c}>{c}</option>)}</select>
+          <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value as typeof filtroCategoria)} aria-label="Filtrar categoria"><option value="todas">Todas as categorias</option>{[...CATEGORIAS, ...categoriasExtras].map((c) => <option key={c}>{c}</option>)}</select>
           <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)} aria-label="Filtrar situação"><option value="todos">Todos os status</option><option>Orçado</option><option>Aprovado</option><option>Pago</option></select>
           <select value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)} aria-label="Ordenar despesas por"><option value="data">Ordenar: data</option><option value="fornecedor">Fornecedor</option><option value="categoria">Categoria</option><option value="orcado">Valor orçado</option><option value="pago">Valor pago</option><option value="status">Status</option></select>
           <button className="adm-btn adm-btn-fantasma" onClick={() => setDirecao((d) => d === "asc" ? "desc" : "asc")} aria-label="Inverter ordem">{direcao === "asc" ? "↑" : "↓"}</button>
@@ -1002,7 +1008,7 @@ function FluxoFinanceiro({ base, resumo, caixas, setCaixas, irPara, registrarLog
 
 function Logs({ registros, administradorDemo }: { registros: LogAdm[]; administradorDemo: boolean }) {
   const [busca, setBusca] = useState("");
-  if (!administradorDemo) return <main className="adm-pagina"><h1>Logs</h1><p className="adm-aviso">Acesso restrito ao administrador. A autorização de função será ativada quando a prévia receber autenticação.</p></main>;
+  if (!administradorDemo) return <main className="adm-pagina"><h1>Logs</h1><p className="adm-aviso">Acesso restrito ao administrador. A validação real de funções será configurada junto com a integração.</p></main>;
   const filtrados = registros.filter((r) => (r.acao + " " + r.usuario + " " + r.detalhe).toLowerCase().includes(busca.toLowerCase()));
   return <main className="adm-pagina"><div className="adm-cabecalho"><div><p className="adm-eyebrow">AUDITORIA · ADMINISTRADOR</p><h1>Logs do sistema</h1><p className="adm-cabecalho-sub">Registro demonstrativo limitado à sessão atual da prévia.</p></div><span className="adm-selo adm-selo-ambar">Não é um log permanente</span></div><section className="adm-bloco"><div className="adm-ferramentas"><label className="adm-busca"><Search size={16} aria-hidden/><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar ação ou usuário" /></label><span className="adm-mudo">{filtrados.length} evento(s)</span></div>{filtrados.length ? <div className="adm-tabela-caixa"><table className="adm-tabela"><thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Detalhe</th></tr></thead><tbody>{filtrados.map((r) => <tr key={r.id}><td>{new Date(r.quando).toLocaleString("pt-BR")}</td><td>{r.usuario}</td><td>{r.acao}</td><td>{r.detalhe}</td></tr>)}</tbody></table></div> : <div className="adm-estado-vazio"><span>Nenhuma ação registrada nesta sessão.</span></div>}</section></main>;
 }
