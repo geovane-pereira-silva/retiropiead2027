@@ -23,6 +23,7 @@ async function chamar<T>(acao: string, dados?: unknown): Promise<T> {
 
 export const estadoAdm = () => chamar<EstadoAdm>("state");
 export const carregarAdm = () => chamar<Retorno<Base>>("load");
+export const carregarPreviewAdm = () => chamar<Retorno<Base>>("preview-data");
 export const entrarAdm = (args: { data: { email: string; senha: string } }) =>
   chamar<Retorno<{ nome: string }>>("login", args.data);
 export const sairAdm = () => chamar<{ ok: true }>("logout", {});
