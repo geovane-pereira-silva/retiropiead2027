@@ -1016,6 +1016,7 @@ function Logs({ registros, administradorDemo }: { registros: LogAdm[]; administr
 /* ───────────────────────────── Relatórios ───────────────────────────── */
 
 function Relatorios({ base, resumo, navegar }: { base: Base; resumo: ReturnType<typeof resumirTudo>; navegar: (destino: Tela) => void }) {
+  const [cenarioSelecionado, setCenarioSelecionado] = useState<"Pessimista" | "Realista" | "Otimista">("Realista");
   const [busca, setBusca] = useState("");
   const [classificacao, setClassificacao] = useState<ClassificacaoParticipante | "todas">("todas");
   const [transporte, setTransporte] = useState<"todos" | "onibus" | "proprio">("todos");
@@ -1045,6 +1046,14 @@ function Relatorios({ base, resumo, navegar }: { base: Base; resumo: ReturnType<
   const pessoasPagantesRecorte = pessoasNoRecorte.filter((p) => p.valor > 0).length;
   const transporteFiltrado = resumoTransporte(baseFiltrada);
   const camisetasFiltradas = resumoCamisetas(baseFiltrada);
+  const pessoasPorCategoria = CLASSIFICACOES.map((nome) => ({ nome, total: pessoasNoRecorte.filter((p) => p.classificacao === nome).length }));
+  const maxCategoria = Math.max(1, ...pessoasPorCategoria.map((x) => x.total));
+  const fatoresCenario = { Pessimista: { recebimento: .7, despesa: 1.1 }, Realista: { recebimento: .85, despesa: 1.05 }, Otimista: { recebimento: .95, despesa: 1 } };
+  const cenario = fatoresCenario[cenarioSelecionado];
+  const saldoPrevisto = resumo.saldoAtual + resumo.aReceber * cenario.recebimento - resumo.despesasAPagar * cenario.despesa;
+  const analiseResumo = resumo.atrasadas.length
+    ? resumo.atrasadas.length + " família(s) têm parcelas vencidas. Priorize o contato e acompanhe os recebimentos antes de assumir novas despesas."
+    : "Não há parcelas vencidas identificadas. Acompanhe os valores a receber e compare novas despesas com o orçamento disponível.";
   const baixar = () => {
     const resumoCsv = { ...resumo, familias: resumo.familias.filter((f) => ids.has(f.familia.id)) };
     const blob = new Blob([csvInscritos(baseFiltrada, resumoCsv)], { type: "text/csv;charset=utf-8" });
