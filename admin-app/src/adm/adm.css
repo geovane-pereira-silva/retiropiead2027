@@ -693,3 +693,117 @@
   .adm-usuario-form { grid-template-columns: 1fr; }
   .adm-usuario-form .adm-btn { width: 100%; }
 }
+
+
+/* Refinos de usabilidade do painel administrativo */
+.adm-nav.ativo {
+  position: relative;
+  background: #edf5ef;
+  color: #174d36;
+  box-shadow: inset 3px 0 #2f7a52;
+}
+.adm-btn-primario {
+  background: #16794c;
+  border-color: #16794c;
+  color: #fff;
+  box-shadow: 0 2px 5px rgb(15 80 49 / .12);
+}
+.adm-btn-primario:hover:not(:disabled) {
+  background: #105e3a;
+  border-color: #105e3a;
+  box-shadow: 0 3px 9px rgb(15 80 49 / .18);
+}
+.adm-faixa {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+  padding: .42rem 1rem;
+  border-bottom: 1px solid #f0dfb7;
+}
+.adm-faixa-fechar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 0;
+  border-radius: .45rem;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.adm-faixa-fechar:hover { background: rgb(105 74 20 / .1); }
+.adm-topo-inscritos { align-items: center; }
+.adm-topo-inscritos h1 { margin-bottom: 0; }
+.adm-tabela-inscritos th:nth-child(3),
+.adm-tabela-inscritos th:nth-child(4),
+.adm-tabela-inscritos td[data-label="Devido"],
+.adm-tabela-inscritos td[data-label="Pago"],
+.adm-tabela-pagamentos th:nth-child(4),
+.adm-tabela-pagamentos td[data-label="Valor recebido"],
+.adm-tabela-despesas th:nth-child(4),
+.adm-tabela-despesas th:nth-child(5),
+.adm-tabela-despesas td:nth-child(4),
+.adm-tabela-despesas td:nth-child(5) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.adm-tabela-inscritos td[data-label="Devido"],
+.adm-tabela-inscritos td[data-label="Pago"],
+.adm-tabela-pagamentos td[data-label="Valor recebido"],
+.adm-tabela-despesas td:nth-child(4),
+.adm-tabela-despesas td:nth-child(5) {
+  font-weight: 600;
+}
+.adm-tabela td { padding-block: .62rem; }
+.adm-form label:has(input[placeholder="Opcional"]),
+.adm-form label:has(textarea[placeholder="Opcional"]) {
+  grid-column: auto;
+  width: min(100%, 27rem);
+}
+.adm label:has(input:required)::before,
+.adm label:has(select:required)::before {
+  content: "Obrigatório";
+  justify-self: start;
+  color: #3b6650;
+  background: #edf5ef;
+  border-radius: 999px;
+  padding: .08rem .42rem;
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+.adm label:has(input[placeholder="Opcional"])::before,
+.adm label:has(textarea[placeholder="Opcional"])::before {
+  content: "Opcional";
+  justify-self: start;
+  color: #737b75;
+  background: #f2f3f0;
+  border-radius: 999px;
+  padding: .08rem .42rem;
+  font-size: .66rem;
+  font-weight: 600;
+}
+.adm-estado-vazio {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .65rem 1rem;
+  min-height: 4rem;
+  padding: .8rem 1rem;
+  color: var(--a-mudo);
+  background: #fafbf9;
+  border: 1px dashed #d6ded7;
+  border-radius: .7rem;
+}
+.adm-estado-vazio .adm-btn { flex: 0 0 auto; }
+@media (max-width: 48rem) {
+  .adm-topo-inscritos { align-items: stretch; }
+  .adm-topo-inscritos > .adm-btn { width: 100%; }
+  .adm-faixa { padding-inline: .75rem; }
+  .adm-estado-vazio { align-items: stretch; }
+  .adm-estado-vazio .adm-btn { width: 100%; }
+}
