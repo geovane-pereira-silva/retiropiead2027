@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction, type FormEvent } from "react";
 import {
   BadgeDollarSign,
   FileText,
@@ -227,7 +227,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
       <aside className="adm-lateral" aria-label="Menu">
         <div className="adm-logo adm-brand"><img src="/adm/logo-conexao-jovem-branca.png" alt="Conexão Jovem" /><span>Gestão<br />Retiro 2027</span></div>
         <nav>
-          {TELAS.map((t) => (
+          {TELAS.filter((t) => t.id !== "logs" || !real).map((t) => (
             <button key={t.id} className={`adm-nav ${tela === t.id ? "ativo" : ""}`} aria-current={tela === t.id ? "page" : undefined} onClick={() => setTela(t.id)}>
               <t.icone size={18} aria-hidden /> <span>{t.rotulo}</span>
             </button>
@@ -250,7 +250,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
             {tela === "painel" && <Painel resumo={resumo} hoje={hoje} abrir={(id) => { setTela("inscritos"); setAberta(id); }} navegar={setTela} abrirData={(data) => { setFiltroDataPainel(data); setTela("pagamentos"); }} />}
             {tela === "inscritos" && <Inscritos resumo={resumo} aberta={aberta} setAberta={setAberta} hoje={hoje} base={base} lancar={lancarPagamento} exec={exec} irParaPagamentos={() => setTela("pagamentos")} />}
             {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} abrirFamilia={(id) => { setTela("inscritos"); setAberta(id); }} dataFiltro={filtroDataPainel} />}
-            {tela === "despesas" && <Despesas base={base} exec={exec} />}
+            {tela === "despesas" && <Despesas base={base} exec={exec} categoriasExtras={categoriasExtras} onAdicionarCategoria={(nomeCategoria) => { setCategoriasExtras((lista) => lista.includes(nomeCategoria) ? lista : [...lista, nomeCategoria]); setLogs((items) => [{ id: novoId("LOG"), quando: new Date().toISOString(), usuario: nome, acao: "Nova categoria de despesa", detalhe: nomeCategoria }, ...items]); }} />}
             {tela === "doacoes" && <Doacoes base={base} exec={exec} />}
             {tela === "fluxo" && <FluxoFinanceiro base={base} resumo={resumo} caixas={caixas} setCaixas={setCaixas} irPara={(destino) => setTela(destino)} registrarLog={(acao, detalhe) => setLogs((items) => [{ id: novoId("LOG"), quando: new Date().toISOString(), usuario: nome, acao, detalhe }, ...items])} />}\n            {tela === "relatorios" && <Relatorios base={base} resumo={resumo} navegar={(destino) => setTela(destino)} />}\n            {tela === "logs" && <Logs registros={logs} administradorDemo={!real} />}
             {tela === "usuarios" && <Usuarios />}
@@ -759,8 +759,10 @@ function Pagamentos({ base, resumo, lancar, abrirFamilia, dataFiltro }: { base: 
 
 /* ───────────────────────────── Despesas ───────────────────────────── */
 
-function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<boolean> }) {
-  const [categoria, setCategoria] = useState<CategoriaDespesa>(CATEGORIAS[0]);
+function Despesas({ base, exec, categoriasExtras, onAdicionarCategoria }: { base: Base; exec: (g: Gravacao) => Promise<boolean>; categoriasExtras: string[]; onAdicionarCategoria: (nome: string) => void }) {
+  const [categoria, setCategoria] = useState<string>(CATEGORIAS[0]);
+  const [novaCategoria, setNovaCategoria] = useState("");
+  const [adicionandoCategoria, setAdicionandoCategoria] = useState(false);
   const [fornecedor, setFornecedor] = useState("");
   const [descricao, setDescricao] = useState("");
   const [orcado, setOrcado] = useState("");
@@ -769,7 +771,7 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
   const [data, setData] = useState(hojeISO());
   const [salvando, setSalvando] = useState(false);
   const [busca, setBusca] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState<"todas" | CategoriaDespesa>("todas");
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
   const [filtroStatus, setFiltroStatus] = useState<"todos" | StatusDespesa>("todos");
   const [ordenacao, setOrdenacao] = useState("data");
   const [direcao, setDirecao] = useState<DirecaoOrdenacao>("desc");
@@ -807,14 +809,11 @@ function Despesas({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<b
           if (!valido || salvando) return;
           setSalvando(true);
           try {
-            if (await exec({ tipo: "despesa", categoria, fornecedor: fornecedor.trim(), responsavelCompra: responsavelCompra.trim(), descricao: descricao.trim(), orcado: n, pago: valorPago, data })) { setFornecedor(""); setResponsavelCompra(""); setDescricao(""); setOrcado(""); setPago(""); setData(hojeISO()); }
+            if (await exec({ tipo: "despesa", categoria: categoria as CategoriaDespesa, fornecedor: fornecedor.trim(), responsavelCompra: responsavelCompra.trim(), descricao: descricao.trim(), orcado: n, pago: valorPago, data })) { setFornecedor(""); setResponsavelCompra(""); setDescricao(""); setOrcado(""); setPago(""); setData(hojeISO()); }
           } finally { setSalvando(false); }
         }}>
-          <label>Categoria
-            <select value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaDespesa)}>
-              {CATEGORIAS.map((c) => (<option key={c}>{c}</option>))}
-            </select>
-          </label>
+          <label>Categoria<div className="adm-categoria-controle"><select value={categoria} onChange={(e) => setCategoria(e.target.value)}>{[...CATEGORIAS, ...categoriasExtras].map((c) => (<option key={c}>{c}</option>))}</select><button type="button" className="adm-btn adm-btn-fantasma" onClick={() => setAdicionandoCategoria((v) => !v)}>+ Nova</button></div></label>
+          {adicionandoCategoria && <div className="adm-nova-categoria"><label>Nome da nova categoria<input value={novaCategoria} onChange={(e) => setNovaCategoria(e.target.value)} placeholder="Ex.: Comunicação" /></label><button type="button" className="adm-btn" disabled={!novaCategoria.trim() || [...CATEGORIAS, ...categoriasExtras].some((c) => c.toLowerCase() === novaCategoria.trim().toLowerCase())} onClick={() => { const nomeCategoria = novaCategoria.trim(); onAdicionarCategoria(nomeCategoria); setCategoria(nomeCategoria); setNovaCategoria(""); setAdicionandoCategoria(false); }}>Adicionar categoria</button></div>}
           <label>Fornecedor<input value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} required /></label>
           <label>Quem fez a compra<input value={responsavelCompra} onChange={(e) => setResponsavelCompra(e.target.value)} required placeholder="Nome da pessoa responsável" /></label>
           <label>Valor orçado (R$)<input inputMode="decimal" value={orcado} onChange={(e) => setOrcado(e.target.value)} placeholder="0,00" /></label>
@@ -931,7 +930,7 @@ function FluxoFinanceiro({ base, resumo, caixas, setCaixas, irPara, registrarLog
   base: Base;
   resumo: ReturnType<typeof resumirTudo>;
   caixas: CaixaAdm[];
-  setCaixas: React.Dispatch<React.SetStateAction<CaixaAdm[]>>;
+  setCaixas: Dispatch<SetStateAction<CaixaAdm[]>>;
   irPara: (destino: Tela) => void;
   registrarLog: (acao: string, detalhe: string) => void;
 }) {
@@ -940,7 +939,7 @@ function FluxoFinanceiro({ base, resumo, caixas, setCaixas, irPara, registrarLog
   const [tipoCaixa, setTipoCaixa] = useState<CaixaAdm["tipo"]>("Conta bancária");
   const [mostraNovoCaixa, setMostraNovoCaixa] = useState(false);
   const movimentos = [
-    ...base.pagamentos.map((p) => ({ id: p.id, data: p.data, tipo: p.valor < 0 ? "Saída" : "Entrada", origem: "Recebimento", descricao: base.familias.find((f) => f.id === p.familiaId)?.responsavel ?? "Cadastro", valor: Math.abs(p.valor), destino: "Recebimentos" as Tela })),
+    ...base.pagamentos.map((p) => ({ id: p.id, data: p.data, tipo: p.valor < 0 ? "Saída" : "Entrada", origem: "Recebimento", descricao: base.familias.find((f) => f.id === p.familiaId)?.responsavel ?? "Cadastro", valor: Math.abs(p.valor), destino: "pagamentos" as Tela })),
     ...base.doacoes.map((d) => ({ id: d.id, data: d.data, tipo: "Entrada", origem: "Doação", descricao: d.doador || "Doação sem identificação", valor: d.valor, destino: "doacoes" as Tela })),
     ...base.despesas.map((d) => ({ id: d.id, data: d.data || "", tipo: "Saída", origem: "Despesa", descricao: d.fornecedor + (d.descricao ? " · " + d.descricao : ""), valor: d.pago, destino: "despesas" as Tela })),
   ].sort((a, b) => b.data.localeCompare(a.data));
