@@ -26,7 +26,7 @@ export async function atenderAdmin(request: Request): Promise<Response> {
 
   // Prévia isolada: snapshot privado importado das planilhas, apenas leitura.
   if (request.method === "GET" && acao === "preview-data" && !amb.real) {
-    const snapshot = process.env.ADM_PREVIEW_DATA_GZIP;
+    const snapshot = process.env.ADM_PREVIEW_DATA_GZIP_V2 || process.env.ADM_PREVIEW_DATA_GZIP;
     if (!snapshot) return json({ ok: false, codigo: "PREVIEW_SEM_DADOS", mensagem: "O conjunto de dados da prévia ainda não foi carregado." }, 503);
     try {
       const dados = JSON.parse(gunzipSync(Buffer.from(snapshot, "base64")).toString("utf8")) as Base;
