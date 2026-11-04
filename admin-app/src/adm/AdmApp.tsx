@@ -252,7 +252,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
             {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} abrirFamilia={(id) => { setTela("inscritos"); setAberta(id); }} dataFiltro={filtroDataPainel} />}
             {tela === "despesas" && <Despesas base={base} exec={exec} categoriasExtras={categoriasExtras} onAdicionarCategoria={(nomeCategoria) => { setCategoriasExtras((lista) => lista.includes(nomeCategoria) ? lista : [...lista, nomeCategoria]); setLogs((items) => [{ id: novoId("LOG"), quando: new Date().toISOString(), usuario: nome, acao: "Nova categoria de despesa", detalhe: nomeCategoria }, ...items]); }} />}
             {tela === "doacoes" && <Doacoes base={base} exec={exec} />}
-            {tela === "fluxo" && <FluxoFinanceiro base={base} resumo={resumo} caixas={caixas} setCaixas={setCaixas} irPara={(destino) => setTela(destino)} registrarLog={(acao, detalhe) => setLogs((items) => [{ id: novoId("LOG"), quando: new Date().toISOString(), usuario: nome, acao, detalhe }, ...items])} />}\n            {tela === "relatorios" && <Relatorios base={base} resumo={resumo} navegar={(destino) => setTela(destino)} />}\n            {tela === "logs" && <Logs registros={logs} administradorDemo={!real} />}
+            {tela === "fluxo" && <FluxoFinanceiro base={base} resumo={resumo} caixas={caixas} setCaixas={setCaixas} categoriasExtras={categoriasExtras} irPara={(destino) => setTela(destino)} registrarLog={(acao, detalhe) => setLogs((items) => [{ id: novoId("LOG"), quando: new Date().toISOString(), usuario: nome, acao, detalhe }, ...items])} />}\n            {tela === "relatorios" && <Relatorios base={base} resumo={resumo} navegar={(destino) => setTela(destino)} />}\n            {tela === "logs" && <Logs registros={logs} administradorDemo={!real} />}
             {tela === "usuarios" && <Usuarios />}
           </>
         )}
@@ -932,80 +932,155 @@ const CAIXAS_INICIAIS: CaixaAdm[] = [
 ];
 type LogAdm = { id: string; quando: string; usuario: string; acao: string; detalhe: string };
 
-function FluxoFinanceiro({ base, resumo, caixas, setCaixas, irPara, registrarLog }: {
+type MovimentoFluxoAdm = { id: string; data: string; tipo: "Entrada" | "Saída"; origem: string; categoria: string; descricao: string; valor: number; destino: Tela; caixa?: string };
+
+function FluxoFinanceiro({ base, resumo, caixas, setCaixas, irPara, registrarLog, categoriasExtras }: {
   base: Base;
   resumo: ReturnType<typeof resumirTudo>;
   caixas: CaixaAdm[];
   setCaixas: Dispatch<SetStateAction<CaixaAdm[]>>;
   irPara: (destino: Tela) => void;
   registrarLog: (acao: string, detalhe: string) => void;
+  categoriasExtras: string[];
 }) {
-  const [mes, setMes] = useState("");
+  const [mesAberto, setMesAberto] = useState("");
   const [nomeCaixa, setNomeCaixa] = useState("");
   const [tipoCaixa, setTipoCaixa] = useState<CaixaAdm["tipo"]>("Conta bancária");
   const [mostraNovoCaixa, setMostraNovoCaixa] = useState(false);
-  const movimentos = [
-    ...base.pagamentos.map((p) => ({ id: p.id, data: p.data, tipo: p.valor < 0 ? "Saída" : "Entrada", origem: "Recebimento", descricao: base.familias.find((f) => f.id === p.familiaId)?.responsavel ?? "Cadastro", valor: Math.abs(p.valor), destino: "pagamentos" as Tela })),
-    ...base.doacoes.map((d) => ({ id: d.id, data: d.data, tipo: "Entrada", origem: "Doação", descricao: d.doador || "Doação sem identificação", valor: d.valor, destino: "doacoes" as Tela })),
-    ...base.despesas.map((d) => ({ id: d.id, data: d.data || "", tipo: "Saída", origem: "Despesa", descricao: d.fornecedor + (d.descricao ? " · " + d.descricao : ""), valor: d.pago, destino: "despesas" as Tela })),
-  ].sort((a, b) => b.data.localeCompare(a.data));
-  const recortados = movimentos.filter((m) => !mes || m.data.startsWith(mes));
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [busca, setBusca] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
+  const [valorMin, setValorMin] = useState("");
+  const [valorMax, setValorMax] = useState("");
+  const [extras, setExtras] = useState<MovimentoFluxoAdm[]>([]);
+  const [edicoes, setEdicoes] = useState<Record<string, Partial<MovimentoFluxoAdm>>>({});
+  const [formAberto, setFormAberto] = useState(false);
+  const [idEditado, setIdEditado] = useState("");
+  const [tipoMovimento, setTipoMovimento] = useState<"Entrada" | "Saída">("Entrada");
+  const [origemMovimento, setOrigemMovimento] = useState("Recebimento");
+  const [categoriaMovimento, setCategoriaMovimento] = useState("Recebimento");
+  const [descricaoMovimento, setDescricaoMovimento] = useState("");
+  const [valorMovimento, setValorMovimento] = useState("");
+  const [dataMovimento, setDataMovimento] = useState(hojeISO());
+  const [caixaMovimento, setCaixaMovimento] = useState("");
+
+  const originais: MovimentoFluxoAdm[] = [
+    ...base.pagamentos.map((p) => ({ id: p.id, data: p.data, tipo: p.valor < 0 ? "Saída" as const : "Entrada" as const, origem: "Recebimento", categoria: "Recebimento", descricao: base.familias.find((f) => f.id === p.familiaId)?.responsavel ?? "Cadastro", valor: Math.abs(p.valor), destino: "pagamentos" as Tela })),
+    ...base.doacoes.map((d) => ({ id: d.id, data: d.data, tipo: "Entrada" as const, origem: "Doação", categoria: "Doação", descricao: d.doador || "Doação sem identificação", valor: d.valor, destino: "doacoes" as Tela })),
+    ...base.despesas.map((d) => ({ id: d.id, data: d.data || "", tipo: "Saída" as const, origem: "Despesa", categoria: d.categoria, descricao: d.fornecedor + (d.descricao ? " · " + d.descricao : ""), valor: d.pago, destino: "despesas" as Tela })),
+  ];
+  const movimentos = [...originais, ...extras].map((m) => ({ ...m, ...edicoes[m.id] })).sort((a, b) => b.data.localeCompare(a.data));
+  const recortados = movimentos.filter((m) => (!de || m.data >= de) && (!ate || m.data <= ate)
+    && normalizarBusca(m.descricao + " " + m.origem + " " + m.categoria).includes(normalizarBusca(busca))
+    && (categoriaFiltro === "todas" || m.categoria === categoriaFiltro)
+    && (!valorMin || m.valor >= lerDinheiro(valorMin))
+    && (!valorMax || m.valor <= lerDinheiro(valorMax)));
+  const categoriasFluxo = Array.from(new Set(["Recebimento", "Doação", ...CATEGORIAS, ...categoriasExtras, ...movimentos.map((m) => m.categoria)])).sort((a, b) => a.localeCompare(b, "pt-BR"));
   const meses = Array.from(new Set(movimentos.map((m) => m.data.slice(0, 7)).filter(Boolean))).sort().slice(-7);
   const porMes = meses.map((chave) => ({
     chave,
     label: chave.slice(5) + "/" + chave.slice(0, 4),
+    itens: movimentos.filter((m) => m.data.startsWith(chave)),
     entradas: movimentos.filter((m) => m.data.startsWith(chave) && m.tipo === "Entrada").reduce((n, m) => n + m.valor, 0),
     saidas: movimentos.filter((m) => m.data.startsWith(chave) && m.tipo === "Saída").reduce((n, m) => n + m.valor, 0),
   }));
-  const maximo = Math.max(1, ...porMes.flatMap((m) => [m.entradas, m.saidas]));
   const adicionarCaixa = (e: FormEvent) => {
     e.preventDefault();
     const nome = nomeCaixa.trim();
     if (!nome || caixas.some((c) => c.nome.toLowerCase() === nome.toLowerCase())) return;
-    const novo = { id: novoId("CX"), nome, tipo: tipoCaixa };
-    setCaixas((atuais) => [...atuais, novo]);
+    setCaixas((atuais) => [...atuais, { id: novoId("CX"), nome, tipo: tipoCaixa }]);
     registrarLog("Cadastro de caixa", nome + " · " + tipoCaixa + " (prévia)");
     setNomeCaixa("");
     setMostraNovoCaixa(false);
   };
+  const iniciarNovo = () => {
+    setIdEditado("");
+    setTipoMovimento("Entrada");
+    setOrigemMovimento("Recebimento");
+    setCategoriaMovimento("Recebimento");
+    setDescricaoMovimento("");
+    setValorMovimento("");
+    setDataMovimento(hojeISO());
+    setCaixaMovimento(caixas[0]?.id ?? "");
+    setFormAberto(true);
+  };
+  const iniciarEdicao = (m: MovimentoFluxoAdm) => {
+    setIdEditado(m.id);
+    setTipoMovimento(m.tipo);
+    setOrigemMovimento(m.origem);
+    setCategoriaMovimento(m.categoria);
+    setDescricaoMovimento(m.descricao);
+    setValorMovimento(m.valor.toFixed(2).replace(".", ","));
+    setDataMovimento(m.data || hojeISO());
+    setCaixaMovimento(m.caixa ?? "");
+    setFormAberto(true);
+  };
+  const salvarMovimento = (e: FormEvent) => {
+    e.preventDefault();
+    const valor = lerDinheiro(valorMovimento);
+    if (!descricaoMovimento.trim() || !dataMovimento || !Number.isFinite(valor) || valor <= 0) return;
+    const atualizacao: MovimentoFluxoAdm = { id: idEditado || novoId("MOV"), data: dataMovimento, tipo: tipoMovimento, origem: origemMovimento.trim() || categoriaMovimento, categoria: categoriaMovimento, descricao: descricaoMovimento.trim(), valor, destino: tipoMovimento === "Entrada" ? "pagamentos" : "despesas", caixa: caixaMovimento || undefined };
+    if (idEditado) setEdicoes((itens) => ({ ...itens, [idEditado]: atualizacao }));
+    else setExtras((itens) => [atualizacao, ...itens]);
+    registrarLog(idEditado ? "Edição de movimento" : "Novo movimento", atualizacao.descricao + " · " + reais(valor) + " (prévia)");
+    setFormAberto(false);
+  };
   const cenarios = [
-    { nome: "Pessimista", fator: .7, custo: 1.1, tom: "vermelho", nota: "70% dos valores em aberto recebidos · despesas 10% acima do orçado" },
-    { nome: "Realista", fator: .85, custo: 1.05, tom: "azul", nota: "85% dos valores em aberto recebidos · despesas 5% acima do orçado" },
-    { nome: "Otimista", fator: .95, custo: 1, tom: "verde", nota: "95% dos valores em aberto recebidos · despesas dentro do orçamento" },
+    { nome: "Pessimista", fator: .7, custo: 1.1, nota: "70% dos valores em aberto · despesas 10% acima" },
+    { nome: "Realista", fator: .85, custo: 1.05, nota: "85% dos valores em aberto · despesas 5% acima" },
+    { nome: "Otimista", fator: .95, custo: 1, nota: "95% dos valores em aberto · orçamento mantido" },
   ];
   return (
-    <main className="adm-pagina">
-      <div className="adm-cabecalho"><div><p className="adm-eyebrow">SAÚDE FINANCEIRA</p><h1>Fluxo financeiro</h1><p className="adm-cabecalho-sub">Entradas, saídas, caixas e previsões em uma visão única.</p></div><span className="adm-selo adm-selo-ambar">Dados da prévia · não conciliados</span></div>
-      <section className="adm-grade adm-grade-3">
-        <button type="button" className="adm-cartao adm-cartao-link" onClick={() => irPara("pagamentos")}><span className="adm-mudo">Recebido</span><strong className="tom-verde">{reais(resumo.recebido + resumo.doacoes)}</strong><small>Recebimentos e doações · abrir origem ↗</small></button>
-        <button type="button" className="adm-cartao adm-cartao-link" onClick={() => irPara("despesas")}><span className="adm-mudo">Despesas pagas</span><strong className="tom-vermelho">{reais(resumo.despesasPagas)}</strong><small>Saídas registradas · abrir despesas ↗</small></button>
-        <article className="adm-cartao"><span className="adm-mudo">Saldo calculado</span><strong>{reais(resumo.saldoAtual)}</strong><small>Entradas menos despesas pagas</small></article>
-        <article className="adm-cartao"><span className="adm-mudo">A receber</span><strong className="tom-ambar">{reais(resumo.aReceber)}</strong><small>Valores previstos dos cadastros</small></article>
-        <article className="adm-cartao"><span className="adm-mudo">Provisão de despesas</span><strong>{reais(resumo.despesasAPagar)}</strong><small>Orçado menos o que já foi pago</small></article>
-        <article className="adm-cartao"><span className="adm-mudo">Saldo projetado</span><strong>{reais(resumo.saldoProjetado)}</strong><small>Considerando todo o orçamento e valores devidos</small></article>
+    <main className="adm-pagina adm-pagina-fluxo">
+      <div className="adm-cabecalho"><div><p className="adm-eyebrow">FINANCEIRO</p><h1>Fluxo financeiro</h1></div><span className="adm-selo adm-selo-azul">Prévia · valores não conciliados</span></div>
+      <section className="adm-fluxo-resumo" aria-label="Resumo financeiro">
+        <button type="button" onClick={() => irPara("pagamentos")}><span>ENTRADAS</span><strong>{reais(resumo.recebido + resumo.doacoes)}</strong><small>Recebimentos e doações ↗</small></button>
+        <button type="button" onClick={() => irPara("despesas")}><span>SAÍDAS</span><strong>{reais(resumo.despesasPagas)}</strong><small>Despesas pagas ↗</small></button>
+        <div><span>SALDO CALCULADO</span><strong>{reais(resumo.saldoAtual)}</strong><small>Entradas menos saídas pagas</small></div>
       </section>
-      <section className="adm-bloco">
-        <div className="adm-topo"><div><h2>Caixas e contas</h2><p className="adm-sub">Cadastros da prévia; ainda sem conciliação por conta.</p></div><button type="button" className="adm-btn adm-btn-primario" onClick={() => setMostraNovoCaixa((v) => !v)}>+ Novo caixa</button></div>
+      <div className="adm-provisoes-linha"><span>A receber <strong>{reais(resumo.aReceber)}</strong></span><span>Provisão de despesas <strong>{reais(resumo.despesasAPagar)}</strong></span><span>Saldo projetado <strong>{reais(resumo.saldoProjetado)}</strong></span></div>
+      <details className="adm-contas-min"><summary>Caixas e contas <span>{caixas.length} cadastrados</span><button type="button" className="adm-btn adm-btn-fantasma" onClick={(e) => { e.preventDefault(); setMostraNovoCaixa((v) => !v); }}>+ Novo caixa</button></summary>
         {mostraNovoCaixa && <form className="adm-form adm-form-caixa" onSubmit={adicionarCaixa}><label>Nome do caixa<input value={nomeCaixa} onChange={(e) => setNomeCaixa(e.target.value)} placeholder="Ex.: Conta bancária" required /></label><label>Tipo<select value={tipoCaixa} onChange={(e) => setTipoCaixa(e.target.value as CaixaAdm["tipo"])}><option>Dinheiro</option><option>Conta bancária</option><option>Carteira digital</option></select></label><button className="adm-btn adm-btn-primario" type="submit" disabled={!nomeCaixa.trim()}>Adicionar caixa</button></form>}
-        <div className="adm-caixas">{caixas.map((c) => <article className="adm-caixa" key={c.id}><span className="adm-caixa-icone">{c.tipo === "Dinheiro" ? "$" : c.tipo === "Conta bancária" ? "↔" : "▣"}</span><span><strong>{c.nome}</strong><small>{c.tipo}</small></span><span className="adm-selo adm-selo-neutro">Aguardando conciliação</span></article>)}</div>
+        <div className="adm-caixas">{caixas.map((c) => <article className="adm-caixa" key={c.id}><span className="adm-caixa-icone">{c.tipo === "Dinheiro" ? "$" : c.tipo === "Conta bancária" ? "↔" : "▣"}</span><span><strong>{c.nome}</strong><small>{c.tipo}</small></span><span className="adm-selo adm-selo-neutro">Sem conciliação</span></article>)}</div>
+      </details>
+      <section className="adm-bloco adm-fluxo-meses">
+        <div className="adm-topo"><div><h2>Movimento por mês</h2><p className="adm-sub">Toque em um mês para expandir seus movimentos.</p></div></div>
+        {porMes.length ? porMes.map((m) => <section className="adm-mes-item" key={m.chave}>
+          <button type="button" className="adm-mes-resumo" aria-expanded={mesAberto === m.chave} onClick={() => setMesAberto(mesAberto === m.chave ? "" : m.chave)}><span><strong>{m.label}</strong><small>{m.itens.length} movimentos</small></span><span className="tom-verde">+ {reais(m.entradas)}</span><span className="tom-vermelho">− {reais(m.saidas)}</span><span aria-hidden="true">{mesAberto === m.chave ? "−" : "+"}</span></button>
+          {mesAberto === m.chave && <div className="adm-mes-conteudo"><div className="adm-mes-barras"><i className="entrada" style={{ width: Math.min(100, m.entradas / Math.max(1,m.entradas,m.saidas) * 100) + "%" }} /><i className="saida" style={{ width: Math.min(100, m.saidas / Math.max(1,m.entradas,m.saidas) * 100) + "%" }} /></div>{m.itens.map((item) => <button type="button" key={item.id} className="adm-mes-linha" onClick={() => iniciarEdicao(item)}><span>{item.data ? dma(item.data) : "—"} · {item.descricao}</span><strong className={item.tipo === "Entrada" ? "tom-verde" : "tom-vermelho"}>{item.tipo === "Saída" ? "−" : "+"}{reais(item.valor)}</strong></button>)}</div>}
+        </section>) : <p className="adm-vazio">Ainda não há movimentos mensais.</p>}
       </section>
-      <section className="adm-bloco">
-        <div className="adm-topo"><div><h2>Movimento por mês</h2><p className="adm-sub">Selecione um mês para filtrar o extrato abaixo.</p></div><label>Mês<input type="month" value={mes} onChange={(e) => setMes(e.target.value)} /></label></div>
-        {porMes.length ? <div className="adm-fluxo-grafico" role="list" aria-label="Gráfico de entradas e saídas por mês">{porMes.map((m) => <button type="button" key={m.chave} className={"adm-fluxo-coluna" + (mes === m.chave ? " ativo" : "")} onClick={() => setMes(mes === m.chave ? "" : m.chave)} aria-label={"Filtrar extrato por " + m.label + ": entradas " + reais(m.entradas) + ", saídas " + reais(m.saidas)}><span className="adm-fluxo-barras"><i className="entrada" style={{ height: Math.max(3, 100 * m.entradas / maximo) + "%" }} /><i className="saida" style={{ height: Math.max(3, 100 * m.saidas / maximo) + "%" }} /></span><span>{m.label}</span></button>)}</div> : <p className="adm-vazio">Ainda não há movimentos com data para montar o gráfico.</p>}
-        <div className="adm-legenda"><span><i className="entrada" /> Entradas</span><span><i className="saida" /> Saídas</span></div>
+      <section className="adm-duas adm-fluxo-cenarios">
+        <article className="adm-bloco"><h2>Previsões e provisões</h2><div className="adm-cenarios-fluxo">{cenarios.map((c) => { const saldo = resumo.saldoAtual + resumo.aReceber * c.fator - resumo.despesasAPagar * c.custo; return <div key={c.nome} className="adm-cenario"><span className={"adm-selo adm-selo-" + (c.nome === "Pessimista" ? "vermelho" : c.nome === "Otimista" ? "verde" : "azul")}>{c.nome}</span><strong>{reais(saldo)}</strong><small>{c.nota}</small></div>; })}</div><p className="adm-sub">Estimativas, não saldo bancário confirmado.</p></article>
+        <article className="adm-bloco"><h2>Pontos de atenção</h2>{resumo.atrasadas.length ? <button type="button" className="adm-alerta-link" onClick={() => irPara("inscritos")}>{resumo.atrasadas.length} famílias com parcelas vencidas · revisar cadastros ↗</button> : <p className="adm-vazio">Sem parcelas vencidas no arquivo importado.</p>}<button type="button" className="adm-alerta-link" onClick={() => irPara("despesas")}>{reais(resumo.despesasAPagar)} em provisões de despesas · revisar saídas ↗</button></article>
       </section>
-      <section className="adm-duas">
-        <article className="adm-bloco"><h2>Previsões e provisões</h2><div className="adm-cenarios-fluxo">{cenarios.map((c) => { const saldo = resumo.saldoAtual + resumo.aReceber * c.fator - resumo.despesasAPagar * c.custo; return <div key={c.nome} className="adm-cenario"><span className={"adm-selo adm-selo-" + c.tom}>{c.nome}</span><strong>{reais(saldo)}</strong><small>{c.nota}</small></div>; })}</div><p className="adm-sub">Estimativas de planejamento, não representam saldo bancário confirmado.</p></article>
-        <article className="adm-bloco"><h2>Pontos de atenção</h2>{resumo.atrasadas.length ? <button type="button" className="adm-alerta-link" onClick={() => irPara("inscritos")}>{resumo.atrasadas.length} famílias com parcelas vencidas · revisar cadastros ↗</button> : <p className="adm-vazio">Sem parcelas vencidas identificadas nos dados disponíveis.</p>}<button type="button" className="adm-alerta-link" onClick={() => irPara("despesas")}>{reais(resumo.despesasAPagar)} em provisões de despesas · revisar saídas ↗</button></article>
-      </section>
-      <section className="adm-bloco">
-        <div className="adm-topo"><div><h2>Extrato consolidado</h2><p className="adm-sub">{recortados.length} movimento(s) · verde indica entrada e vermelho indica saída.</p></div>{mes && <button className="adm-btn adm-btn-fantasma" type="button" onClick={() => setMes("")}>Limpar mês</button>}</div>
-        <div className="adm-tabela-caixa"><table className="adm-tabela adm-tabela-fluxo"><thead><tr><th>Data</th><th>Movimento</th><th>Origem</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>{recortados.map((m) => <tr key={m.id} onClick={() => irPara(m.destino)}><td>{m.data ? dma(m.data) : "—"}</td><td><span className={"adm-selo adm-selo-" + (m.tipo === "Entrada" ? "verde" : "vermelho")}>{m.tipo}</span></td><td>{m.origem}</td><td>{m.descricao}</td><td className={m.tipo === "Entrada" ? "tom-verde" : "tom-vermelho"}>{m.tipo === "Saída" ? "−" : "+"}{reais(m.valor)}</td></tr>)}{!recortados.length && <tr><td colSpan={5}><p className="adm-vazio">Nenhum movimento neste recorte.</p></td></tr>}</tbody></table></div>
+      <section className="adm-bloco adm-extrato">
+        <div className="adm-topo"><div><h2>Extrato consolidado</h2><p className="adm-sub">{recortados.length} movimento(s) · ajustes locais da prévia não alteram as planilhas.</p></div><button type="button" className="adm-btn adm-btn-primario" onClick={iniciarNovo}>+ Novo lançamento</button></div>
+        {formAberto && <form className="adm-form adm-extrato-form" onSubmit={salvarMovimento}>
+          <label>Movimento<select value={tipoMovimento} onChange={(e) => setTipoMovimento(e.target.value as "Entrada" | "Saída")}><option>Entrada</option><option>Saída</option></select></label>
+          <label>Descrição<input value={descricaoMovimento} onChange={(e) => setDescricaoMovimento(e.target.value)} placeholder="Nome ou descrição" required /></label>
+          <label>Origem<input value={origemMovimento} onChange={(e) => setOrigemMovimento(e.target.value)} placeholder="Recebimento, despesa..." /></label>
+          <label>Categoria<select value={categoriaMovimento} onChange={(e) => setCategoriaMovimento(e.target.value)}>{categoriasFluxo.map((c) => <option key={c}>{c}</option>)}</select></label>
+          <label>Valor (R$)<input inputMode="decimal" value={valorMovimento} onChange={(e) => setValorMovimento(e.target.value)} placeholder="0,00" required /></label>
+          <label>Data<input type="date" value={dataMovimento} onChange={(e) => setDataMovimento(e.target.value)} required /></label>
+          <label>Caixa<select value={caixaMovimento} onChange={(e) => setCaixaMovimento(e.target.value)}><option value="">Não associado</option>{caixas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
+          <div className="adm-form-acoes"><button className="adm-btn adm-btn-primario" type="submit" disabled={!descricaoMovimento.trim() || lerDinheiro(valorMovimento) <= 0}>{idEditado ? "Salvar edição" : "Adicionar movimento"}</button><button type="button" className="adm-btn" onClick={() => setFormAberto(false)}>Cancelar</button></div>
+        </form>}
+        <div className="adm-filtros-extrato">
+          <label>De<input type="date" value={de} onChange={(e) => setDe(e.target.value)} /></label>
+          <label>Até<input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></label>
+          <label>Nome / descrição<input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar" /></label>
+          <label>Categoria<select value={categoriaFiltro} onChange={(e) => setCategoriaFiltro(e.target.value)}><option value="todas">Todas</option>{categoriasFluxo.map((c) => <option key={c}>{c}</option>)}</select></label>
+          <label>Valor mínimo<input inputMode="decimal" value={valorMin} onChange={(e) => setValorMin(e.target.value)} placeholder="R$ 0,00" /></label>
+          <label>Valor máximo<input inputMode="decimal" value={valorMax} onChange={(e) => setValorMax(e.target.value)} placeholder="Sem limite" /></label>
+          {(de || ate || busca || categoriaFiltro !== "todas" || valorMin || valorMax) && <button type="button" className="adm-btn adm-btn-fantasma" onClick={() => { setDe(""); setAte(""); setBusca(""); setCategoriaFiltro("todas"); setValorMin(""); setValorMax(""); }}>Limpar filtros</button>}
+        </div>
+        <div className="adm-tabela-caixa"><table className="adm-tabela adm-tabela-fluxo"><thead><tr><th>Data</th><th>Movimento</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Ação</th></tr></thead><tbody>{recortados.map((m) => <tr key={m.id}><td>{m.data ? dma(m.data) : "—"}</td><td><span className={"adm-selo adm-selo-" + (m.tipo === "Entrada" ? "verde" : "vermelho")}>{m.tipo}</span></td><td>{m.categoria}</td><td>{m.descricao}<small className="adm-bloco-sub">{m.origem}{m.caixa ? " · " + (caixas.find((c) => c.id === m.caixa)?.nome ?? m.caixa) : " · Sem caixa"}</small></td><td className={m.tipo === "Entrada" ? "tom-verde" : "tom-vermelho"}>{m.tipo === "Saída" ? "−" : "+"}{reais(m.valor)}</td><td><button className="adm-btn adm-btn-fantasma" type="button" onClick={() => iniciarEdicao(m)}>Editar</button></td></tr>)}{!recortados.length && <tr><td colSpan={6}><p className="adm-vazio">Nenhum movimento neste recorte.</p></td></tr>}</tbody></table></div>
       </section>
     </main>
   );
 }
-
 function Logs({ registros, administradorDemo }: { registros: LogAdm[]; administradorDemo: boolean }) {
   const [busca, setBusca] = useState("");
   if (!administradorDemo) return <main className="adm-pagina"><h1>Logs</h1><p className="adm-aviso">Acesso restrito ao administrador. A validação real de funções será configurada junto com a integração.</p></main>;
