@@ -810,3 +810,76 @@
 
 .adm-pagamento-rapido { justify-self: start; color: #245a40; background: #edf5ef; border-color: #cfe0d2; }
 .adm-pagamento-rapido:hover:not(:disabled) { color: #174d36; background: #e1eee4; border-color: #b8d2be; }
+
+
+/* Fluxo, cenários e ferramentas de gestão */
+.adm-cartao-link {
+  display: grid;
+  gap: .25rem;
+  width: 100%;
+  border: 1px solid var(--a-linha);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+.adm-cartao-link:hover { transform: translateY(-1px); border-color: #b9cebf; box-shadow: 0 8px 22px rgb(22 60 40 / .08); }
+.adm-cartao-link strong { font-size: clamp(1.35rem, 2.3vw, 2rem); letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.adm-cartao-link small { color: var(--a-mudo); }
+.adm-caixas { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem,1fr)); gap: .6rem; margin-top: 1rem; }
+.adm-caixa { display: flex; align-items: center; gap: .75rem; min-width: 0; padding: .8rem; border: 1px solid var(--a-linha); border-radius: .75rem; background: #fff; }
+.adm-caixa > span:nth-child(2) { display: grid; flex: 1; min-width: 0; gap: .1rem; }
+.adm-caixa strong { color: #27352e; }
+.adm-caixa small { color: var(--a-mudo); }
+.adm-caixa-icone { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: .7rem; background: #edf5ef; color: #225b3e; font-weight: 800; }
+.adm-form-caixa { margin: 1rem 0 .25rem; padding: 1rem; border-radius: .75rem; background: #f8faf8; }
+.adm-fluxo-grafico { display: flex; align-items: end; gap: clamp(.5rem,2vw,1.1rem); min-height: 12rem; padding: 1rem .5rem .25rem; overflow-x: auto; }
+.adm-fluxo-coluna { display: grid; flex: 1 0 3.6rem; justify-items: center; gap: .5rem; min-height: 11rem; border: 0; background: transparent; color: var(--a-mudo); cursor: pointer; font: inherit; }
+.adm-fluxo-coluna:hover,.adm-fluxo-coluna.ativo { color: #174d36; }
+.adm-fluxo-coluna.ativo { font-weight: 700; }
+.adm-fluxo-barras { display: flex; align-items: end; justify-content: center; gap: .3rem; width: 100%; height: 9rem; border-bottom: 1px solid #dce3dd; background: repeating-linear-gradient(to top,transparent 0,transparent 32px,#eef1ee 33px); }
+.adm-fluxo-barras i { width: min(32%,1.25rem); min-height: 3px; border-radius: .35rem .35rem 0 0; }
+.adm-fluxo-barras .entrada,.adm-legenda .entrada { background: #26865b; }
+.adm-fluxo-barras .saida,.adm-legenda .saida { background: #d65b54; }
+.adm-legenda { display: flex; gap: 1rem; justify-content: end; color: var(--a-mudo); font-size: .8rem; }
+.adm-legenda span { display: inline-flex; align-items: center; gap: .35rem; }
+.adm-legenda i { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; }
+.adm-cenarios-fluxo { display: grid; gap: .65rem; margin: .8rem 0; }
+.adm-cenario { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: .45rem .7rem; padding: .7rem; border: 1px solid var(--a-linha); border-radius: .7rem; }
+.adm-cenario strong { justify-self: end; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.adm-cenario small { grid-column: 1/-1; color: var(--a-mudo); }
+.adm-alerta-link { display: block; width: 100%; margin: .35rem 0; padding: .7rem; border: 1px solid #ead6af; border-radius: .65rem; background: #fffbf2; color: #76520a; text-align: left; font: inherit; cursor: pointer; }
+.adm-alerta-link:hover { background: #fff4dc; }
+.adm-tabela-fluxo th:last-child,.adm-tabela-fluxo td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.adm-categoria-controle { display: flex; gap: .35rem; align-items: center; }
+.adm-categoria-controle select { flex: 1; min-width: 0; }
+.adm-nova-categoria { display: flex; align-items: end; gap: .5rem; grid-column: 1/-1; padding: .75rem; border: 1px solid #d8e5d9; border-radius: .7rem; background: #f7faf7; }
+.adm-nova-categoria label { flex: 1; }
+.adm-cenario-seletor { display: flex; gap: .4rem; margin: .75rem 0; padding: .25rem; width: fit-content; border-radius: .7rem; background: #f1f3f1; }
+.adm-cenario-seletor button { min-height: 2.25rem; padding: .4rem .8rem; border: 0; border-radius: .5rem; background: transparent; color: var(--a-mudo); font: inherit; cursor: pointer; }
+.adm-cenario-seletor button.ativo { background: #fff; color: #174d36; box-shadow: 0 1px 4px rgb(0 0 0 / .1); font-weight: 700; }
+.adm-cenario-destaque { display: grid; gap: .25rem; padding: 1rem; border-radius: .8rem; background: #eff5f0; color: #244a35; }
+.adm-cenario-destaque strong { font-size: clamp(1.65rem,3vw,2.35rem); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.adm-cenario-destaque small { color: #55705d; }
+.adm-relatorio-grafico { margin-top: 1rem; max-width: 54rem; }
+.adm-relatorio-barra { display: grid; grid-template-columns: minmax(10rem, 1.1fr) minmax(8rem,2fr) 2.5rem; gap: .7rem; align-items: center; width: 100%; padding: .35rem .25rem; border: 0; background: transparent; color: var(--a-tinta); text-align: left; font: inherit; cursor: pointer; }
+.adm-relatorio-barra:hover { background: #f6f8f6; }
+.adm-relatorio-barra i { height: .65rem; overflow: hidden; border-radius: 999px; background: #edf0ed; }
+.adm-relatorio-barra i b { display: block; height: 100%; min-width: 2px; border-radius: inherit; background: #43825d; }
+.adm-relatorio-barra strong { text-align: right; font-variant-numeric: tabular-nums; }
+.adm-analise-ia { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 1.1rem; padding: 1rem; border: 1px solid #e0e5e0; border-radius: .8rem; background: #fbfcfb; }
+.adm-analise-ia h3 { margin-top: .35rem; color: var(--a-tinta); }
+.adm-analise-ia p:last-child { max-width: 55rem; color: #55625a; }
+.adm-relatorio-links { display: flex; gap: .6rem; margin-top: .8rem; flex-wrap: wrap; }
+.adm-relatorio-links button { border: 0; background: transparent; color: #256546; font: inherit; font-weight: 650; cursor: pointer; }
+@media (max-width: 48rem) {
+  .adm-caixas { grid-template-columns: 1fr; }
+  .adm-caixa { align-items: start; flex-wrap: wrap; }
+  .adm-caixa .adm-selo { margin-left: 3.15rem; }
+  .adm-form-caixa,.adm-nova-categoria { display: grid; grid-template-columns: 1fr; }
+  .adm-cenario-seletor { width: 100%; }
+  .adm-cenario-seletor button { flex: 1; padding-inline: .35rem; }
+  .adm-relatorio-barra { grid-template-columns: minmax(7rem,1fr) minmax(4rem,1.2fr) 2rem; gap: .4rem; font-size: .82rem; }
+  .adm-analise-ia { align-items: stretch; flex-direction: column; }
+  .adm-analise-ia .adm-btn { width: 100%; }
+  .adm-fluxo-grafico { min-height: 10rem; }
+}
