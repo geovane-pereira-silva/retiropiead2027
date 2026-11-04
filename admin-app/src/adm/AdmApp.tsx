@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 
-import { carregarAdm, entrarAdm, estadoAdm, gravarAdm, sairAdm } from "../api/adm.functions";
+import { carregarAdm, carregarPreviewAdm, entrarAdm, estadoAdm, gravarAdm, sairAdm } from "../api/adm.functions";
 import type { EstadoAdm } from "../api/adm.functions";
 import type { Gravacao } from "../api/adm.server";
 import { fluxoPrevisto, resumirFamilia, resumirTudo, rotuloSituacao } from "./calculos";
@@ -84,8 +84,7 @@ export function Adm() {
         {estado?.modo === "demo" && (
           <>
             <div className="adm-aviso">
-              <strong>Prévia do sistema.</strong> Os dados são fictícios e nada é gravado. O login real (e-mail e
-              senha) funciona na versão publicada, ligada à planilha.
+              <strong>Prévia do sistema.</strong> O painel usa uma cópia protegida das planilhas para esta prévia. Nada é gravado na planilha.
             </div>
             <button className="adm-btn adm-btn-primario" onClick={() => setDemoAberta(true)}>Entrar na demonstração</button>
           </>
@@ -134,11 +133,11 @@ function Login({ entrou }: { entrou: (nome: string) => void }) {
 /* ───────────────────────────── Sistema ───────────────────────────── */
 
 function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () => void }) {
-  const [base, setBase] = useState<Base | null>(() => (real ? null : criarDemo()));
+  const [base, setBase] = useState<Base | null>(null);
   const [tela, setTela] = useState<Tela>("painel");
   const [aberta, setAberta] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ tom: "ok" | "erro"; texto: string } | null>(null);
-  const [carregando, setCarregando] = useState(real);
+  const [carregando, setCarregando] = useState(true);
   const [paleta, setPaleta] = useState(false);
   const [filtroDataPainel, setFiltroDataPainel] = useState<string | null>(null);
   const gravacaoEmAndamento = useRef(false);
@@ -158,7 +157,17 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
     }
   };
   useEffect(() => {
-    if (real) void recarregar();
+    if (real) {
+      void recarregar();
+      return;
+    }
+    let ativo = true;
+    setCarregando(true);
+    carregarPreviewAdm()
+      .then((r) => { if (ativo && r.ok) setBase(r.dados); })
+      .catch(() => undefined)
+      .finally(() => { if (ativo) setCarregando(false); });
+    return () => { ativo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [real]);
 
@@ -181,7 +190,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
     try {
       if (!real) {
         setBase((b) => (b ? aplicarLocal(b, g, hoje, novoId("L")) : b));
-        setAviso({ tom: "ok", texto: "Registrado na prévia (nada foi gravado)." });
+        setAviso({ tom: "ok", texto: "Simulação registrada nesta sessão; a planilha original não foi alterada." });
         return true;
       }
       const r = await gravarAdm({ data: g });
@@ -225,7 +234,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
         </div>
       </aside>
       <div className="adm-conteudo">
-        {!real && <div className="adm-faixa" role="status">Dados de demonstração — nada é gravado na planilha.</div>}
+        {!real && <div className="adm-faixa" role="status">Cópia das planilhas para avaliação — nenhum lançamento altera os dados originais.</div>}
         {aviso && <div className={`adm-toast adm-toast-${aviso.tom}`} role="status">{aviso.texto}</div>}
         {(!base || !resumo) && <main className="adm-pagina"><p className="adm-sub">{carregando ? "Carregando a planilha…" : "Sem dados."}</p></main>}
         {base && resumo && (
