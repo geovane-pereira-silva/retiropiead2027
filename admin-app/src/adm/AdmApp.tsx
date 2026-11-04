@@ -1073,6 +1073,14 @@ function Relatorios({ base, resumo, navegar }: { base: Base; resumo: ReturnType<
         <Cartao rotulo="Carro próprio" valor={String(transporteFiltrado.proprio)} />
         <Cartao rotulo="Transporte não informado" valor={String(pessoasNoRecorte.filter((p) => p.transporte === "nao-informado").length)} />
       </section>
+      <section className="adm-bloco adm-relatorio-analise">
+        <div className="adm-topo"><div><p className="adm-eyebrow">ANÁLISE FINANCEIRA</p><h2>Projeção do retiro</h2><p className="adm-sub">Cenários de planejamento sobre valores importados; não são saldo bancário.</p></div><button type="button" className="adm-btn adm-btn-fantasma" onClick={() => navegar("fluxo")}>Abrir fluxo financeiro ↗</button></div>
+        <div className="adm-cenario-seletor" role="group" aria-label="Escolher cenário">{(["Pessimista", "Realista", "Otimista"] as const).map((x) => <button key={x} type="button" className={cenarioSelecionado === x ? "ativo" : ""} onClick={() => setCenarioSelecionado(x)}>{x}</button>)}</div>
+        <div className="adm-cenario-destaque"><span>Saldo previsto · {cenarioSelecionado}</span><strong>{reais(saldoPrevisto)}</strong><small>Recebimento de {(cenario.recebimento * 100).toFixed(0)}% do saldo em aberto · despesas em {(cenario.despesa * 100).toFixed(0)}% da provisão.</small></div>
+        <div className="adm-relatorio-grafico"><h3>Participantes por categoria</h3>{pessoasPorCategoria.map((x) => <button type="button" key={x.nome} className="adm-relatorio-barra" onClick={() => setClassificacao(x.nome)} aria-label={"Filtrar " + x.total + " registros: " + x.nome}><span>{x.nome}</span><i><b style={{ width: (x.total / maxCategoria * 100) + "%" }} /></i><strong>{x.total}</strong></button>)}</div>
+        <div className="adm-analise-ia"><div><p className="adm-eyebrow">ANÁLISE AUTOMÁTICA</p><h3>Leitura atual</h3><p>{analiseResumo}</p></div><button className="adm-btn" type="button" disabled title="A análise com Gemini será conectada depois">Análise com Gemini · em breve</button></div>
+        <div className="adm-relatorio-links"><button type="button" onClick={() => navegar("pagamentos")}>↗ Conferir recebimentos</button><button type="button" onClick={() => navegar("despesas")}>↗ Conferir despesas</button></div>
+      </section>
       <section className="adm-bloco">
         <h2>Camisetas</h2>
         {camisetasFiltradas.itens.length === 0 && <p className="adm-vazio">Nenhum tamanho registrado neste recorte. Registre na ficha de cada família.</p>}
