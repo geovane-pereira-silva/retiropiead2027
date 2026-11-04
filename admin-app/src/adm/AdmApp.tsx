@@ -39,15 +39,17 @@ const dma = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice
 const hojeISO = () => hojeLocalISO();
 const novoId = (p: string) => `${p}-${Date.now().toString(36)}${Math.floor(Math.random() * 1e3)}`;
 
-type Tela = "painel" | "inscritos" | "pagamentos" | "despesas" | "doacoes" | "relatorios" | "usuarios";
+type Tela = "painel" | "inscritos" | "pagamentos" | "despesas" | "doacoes" | "fluxo" | "relatorios" | "usuarios" | "logs";
 const TELAS: { id: Tela; rotulo: string; icone: typeof Users }[] = [
   { id: "painel", rotulo: "Painel", icone: LayoutDashboard },
-  { id: "inscritos", rotulo: "Inscritos", icone: Users },
-  { id: "pagamentos", rotulo: "Pagamentos", icone: BadgeDollarSign },
+  { id: "inscritos", rotulo: "Cadastros", icone: Users },
+  { id: "pagamentos", rotulo: "Recebimentos", icone: BadgeDollarSign },
   { id: "despesas", rotulo: "Despesas", icone: Receipt },
   { id: "doacoes", rotulo: "Doações", icone: Gift },
+  { id: "fluxo", rotulo: "Fluxo financeiro", icone: Receipt },
   { id: "relatorios", rotulo: "Relatórios", icone: FileText },
   { id: "usuarios", rotulo: "Usuários", icone: Users },
+  { id: "logs", rotulo: "Logs", icone: FileText },
 ];
 
 const COR_SITUACAO: Record<SituacaoFamilia, string> = {
@@ -141,6 +143,9 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
   const [carregando, setCarregando] = useState(true);
   const [paleta, setPaleta] = useState(false);
   const [faixaVisivel, setFaixaVisivel] = useState(true);
+  const [logs, setLogs] = useState<LogAdm[]>([]);
+  const [categoriasExtras, setCategoriasExtras] = useState<string[]>([]);
+  const [caixas, setCaixas] = useState<CaixaAdm[]>(CAIXAS_INICIAIS);
   const [filtroDataPainel, setFiltroDataPainel] = useState<string | null>(null);
   const gravacaoEmAndamento = useRef(false);
   const hoje = hojeISO();
@@ -192,6 +197,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
     try {
       if (!real) {
         setBase((b) => (b ? aplicarLocal(b, g, hoje, novoId("L")) : b));
+        setLogs((items) => [{ id: novoId("LOG"), quando: new Date().toISOString(), usuario: nome, acao: "Lançamento de " + g.tipo, detalhe: "Alteração demonstrativa nesta sessão." }, ...items]);
         setAviso({ tom: "ok", texto: "Simulação registrada nesta sessão; a planilha original não foi alterada." });
         return true;
       }
@@ -246,7 +252,7 @@ function Sistema({ real, nome, sair }: { real: boolean; nome: string; sair: () =
             {tela === "pagamentos" && <Pagamentos base={base} resumo={resumo} lancar={lancarPagamento} abrirFamilia={(id) => { setTela("inscritos"); setAberta(id); }} dataFiltro={filtroDataPainel} />}
             {tela === "despesas" && <Despesas base={base} exec={exec} />}
             {tela === "doacoes" && <Doacoes base={base} exec={exec} />}
-            {tela === "relatorios" && <Relatorios base={base} resumo={resumo} />}
+            {tela === "fluxo" && <FluxoFinanceiro base={base} resumo={resumo} caixas={caixas} setCaixas={setCaixas} irPara={(destino) => setTela(destino)} registrarLog={(acao, detalhe) => setLogs((items) => [{ id: novoId("LOG"), quando: new Date().toISOString(), usuario: nome, acao, detalhe }, ...items])} />}\n            {tela === "relatorios" && <Relatorios base={base} resumo={resumo} navegar={(destino) => setTela(destino)} />}\n            {tela === "logs" && <Logs registros={logs} administradorDemo={!real} />}
             {tela === "usuarios" && <Usuarios />}
           </>
         )}
@@ -913,9 +919,98 @@ function Doacoes({ base, exec }: { base: Base; exec: (g: Gravacao) => Promise<bo
   );
 }
 
+type CaixaAdm = { id: string; nome: string; tipo: "Dinheiro" | "Conta bancária" | "Carteira digital" };
+const CAIXAS_INICIAIS: CaixaAdm[] = [
+  { id: "caixa-fisico", nome: "Caixa físico", tipo: "Dinheiro" },
+  { id: "nubank-ana", nome: "Nubank · Ana Paula", tipo: "Conta bancária" },
+  { id: "mp-janaina", nome: "Mercado Pago · Janaina", tipo: "Carteira digital" },
+];
+type LogAdm = { id: string; quando: string; usuario: string; acao: string; detalhe: string };
+
+function FluxoFinanceiro({ base, resumo, caixas, setCaixas, irPara, registrarLog }: {
+  base: Base;
+  resumo: ReturnType<typeof resumirTudo>;
+  caixas: CaixaAdm[];
+  setCaixas: React.Dispatch<React.SetStateAction<CaixaAdm[]>>;
+  irPara: (destino: Tela) => void;
+  registrarLog: (acao: string, detalhe: string) => void;
+}) {
+  const [mes, setMes] = useState("");
+  const [nomeCaixa, setNomeCaixa] = useState("");
+  const [tipoCaixa, setTipoCaixa] = useState<CaixaAdm["tipo"]>("Conta bancária");
+  const [mostraNovoCaixa, setMostraNovoCaixa] = useState(false);
+  const movimentos = [
+    ...base.pagamentos.map((p) => ({ id: p.id, data: p.data, tipo: p.valor < 0 ? "Saída" : "Entrada", origem: "Recebimento", descricao: base.familias.find((f) => f.id === p.familiaId)?.responsavel ?? "Cadastro", valor: Math.abs(p.valor), destino: "Recebimentos" as Tela })),
+    ...base.doacoes.map((d) => ({ id: d.id, data: d.data, tipo: "Entrada", origem: "Doação", descricao: d.doador || "Doação sem identificação", valor: d.valor, destino: "doacoes" as Tela })),
+    ...base.despesas.map((d) => ({ id: d.id, data: d.data || "", tipo: "Saída", origem: "Despesa", descricao: d.fornecedor + (d.descricao ? " · " + d.descricao : ""), valor: d.pago, destino: "despesas" as Tela })),
+  ].sort((a, b) => b.data.localeCompare(a.data));
+  const recortados = movimentos.filter((m) => !mes || m.data.startsWith(mes));
+  const meses = Array.from(new Set(movimentos.map((m) => m.data.slice(0, 7)).filter(Boolean))).sort().slice(-7);
+  const porMes = meses.map((chave) => ({
+    chave,
+    label: chave.slice(5) + "/" + chave.slice(0, 4),
+    entradas: movimentos.filter((m) => m.data.startsWith(chave) && m.tipo === "Entrada").reduce((n, m) => n + m.valor, 0),
+    saidas: movimentos.filter((m) => m.data.startsWith(chave) && m.tipo === "Saída").reduce((n, m) => n + m.valor, 0),
+  }));
+  const maximo = Math.max(1, ...porMes.flatMap((m) => [m.entradas, m.saidas]));
+  const adicionarCaixa = (e: FormEvent) => {
+    e.preventDefault();
+    const nome = nomeCaixa.trim();
+    if (!nome || caixas.some((c) => c.nome.toLowerCase() === nome.toLowerCase())) return;
+    const novo = { id: novoId("CX"), nome, tipo: tipoCaixa };
+    setCaixas((atuais) => [...atuais, novo]);
+    registrarLog("Cadastro de caixa", nome + " · " + tipoCaixa + " (prévia)");
+    setNomeCaixa("");
+    setMostraNovoCaixa(false);
+  };
+  const cenarios = [
+    { nome: "Pessimista", fator: .7, custo: 1.1, tom: "vermelho", nota: "70% dos valores em aberto recebidos · despesas 10% acima do orçado" },
+    { nome: "Realista", fator: .85, custo: 1.05, tom: "azul", nota: "85% dos valores em aberto recebidos · despesas 5% acima do orçado" },
+    { nome: "Otimista", fator: .95, custo: 1, tom: "verde", nota: "95% dos valores em aberto recebidos · despesas dentro do orçamento" },
+  ];
+  return (
+    <main className="adm-pagina">
+      <div className="adm-cabecalho"><div><p className="adm-eyebrow">SAÚDE FINANCEIRA</p><h1>Fluxo financeiro</h1><p className="adm-cabecalho-sub">Entradas, saídas, caixas e previsões em uma visão única.</p></div><span className="adm-selo adm-selo-ambar">Dados da prévia · não conciliados</span></div>
+      <section className="adm-grade adm-grade-3">
+        <button type="button" className="adm-cartao adm-cartao-link" onClick={() => irPara("pagamentos")}><span className="adm-mudo">Recebido</span><strong className="tom-verde">{reais(resumo.recebido + resumo.doacoes)}</strong><small>Recebimentos e doações · abrir origem ↗</small></button>
+        <button type="button" className="adm-cartao adm-cartao-link" onClick={() => irPara("despesas")}><span className="adm-mudo">Despesas pagas</span><strong className="tom-vermelho">{reais(resumo.despesasPagas)}</strong><small>Saídas registradas · abrir despesas ↗</small></button>
+        <article className="adm-cartao"><span className="adm-mudo">Saldo calculado</span><strong>{reais(resumo.saldoAtual)}</strong><small>Entradas menos despesas pagas</small></article>
+        <article className="adm-cartao"><span className="adm-mudo">A receber</span><strong className="tom-ambar">{reais(resumo.aReceber)}</strong><small>Valores previstos dos cadastros</small></article>
+        <article className="adm-cartao"><span className="adm-mudo">Provisão de despesas</span><strong>{reais(resumo.despesasAPagar)}</strong><small>Orçado menos o que já foi pago</small></article>
+        <article className="adm-cartao"><span className="adm-mudo">Saldo projetado</span><strong>{reais(resumo.saldoProjetado)}</strong><small>Considerando todo o orçamento e valores devidos</small></article>
+      </section>
+      <section className="adm-bloco">
+        <div className="adm-topo"><div><h2>Caixas e contas</h2><p className="adm-sub">Cadastros da prévia; ainda sem conciliação por conta.</p></div><button type="button" className="adm-btn adm-btn-primario" onClick={() => setMostraNovoCaixa((v) => !v)}>+ Novo caixa</button></div>
+        {mostraNovoCaixa && <form className="adm-form adm-form-caixa" onSubmit={adicionarCaixa}><label>Nome do caixa<input value={nomeCaixa} onChange={(e) => setNomeCaixa(e.target.value)} placeholder="Ex.: Conta bancária" required /></label><label>Tipo<select value={tipoCaixa} onChange={(e) => setTipoCaixa(e.target.value as CaixaAdm["tipo"])}><option>Dinheiro</option><option>Conta bancária</option><option>Carteira digital</option></select></label><button className="adm-btn adm-btn-primario" type="submit" disabled={!nomeCaixa.trim()}>Adicionar caixa</button></form>}
+        <div className="adm-caixas">{caixas.map((c) => <article className="adm-caixa" key={c.id}><span className="adm-caixa-icone">{c.tipo === "Dinheiro" ? "$" : c.tipo === "Conta bancária" ? "↔" : "▣"}</span><span><strong>{c.nome}</strong><small>{c.tipo}</small></span><span className="adm-selo adm-selo-neutro">Aguardando conciliação</span></article>)}</div>
+      </section>
+      <section className="adm-bloco">
+        <div className="adm-topo"><div><h2>Movimento por mês</h2><p className="adm-sub">Selecione um mês para filtrar o extrato abaixo.</p></div><label>Mês<input type="month" value={mes} onChange={(e) => setMes(e.target.value)} /></label></div>
+        {porMes.length ? <div className="adm-fluxo-grafico" role="list" aria-label="Gráfico de entradas e saídas por mês">{porMes.map((m) => <button type="button" key={m.chave} className={"adm-fluxo-coluna" + (mes === m.chave ? " ativo" : "")} onClick={() => setMes(mes === m.chave ? "" : m.chave)} aria-label={"Filtrar extrato por " + m.label + ": entradas " + reais(m.entradas) + ", saídas " + reais(m.saidas)}><span className="adm-fluxo-barras"><i className="entrada" style={{ height: Math.max(3, 100 * m.entradas / maximo) + "%" }} /><i className="saida" style={{ height: Math.max(3, 100 * m.saidas / maximo) + "%" }} /></span><span>{m.label}</span></button>)}</div> : <p className="adm-vazio">Ainda não há movimentos com data para montar o gráfico.</p>}
+        <div className="adm-legenda"><span><i className="entrada" /> Entradas</span><span><i className="saida" /> Saídas</span></div>
+      </section>
+      <section className="adm-duas">
+        <article className="adm-bloco"><h2>Previsões e provisões</h2><div className="adm-cenarios-fluxo">{cenarios.map((c) => { const saldo = resumo.saldoAtual + resumo.aReceber * c.fator - resumo.despesasAPagar * c.custo; return <div key={c.nome} className="adm-cenario"><span className={"adm-selo adm-selo-" + c.tom}>{c.nome}</span><strong>{reais(saldo)}</strong><small>{c.nota}</small></div>; })}</div><p className="adm-sub">Estimativas de planejamento, não representam saldo bancário confirmado.</p></article>
+        <article className="adm-bloco"><h2>Pontos de atenção</h2>{resumo.atrasadas.length ? <button type="button" className="adm-alerta-link" onClick={() => irPara("inscritos")}>{resumo.atrasadas.length} famílias com parcelas vencidas · revisar cadastros ↗</button> : <p className="adm-vazio">Sem parcelas vencidas identificadas nos dados disponíveis.</p>}<button type="button" className="adm-alerta-link" onClick={() => irPara("despesas")}>{reais(resumo.despesasAPagar)} em provisões de despesas · revisar saídas ↗</button></article>
+      </section>
+      <section className="adm-bloco">
+        <div className="adm-topo"><div><h2>Extrato consolidado</h2><p className="adm-sub">{recortados.length} movimento(s) · verde indica entrada e vermelho indica saída.</p></div>{mes && <button className="adm-btn adm-btn-fantasma" type="button" onClick={() => setMes("")}>Limpar mês</button>}</div>
+        <div className="adm-tabela-caixa"><table className="adm-tabela adm-tabela-fluxo"><thead><tr><th>Data</th><th>Movimento</th><th>Origem</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>{recortados.map((m) => <tr key={m.id} onClick={() => irPara(m.destino)}><td>{m.data ? dma(m.data) : "—"}</td><td><span className={"adm-selo adm-selo-" + (m.tipo === "Entrada" ? "verde" : "vermelho")}>{m.tipo}</span></td><td>{m.origem}</td><td>{m.descricao}</td><td className={m.tipo === "Entrada" ? "tom-verde" : "tom-vermelho"}>{m.tipo === "Saída" ? "−" : "+"}{reais(m.valor)}</td></tr>)}{!recortados.length && <tr><td colSpan={5}><p className="adm-vazio">Nenhum movimento neste recorte.</p></td></tr>}</tbody></table></div>
+      </section>
+    </main>
+  );
+}
+
+function Logs({ registros, administradorDemo }: { registros: LogAdm[]; administradorDemo: boolean }) {
+  const [busca, setBusca] = useState("");
+  if (!administradorDemo) return <main className="adm-pagina"><h1>Logs</h1><p className="adm-aviso">Acesso restrito ao administrador. A autorização de função será ativada quando a prévia receber autenticação.</p></main>;
+  const filtrados = registros.filter((r) => (r.acao + " " + r.usuario + " " + r.detalhe).toLowerCase().includes(busca.toLowerCase()));
+  return <main className="adm-pagina"><div className="adm-cabecalho"><div><p className="adm-eyebrow">AUDITORIA · ADMINISTRADOR</p><h1>Logs do sistema</h1><p className="adm-cabecalho-sub">Registro demonstrativo limitado à sessão atual da prévia.</p></div><span className="adm-selo adm-selo-ambar">Não é um log permanente</span></div><section className="adm-bloco"><div className="adm-ferramentas"><label className="adm-busca"><Search size={16} aria-hidden/><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar ação ou usuário" /></label><span className="adm-mudo">{filtrados.length} evento(s)</span></div>{filtrados.length ? <div className="adm-tabela-caixa"><table className="adm-tabela"><thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Detalhe</th></tr></thead><tbody>{filtrados.map((r) => <tr key={r.id}><td>{new Date(r.quando).toLocaleString("pt-BR")}</td><td>{r.usuario}</td><td>{r.acao}</td><td>{r.detalhe}</td></tr>)}</tbody></table></div> : <div className="adm-estado-vazio"><span>Nenhuma ação registrada nesta sessão.</span></div>}</section></main>;
+}
+
 /* ───────────────────────────── Relatórios ───────────────────────────── */
 
-function Relatorios({ base, resumo }: { base: Base; resumo: ReturnType<typeof resumirTudo> }) {
+function Relatorios({ base, resumo, navegar }: { base: Base; resumo: ReturnType<typeof resumirTudo>; navegar: (destino: Tela) => void }) {
   const [busca, setBusca] = useState("");
   const [classificacao, setClassificacao] = useState<ClassificacaoParticipante | "todas">("todas");
   const [transporte, setTransporte] = useState<"todos" | "onibus" | "proprio">("todos");
