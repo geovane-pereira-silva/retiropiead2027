@@ -555,7 +555,7 @@ function Ficha({ f, fechar, lancar, exec, hoje, base }: { f: ResumoFamilia; fech
           </>
         )}
         <h3>Recebimentos e histórico</h3>
-        <FormPagamento familias={[atual.familia]} fixa lancar={lancar} estornoPermitido limiteEstorno={() => Math.max(0, atual.pago)} />
+        <FormPagamento familias={[atual.familia]} fixa lancar={lancar} estornoPermitido limiteEstorno={() => Math.max(0, atual.pago)} sugestao={() => Math.max(0, atual.devido)} />
         <h3>Ajustes</h3>
         {base.ajustes.filter((a) => a.familiaId === atual.familia.id).length === 0 && <p className="adm-vazio">Nenhum ajuste.</p>}
         <ul className="adm-lista adm-lista-simples">
@@ -623,7 +623,7 @@ function FormAjuste({ familiaId, exec }: { familiaId: string; exec: (g: Gravacao
 
 /* ───────────────────────────── Pagamentos ───────────────────────────── */
 
-function FormPagamento({ familias, fixa, lancar, limiteEstorno, estornoPermitido = false }: { familias: { id: string; responsavel: string }[]; fixa?: boolean; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>; limiteEstorno?: (familiaId: string) => number; estornoPermitido?: boolean }) {
+function FormPagamento({ familias, fixa, lancar, limiteEstorno, estornoPermitido = false, sugestao }: { familias: { id: string; responsavel: string }[]; fixa?: boolean; lancar: (p: Omit<Pagamento, "id">) => Promise<boolean>; limiteEstorno?: (familiaId: string) => number; estornoPermitido?: boolean; sugestao?: (familiaId: string) => number }) {
   const [familiaId, setFamiliaId] = useState(familias[0]?.id ?? "");
   const [valor, setValor] = useState("");
   const [valorLiquido, setValorLiquido] = useState("");
@@ -662,6 +662,7 @@ function FormPagamento({ familias, fixa, lancar, limiteEstorno, estornoPermitido
         </label>
       )}
       <label>{forma === "Cartão" && !estorno ? "Valor cobrado (R$)" : "Valor (R$)"}<input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" /></label>
+      {forma !== "Cartão" && !estorno && (sugestao?.(familiaId) ?? 0) > 0 && <button type="button" className="adm-btn adm-btn-fantasma adm-pagamento-rapido" onClick={() => setValor((sugestao?.(familiaId) ?? 0).toFixed(2).replace(".", ","))}>Preencher saldo em aberto · {reais(sugestao?.(familiaId) ?? 0)}</button>}
       {forma === "Cartão" && !estorno && <label>Valor líquido recebido (R$)<input inputMode="decimal" value={valorLiquido} onChange={(e) => setValorLiquido(e.target.value)} placeholder="Após as taxas" /></label>}
       <label>Forma
         <select value={forma} onChange={(e) => setForma(e.target.value as FormaPagamento)}>
@@ -712,7 +713,7 @@ function Pagamentos({ base, resumo, lancar, abrirFamilia, dataFiltro }: { base: 
       </section>
       <section className="adm-bloco adm-pagamento-sticky">
         <div className="adm-topo adm-pagamento-cab"><div><p className="adm-eyebrow">RECEBIMENTOS</p><h2>Lançar parcela do inscrito</h2><p className="adm-sub">Escolha o cadastro principal e registre o valor recebido.</p></div><span className="adm-pagamento-selo">Histórico da pessoa no cadastro</span></div>
-        <FormPagamento familias={base.familias} lancar={lancar} limiteEstorno={(id) => Math.max(0, resumo.familias.find((f) => f.familia.id === id)?.pago ?? 0)} />
+        <FormPagamento familias={base.familias} lancar={lancar} limiteEstorno={(id) => Math.max(0, resumo.familias.find((f) => f.familia.id === id)?.pago ?? 0)} sugestao={(id) => Math.max(0, resumo.familias.find((f) => f.familia.id === id)?.devido ?? 0)} />
       </section>
       <section className="adm-bloco">
         <h2>Histórico</h2>
