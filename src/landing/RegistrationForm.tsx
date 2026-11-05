@@ -62,6 +62,11 @@ function etapaDoErro(chave: string): number {
       "pastorPresidente",
       "liderJovens",
       "responsavelParentesco",
+      "responsavelLegalNome",
+      "responsavelLegalTelefone",
+      "responsavelLegalParentesco",
+      "acompanhanteNome",
+      "acompanhanteTelefone",
     ].includes(chave)
   )
     return 0;
@@ -713,6 +718,104 @@ export function RegistrationForm() {
                 )}
               </span>
             </label>
+            {values.responsavelParticipa && respCalc && respCalc.idade < 18 && (
+              <div className="lp-subsecao" style={{ marginTop: "1.25rem" }}>
+                <h3>Responsável legal e acompanhamento</h3>
+                <p className="hint">
+                  Menores podem fazer o próprio cadastro. Informe os dados do responsável legal e
+                  quem acompanhará o participante no retiro. Se o responsável legal também for,
+                  ele precisa fazer um cadastro separado como participante.
+                </p>
+                <Entrada
+                  chave="responsavelLegalNome"
+                  rotulo="Nome completo do pai, mãe ou responsável legal"
+                  valor={values.responsavelLegalNome}
+                  onChange={(v) => setCampo("responsavelLegalNome", v)}
+                  onBlur={() => tocar("responsavelLegalNome")}
+                  erro={erro("responsavelLegalNome")}
+                  autoComplete="name"
+                  maxLength={100}
+                />
+                <div className="lp-row two" style={{ marginTop: "1rem" }}>
+                  <div className="lp-field">
+                    <label htmlFor="f-responsavelLegalParentesco">Vínculo com o participante</label>
+                    <select
+                      id="f-responsavelLegalParentesco"
+                      value={values.responsavelLegalParentesco}
+                      onChange={(e) =>
+                        setCampo(
+                          "responsavelLegalParentesco",
+                          e.target.value as FormValues["responsavelLegalParentesco"],
+                        )
+                      }
+                      onBlur={() => tocar("responsavelLegalParentesco")}
+                      aria-invalid={erro("responsavelLegalParentesco") ? true : undefined}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="pai">Pai</option>
+                      <option value="mae">Mãe</option>
+                      <option value="responsavel_legal">Responsável legal</option>
+                    </select>
+                    {erro("responsavelLegalParentesco") && (
+                      <p className="lp-err" role="alert">
+                        {erro("responsavelLegalParentesco")}
+                      </p>
+                    )}
+                  </div>
+                  <Entrada
+                    chave="responsavelLegalTelefone"
+                    rotulo="Celular do responsável legal"
+                    valor={values.responsavelLegalTelefone}
+                    onChange={(v) => setCampo("responsavelLegalTelefone", formatarTelefone(v))}
+                    onBlur={() => tocar("responsavelLegalTelefone")}
+                    erro={erro("responsavelLegalTelefone")}
+                    tipo="tel"
+                    modo="tel"
+                    autoComplete="tel-national"
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                  />
+                </div>
+                <label className="lp-check" style={{ marginTop: "1rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={values.responsavelLegalAcompanha}
+                    onChange={(e) => setCampo("responsavelLegalAcompanha", e.target.checked)}
+                  />
+                  <span>O responsável legal será o adulto que acompanhará o menor no retiro</span>
+                </label>
+                {!values.responsavelLegalAcompanha && (
+                  <div style={{ marginTop: "1rem" }}>
+                    <p className="hint">Informe o adulto que acompanhará o participante.</p>
+                    <div className="lp-row two">
+                      <Entrada
+                        chave="acompanhanteNome"
+                        rotulo="Nome completo do acompanhante"
+                        valor={values.acompanhanteNome}
+                        onChange={(v) => setCampo("acompanhanteNome", v)}
+                        onBlur={() => tocar("acompanhanteNome")}
+                        erro={erro("acompanhanteNome")}
+                        autoComplete="name"
+                        maxLength={100}
+                      />
+                      <Entrada
+                        chave="acompanhanteTelefone"
+                        rotulo="Celular do acompanhante"
+                        valor={values.acompanhanteTelefone}
+                        onChange={(v) => setCampo("acompanhanteTelefone", formatarTelefone(v))}
+                        onBlur={() => tocar("acompanhanteTelefone")}
+                        erro={erro("acompanhanteTelefone")}
+                        tipo="tel"
+                        modo="tel"
+                        autoComplete="tel-national"
+                        placeholder="(00) 00000-0000"
+                        maxLength={15}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {!values.responsavelParticipa && (
               <div className="lp-field" style={{ marginTop: "1rem" }}>
                 <label htmlFor="f-responsavelParentesco">Qual é seu vínculo com o menor?</label>
@@ -1248,6 +1351,19 @@ export function RegistrationForm() {
                   </small>
                 </dd>
               </div>
+              {values.responsavelParticipa && respCalc && respCalc.idade < 18 && (
+                <div>
+                  <dt>Responsável legal</dt>
+                  <dd>
+                    {values.responsavelLegalNome || "—"} · {values.responsavelLegalTelefone || "—"}
+                    <small>
+                      {values.responsavelLegalAcompanha
+                        ? "Será também o adulto acompanhante no retiro."
+                        : `Acompanhante: ${values.acompanhanteNome || "—"} · ${values.acompanhanteTelefone || "—"}`}
+                    </small>
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt>Igreja de origem</dt>
                 <dd>{igrejaParaCadastro(values) || "—"}</dd>

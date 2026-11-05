@@ -343,12 +343,65 @@ test("CPF de menor é opcional; de adulto é obrigatório", () => {
   assert.ok(invalido.erros["integrantes.0.cpf"]);
 });
 
-test("responsável menor de 18 anos é recusado", () => {
+test("menor pode fazer o próprio cadastro informando responsável legal", () => {
   const r = validar(
-    base({ responsavel: pessoa("Joana Souza", "2010-01-01", "390.533.447-05") }),
+    base({
+      responsavel: pessoa("Joana Souza", "2010-01-01", "390.533.447-05"),
+      responsavelLegalNome: "Maria Souza",
+      responsavelLegalTelefone: "11987654321",
+      responsavelLegalParentesco: "mae",
+      responsavelLegalAcompanha: true,
+    }),
     ctx,
   );
-  assert.ok(r.erros["responsavel.dataNascimento"]);
+  assert.deepEqual(r.erros, {});
+  assert.equal(r.participantes.length, 1);
+  assert.equal(r.participantes[0].menorDeIdade, true);
+});
+
+test("menor exige acompanhante quando o responsável legal não vai ao retiro", () => {
+  const baseMenor = {
+    responsavel: pessoa("Joana Souza", "2010-01-01", "390.533.447-05"),
+    responsavelLegalNome: "Maria Souza",
+    responsavelLegalTelefone: "11987654321",
+    responsavelLegalParentesco: "mae" as const,
+    responsavelLegalAcompanha: false,
+  };
+  const incompleto = validar(base(baseMenor), ctx);
+  assert.ok(incompleto.erros.acompanhanteNome);
+  assert.ok(incompleto.erros.acompanhanteTelefone);
+
+  const completo = validar(
+    base({
+      ...baseMenor,
+      acompanhanteNome: "Carlos Souza",
+      acompanhanteTelefone: "11987654322",
+    }),
+    ctx,
+  );
+  assert.deepEqual(completo.erros, {});
+});
+
+test("responsável e acompanhante do menor seguem no campo de observações da planilha", () => {
+  const v = base({
+    responsavel: pessoa("Joana Souza", "2010-01-01", "390.533.447-05"),
+    responsavelLegalNome: "Maria Souza",
+    responsavelLegalTelefone: "(11) 98765-4321",
+    responsavelLegalParentesco: "mae",
+    responsavelLegalAcompanha: false,
+    acompanhanteNome: "Carlos Souza",
+    acompanhanteTelefone: "(11) 98765-4322",
+  });
+  const resultado = validar(v, ctx);
+  const corpo = montarCorpo(v, resultado, {
+    idempotencyKey: "menor-001",
+    familiaId: "F-MENOR-1",
+    enviadoEm: "2026-10-22T00:00:00Z",
+    versaoTermos: "t",
+  });
+  assert.match(corpo.necessidades, /Responsável legal: Maria Souza \(mae\)/);
+  assert.match(corpo.necessidades, /Acompanhante: Carlos Souza/);
+  assert.match(corpo.necessidades, /celular 11987654322/);
 });
 
 test("responsável que não participa: valor só dos integrantes", () => {

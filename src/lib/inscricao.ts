@@ -81,11 +81,18 @@ export type Pessoa = {
 };
 
 export type FormValues = {
-  /** Quem preenche: adulto participante ou pai/mãe/responsável pelo participante menor. */
+  /** Participante adulto/menor, ou responsável que cadastra um participante menor. */
   responsavel: Pessoa;
   /** Se quem preenche também é o único participante deste cadastro. */
   responsavelParticipa: boolean;
   responsavelParentesco: "" | "pai" | "mae" | "responsavel_legal";
+  /** Dados obrigatórios quando o participante que preenche é menor de idade. */
+  responsavelLegalNome: string;
+  responsavelLegalTelefone: string;
+  responsavelLegalParentesco: "" | "pai" | "mae" | "responsavel_legal";
+  responsavelLegalAcompanha: boolean;
+  acompanhanteNome: string;
+  acompanhanteTelefone: string;
   telefone: string;
   whatsapp: string;
   email: string;
@@ -127,6 +134,12 @@ export const VALORES_VAZIOS: FormValues = {
   responsavel: { ...PESSOA_VAZIA },
   responsavelParticipa: true,
   responsavelParentesco: "",
+  responsavelLegalNome: "",
+  responsavelLegalTelefone: "",
+  responsavelLegalParentesco: "",
+  responsavelLegalAcompanha: true,
+  acompanhanteNome: "",
+  acompanhanteTelefone: "",
   telefone: "",
   whatsapp: "",
   email: "",
@@ -532,8 +545,22 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
     v.responsavelParticipa,
   );
   if (resp && v.responsavelParticipa && resp.menorDeIdade) {
-    erros["responsavel.dataNascimento"] =
-      "O responsável pela inscrição precisa ter 18 anos ou mais na data do retiro.";
+    if (texto(v.responsavelLegalNome).length < 5)
+      erros.responsavelLegalNome = "Informe o nome completo do pai, mãe ou responsável legal.";
+    if (!v.responsavelLegalParentesco)
+      erros.responsavelLegalParentesco = "Informe o vínculo do responsável legal.";
+    if (!v.responsavelLegalTelefone)
+      erros.responsavelLegalTelefone = "Informe o celular do responsável legal.";
+    else if (!telefoneValido(v.responsavelLegalTelefone))
+      erros.responsavelLegalTelefone = "Celular inválido. Use DDD + número.";
+    if (!v.responsavelLegalAcompanha) {
+      if (texto(v.acompanhanteNome).length < 5)
+        erros.acompanhanteNome = "Informe quem acompanhará o menor no retiro.";
+      if (!v.acompanhanteTelefone)
+        erros.acompanhanteTelefone = "Informe o celular de quem acompanhará o menor.";
+      else if (!telefoneValido(v.acompanhanteTelefone))
+        erros.acompanhanteTelefone = "Celular inválido. Use DDD + número.";
+    }
   }
 
   if (!v.responsavelParticipa && !v.responsavelParentesco) {
@@ -585,6 +612,13 @@ export function validar(v: FormValues, ctx: ContextoValidacao): ResultadoValidac
       erros["responsavel.dataNascimento"] =
         "O pai, a mãe ou responsável legal deve ter 18 anos ou mais.";
     }
+  }
+
+  for (const [campo, valor] of [
+    ["responsavelLegalNome", v.responsavelLegalNome],
+    ["acompanhanteNome", v.acompanhanteNome],
+  ] as const) {
+    if (texto(valor).length > 100) erros[campo] = "Use no máximo 100 caracteres.";
   }
 
   // CPF repetido dentro da mesma inscrição (responsável conta mesmo sem participar).
@@ -694,7 +728,16 @@ export function montarCorpo(
     emergenciaNome: higienizarCelula(v.emergenciaNome),
     emergenciaTelefone: normalizarTelefone(v.emergenciaTelefone),
     familiaresQuarto: higienizarCelula(v.familiaresQuarto),
-    necessidades: higienizarCelula(v.necessidades),
+    necessidades: higienizarCelula(
+      [
+        v.necessidades,
+        v.responsavelParticipa && r.participantes[0]?.menorDeIdade
+          ? `Responsável legal: ${texto(v.responsavelLegalNome)} (${v.responsavelLegalParentesco}); celular ${normalizarTelefone(v.responsavelLegalTelefone)}. Acompanha no retiro: ${v.responsavelLegalAcompanha ? "sim" : "não"}${v.responsavelLegalAcompanha ? "" : `; Acompanhante: ${texto(v.acompanhanteNome)}; celular ${normalizarTelefone(v.acompanhanteTelefone)}`}.`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" | "),
+    ),
     totalParticipantes: r.participantes.length,
     totalValor: r.total,
     totalTexto: formatarReais(r.total) + (r.temValorADefinir ? " + valores a definir" : ""),

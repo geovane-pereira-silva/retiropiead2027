@@ -1168,6 +1168,18 @@
   color: var(--lp-mute);
   font-size: 0.9rem;
 }
+
+.lp-subsecao {
+  border: 1px solid rgba(22, 79, 61, 0.18);
+  border-radius: 1rem;
+  background: rgba(22, 79, 61, 0.035);
+  padding: 1rem;
+}
+
+.lp-subsecao h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
 .lp-aviso-emergencia {
   display: grid;
   gap: 0.25rem;
