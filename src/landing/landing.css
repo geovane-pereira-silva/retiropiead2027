@@ -1170,9 +1170,10 @@
 }
 
 .lp-subsecao {
-  border: 1px solid rgba(22, 79, 61, 0.18);
+  border: 1px solid #e2bb61;
+  border-left: 5px solid #c68100;
   border-radius: 1rem;
-  background: rgba(22, 79, 61, 0.035);
+  background: #fffaf0;
   padding: 1rem;
 }
 
@@ -1180,6 +1181,20 @@
   margin: 0 0 0.5rem;
   font-size: 1rem;
 }
+.lp-alerta-menor {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border-radius: 0.65rem;
+  color: #563900;
+  background: #ffefc2;
+}
+.lp-alerta-menor > svg { margin-top: 0.1rem; color: #9b5d00; }
+.lp-alerta-menor strong { display: block; margin-bottom: 0.25rem; color: #503400; font-size: 1rem; }
+.lp-alerta-menor p { margin: 0; line-height: 1.5; }
+.lp-alerta-menor-integrante { margin-top: 1rem; }
 .lp-aviso-emergencia {
   display: grid;
   gap: 0.25rem;

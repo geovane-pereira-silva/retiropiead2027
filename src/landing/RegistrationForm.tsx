@@ -720,12 +720,18 @@ export function RegistrationForm() {
             </label>
             {values.responsavelParticipa && respCalc && respCalc.idade < 18 && (
               <div className="lp-subsecao" style={{ marginTop: "1.25rem" }}>
-                <h3>Responsável legal e acompanhamento</h3>
-                <p className="hint">
-                  Menores podem fazer o próprio cadastro. Informe os dados do responsável legal e
-                  quem acompanhará o participante no retiro. Se o responsável legal também for,
-                  ele precisa fazer um cadastro separado como participante.
-                </p>
+                <div className="lp-alerta-menor" role="note">
+                  <AlertTriangle size={22} aria-hidden="true" />
+                  <div>
+                    <strong>Atenção: participante menor de 18 anos</strong>
+                    <p>
+                      O cadastro fica no nome de quem vai ao retiro. Você pode preencher o seu
+                      próprio cadastro: informe os dados do pai, da mãe ou do responsável legal e
+                      indique quem acompanhará você no retiro. Se o responsável legal também for
+                      participante, ele deve fazer um cadastro separado.
+                    </p>
+                  </div>
+                </div>
                 <Entrada
                   chave="responsavelLegalNome"
                   rotulo="Nome completo do pai, mãe ou responsável legal"
@@ -1110,6 +1116,19 @@ export function RegistrationForm() {
                         autoComplete="off"
                       />
                     </div>
+                    {menor && info && (
+                      <div className="lp-alerta-menor lp-alerta-menor-integrante" role="note">
+                        <AlertTriangle size={22} aria-hidden="true" />
+                        <div>
+                          <strong>Cadastro de participante menor de 18 anos</strong>
+                          <p>
+                            O cadastro deve usar o nome e a data de nascimento reais do menor. O
+                            pai, a mãe ou o responsável legal deve autorizar a participação; informe
+                            os dados corretos dessa pessoa na etapa anterior.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     <div style={{ marginTop: "1.25rem" }}>
                       <CamisaCampos
                         chave={chave}
